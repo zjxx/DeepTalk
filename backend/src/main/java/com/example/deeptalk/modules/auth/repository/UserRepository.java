@@ -1,6 +1,6 @@
-package com.example.loginsystem.repository;
+package com.example.deeptalk.modules.auth.repository;
 
-import com.example.loginsystem.entity.User;
+import com.example.deeptalk.modules.auth.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 

@@ -1,4 +1,4 @@
-package com.example.loginsystem.entity;
+package com.example.deeptalk.modules.auth.entity;
 
 import lombok.Data;
 import javax.persistence.*;

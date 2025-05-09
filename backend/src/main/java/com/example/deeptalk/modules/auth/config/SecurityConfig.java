@@ -1,4 +1,4 @@
-package com.example.loginsystem.config;
+package com.example.deeptalk.modules.auth.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

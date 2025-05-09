@@ -1,7 +1,7 @@
-package com.example.loginsystem.controller;
+package com.example.deeptalk.modules.auth.controller;
 
-import com.example.loginsystem.entity.User;
-import com.example.loginsystem.repository.UserRepository;
+import com.example.deeptalk.modules.auth.entity.User;
+import com.example.deeptalk.modules.auth.repository.UserRepository;
 import lombok.Data;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
