@@ -48,8 +48,8 @@ DeepTalk/
 
 ### 后端开发
 1. 进入backend目录
-2. 执行 `./start.sh` 启动服务
-3. 访问 `http://localhost:8080` 测试API
+2. 执行mvn clean install（每次更改了maven需要，第一次也需要）
+3. mvn spring-boot:run 
 
 ### 前端开发（待开发）
 1. 进入frontend目录
