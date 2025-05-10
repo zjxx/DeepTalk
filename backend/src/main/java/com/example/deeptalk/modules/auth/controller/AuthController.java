@@ -38,11 +38,12 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
-        User user = userRepository.findByUsername(request.getUsername())
+        System.out.println("login request: " + request.getEmail() + " " + request.getPassword());
+        User user = userRepository.findByEmail(request.getEmail())
                 .orElse(null);
 
         if (user == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            return ResponseEntity.badRequest().body("用户名或密码错误");
+            return ResponseEntity.badRequest().body("邮箱或密码错误");
         }
 
         return ResponseEntity.ok("登录成功");
@@ -58,6 +59,6 @@ class RegisterRequest {
 
 @Data
 class LoginRequest {
-    private String username;
+    private String email;
     private String password;
 } 
