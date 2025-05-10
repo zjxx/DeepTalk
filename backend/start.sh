@@ -9,9 +9,6 @@ else
     systemctl start mysql
 fi
 
-# 执行数据库初始化脚本
-echo "执行数据库初始化脚本..."
-mysql -u root -p'DeepTalk@2024' deeptalk < src/main/resources/db/init.sql
 
 # 启动Spring Boot应用
 echo "启动Spring Boot应用..."
