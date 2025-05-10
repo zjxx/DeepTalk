@@ -22,16 +22,21 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue'
 import { login } from '../controllers/userController'
+import type { LoginRequest } from '../types/auth'
 
 const email = ref('')
 const password = ref('')
 const rememberMe = ref(false)
 
 const handleLogin = async () => {
-  await login(email.value, password.value, rememberMe.value)
+  const loginRequest: LoginRequest = {
+    email: email.value,
+    password: password.value
+  }
+  await login(loginRequest, rememberMe.value)
 }
 </script>
 

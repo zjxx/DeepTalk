@@ -1,18 +1,15 @@
 import userModel from '../models/user'
 import { loginApi } from '../api/user'
-
-interface LoginResponse {
-  token: string;
-}
+import type { LoginRequest, LoginResponse } from '../types/auth'
 
 export async function login(
-  email: string, 
-  password: string, 
+  request: LoginRequest,
   rememberMe: boolean
 ): Promise<void> {
   try {
-    const res: LoginResponse = await loginApi(email, password)
-    userModel.email = email
+    console.log('登录请求数据:', request) // 添加日志
+    const res: LoginResponse = await loginApi(request)
+    userModel.email = request.email
     userModel.token = res.token
     userModel.isLoggedIn = true
     
