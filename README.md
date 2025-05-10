@@ -36,33 +36,27 @@ DeepTalk/
 ### 后端
 - Spring Boot
 - Spring Security
-- MySQL
+- PostgreSQL
 - JPA
 
-### 前端（开发中）
-- React/Vue
+### 前端
+- Vue3
 - TypeScript
-- Ant Design/Element UI
 
 ## 开发指南
 
 ### 后端开发
 1. 进入backend目录
 2. 执行mvn clean install（每次更改了maven需要，第一次也需要）
+(建议换镜像站或者自己找其它方法)
 3. mvn spring-boot:run 
 
-### 前端开发（待开发）
+### 前端开发
 1. 进入frontend目录
-2. 执行 `npm install` 安装依赖
-3. 执行 `npm start` 启动开发服务器
+2. 执行 `npm install --verbose` 安装依赖（每次更改了package.json里的依赖需要，第一次也需要）
+(建议换镜像站或者自己找其它方法)
+3. 执行 `npm run dev` 启动开发服务器
 
-## 贡献指南
-
-1. Fork 本仓库
-2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 创建Pull Request
 
 ## 许可证
 
