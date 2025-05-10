@@ -1,6 +1,6 @@
 import userModel from '../models/user'
 import { loginApi } from '../api/user'
-import type { LoginRequest, LoginResponse } from '../types/auth'
+import type { LoginRequest, LoginResponse } from '../interface/auth'
 
 export async function login(
   request: LoginRequest,

@@ -1,6 +1,6 @@
 import axios from 'axios'
 import type { AxiosResponse } from 'axios'
-import type { LoginRequest, LoginResponse } from '../types/auth'
+import type { LoginRequest, LoginResponse } from '../interface/auth'
 
 export function loginApi(request: LoginRequest): Promise<LoginResponse> {
   console.log('发送的登录数据:', JSON.stringify(request))

@@ -25,7 +25,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { login } from '../controllers/userController'
-import type { LoginRequest } from '../types/auth'
+import type { LoginRequest } from '../interface/auth'
 
 const email = ref('')
 const password = ref('')
