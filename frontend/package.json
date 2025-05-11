@@ -14,9 +14,11 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
+    "@mdi/font": "^7.4.47",
+    "axios": "^1.6.7",
     "vue": "^3.4.15",
     "vue-router": "^4.2.5",
-    "axios": "^1.6.7"
+    "vuetify": "^3.8.4"
   },
   "devDependencies": {
     "@tsconfig/node22": "^22.0.1",
