@@ -90,14 +90,30 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { login } from '../controllers/userController'
+import { ref, onMounted } from 'vue'
+import { login, autoLogin } from '../controllers/userController'
 import type { LoginRequest } from '../interface/auth'
 
 const email = ref('')
 const password = ref('')
 const rememberMe = ref(false)
 const loading = ref(false)
+
+// 在组件挂载时尝试自动登录
+onMounted(async () => {
+  loading.value = true
+  try {
+    const success = await autoLogin()
+    if (success) {
+      // 自动登录成功，直接跳转到个人资料页
+      window.location.href = '/profile'
+    }
+  } catch (error) {
+    console.error('自动登录失败:', error)
+  } finally {
+    loading.value = false
+  }
+})
 
 const validateEmail = (email: string): boolean => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
