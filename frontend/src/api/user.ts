@@ -22,6 +22,11 @@ export function verifyApi(request: VerifyRequest): Promise<VerifyResponse> {
   return http.post<VerifyResponse>(API_ENDPOINTS.AUTH.VERIFY_CODE, request)
 }
 
+export function logoutApi(email: string): Promise<void> {
+  console.log('发送退出登录请求:', email)
+  return http.post(API_ENDPOINTS.AUTH.LOGOUT, { email })
+}
+
 // 其他 API 函数可以在这里添加
 // export function registerApi(request: RegisterRequest): Promise<RegisterResponse> {
 //   return http.post<RegisterResponse>(API_ENDPOINTS.AUTH.REGISTER, request)
