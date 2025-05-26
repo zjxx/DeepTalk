@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Login from './views/Login.vue'
-// 你可以后续添加Register和Profile等页面
+import Register from './views/Register.vue'
+// 你可以后续添加Profile等页面
 
 const routes = [
   {
@@ -12,7 +13,11 @@ const routes = [
     name: 'Login',
     component: Login
   },
-  // { path: '/register', component: () => import('./views/Register.vue') },
+  {
+    path: '/register',
+    name: 'Register',
+    component: Register
+  },
   // { path: '/profile', component: () => import('./views/Profile.vue') },
 ]
 

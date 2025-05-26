@@ -17,25 +17,13 @@ onMounted(() => {
 </script>
 
 <style>
-* {
+body {
   margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-html, body {
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  padding: 0;
   font-family: Arial, Helvetica, sans-serif;
 }
 
 #app {
   width: 100%;
-  height: 100vh;
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
 }
 </style> 
