@@ -36,7 +36,7 @@
                 required
                 class="form-field"
               ></v-text-field>
-              <v-tooltip text="密码必须包含至少8个字符，包括字母、数字和符号">
+              <v-tooltip text="密码必须包含至少6个字符，包括字母、数字和符号">
                 <template v-slot:activator="{ props }">
                   <v-icon v-bind="props" color="grey" class="password-info-icon">mdi-information</v-icon>
                 </template>
@@ -105,7 +105,7 @@ const validateEmail = (email: string): boolean => {
 }
 
 const validatePassword = (password: string): boolean => {
-  return password.length >= 8
+  return password.length >= 6
 }
 
 const handleLogin = async () => {
@@ -117,7 +117,7 @@ const handleLogin = async () => {
 
   // 验证密码
   if (!validatePassword(password.value)) {
-    alert('密码长度至少为8个字符')
+    alert('密码长度至少为6个字符')
     return
   }
 
