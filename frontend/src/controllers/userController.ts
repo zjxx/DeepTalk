@@ -1,6 +1,6 @@
 import userModel from '../models/user'
-import { loginApi } from '../api/user'
-import type { LoginRequest, LoginResponse } from '../interface/auth'
+import { loginApi, registerApi, sendVerificationCodeApi, verifyApi } from '../api/user'
+import type { LoginRequest, LoginResponse, RegisterRequest, VerifyRequest } from '../interface/auth'
 
 export async function login(
   request: LoginRequest,
@@ -21,5 +21,39 @@ export async function login(
     window.location.href = '/profile'
   } catch (e) {
     alert('登录失败，请检查邮箱和密码')
+  }
+}
+
+export async function register(request: RegisterRequest): Promise<void> {
+  try {
+    console.log('注册请求数据:', request)
+    await registerApi(request)
+  } catch (e) {
+    alert('注册失败，请稍后重试')
+    throw e
+  }
+}
+
+export async function sendVerificationCode(email: string): Promise<void> {
+  try {
+    console.log('发送验证码到:', email)
+    await sendVerificationCodeApi(email)
+  } catch (e) {
+    alert('发送验证码失败，请稍后重试')
+    throw e
+  }
+}
+
+export async function verify(request: VerifyRequest): Promise<void> {
+  try {
+    console.log('验证码验证请求:', request)
+    const response = await verifyApi(request)
+    if (!response.success) {
+      alert(response.message || '验证码验证失败')
+      throw new Error(response.message)
+    }
+  } catch (e) {
+    alert('验证码验证失败，请重试')
+    throw e
   }
 } 
