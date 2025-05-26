@@ -139,6 +139,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { register, sendVerificationCode as sendCode, verify } from '../controllers/userController'
 
 const router = useRouter()
 const username = ref('')
@@ -186,7 +187,7 @@ const sendVerificationCode = async () => {
   }
   
   try {
-    // TODO: 调用发送验证码的API
+    await sendCode(email.value)
     startCountdown()
   } catch (error) {
     console.error('发送验证码失败:', error)
@@ -201,8 +202,10 @@ const validateCode = async () => {
 
   validating.value = true
   try {
-    // TODO: 调用验证码验证API
-    await new Promise(resolve => setTimeout(resolve, 1000)) // 模拟API调用
+    await verify({
+      email: email.value,
+      code: verificationCode.value
+    })
     showVerificationDialog.value = false
     router.push('/login')
   } catch (error) {
@@ -245,11 +248,34 @@ const handleRegister = async () => {
 
   loading.value = true
   try {
-    // TODO: 调用注册API
+    console.log('准备发送注册请求...')
+    console.log('注册数据:', {
+      username: username.value,
+      email: email.value,
+      password: password.value
+    })
+    
+    await register({
+      username: username.value,
+      email: email.value,
+      password: password.value
+    })
+    console.log('注册请求发送成功')
     await sendVerificationCode()
     showVerificationDialog.value = true
-  } catch (error) {
-    console.error('注册失败:', error)
+  } catch (error: any) {
+    console.error('注册失败，详细错误:', error)
+    if (error.response) {
+      console.error('错误响应:', error.response.data)
+      console.error('错误状态码:', error.response.status)
+      if (error.response.status === 502) {
+        alert('服务器暂时无法访问，请稍后再试')
+      } else {
+        alert('注册失败，请稍后重试')
+      }
+    } else {
+      alert('网络连接失败，请检查网络设置')
+    }
   } finally {
     loading.value = false
   }
