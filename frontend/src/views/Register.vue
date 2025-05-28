@@ -280,29 +280,17 @@ const handleRegister = async () => {
       password: password.value
     })
     console.log('注册请求发送成功')
-    await sendVerificationCode()
-    showVerificationDialog.value = true
-  } catch (error: unknown) {
-    console.error('注册失败，详细错误:', error)
-    if (error instanceof AxiosError) {
-      if (error.response) {
-        console.error('错误响应:', error.response.data)
-        console.error('错误状态码:', error.response.status)
-        if (error.response.status === 502) {
-          alert('服务器暂时无法访问，请稍后再试')
-        } else {
-          alert('注册失败，请稍后重试')
-        }
-      } else if (error.request) {
-        console.error('请求错误:', error.request)
-        alert('网络连接失败，请检查网络设置')
-      } else {
-        console.error('错误信息:', error.message)
-        alert('发生错误，请稍后重试')
-      }
-    } else {
-      alert('发生未知错误，请稍后重试')
+    // 注册成功后再发送验证码并显示弹窗
+    try {
+      await sendVerificationCode()
+      showVerificationDialog.value = true
+    } catch (error) {
+      console.error('发送验证码失败:', error)
+      alert('注册成功，但发送验证码失败，请稍后重试')
     }
+  } catch (error) {
+    // 错误处理已经在 controller 中完成
+    console.error('注册失败:', error)
   } finally {
     loading.value = false
   }
