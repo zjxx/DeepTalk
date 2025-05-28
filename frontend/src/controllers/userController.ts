@@ -57,6 +57,7 @@ export async function login(
     window.location.href = '/profile'
   } catch (e) {
     alert('登录失败，请检查邮箱和密码')
+    console.error('登录失败:', e)
   }
 }
 
