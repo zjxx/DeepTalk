@@ -109,7 +109,7 @@ onMounted(async () => {
       window.location.href = '/profile'
     }
   } catch (error) {
-    console.error('自动登录失败:', error)
+    console.error('自动登录失败: ', error)
   } finally {
     loading.value = false
   }
