@@ -140,6 +140,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { register, sendVerificationCode as sendCode, verify } from '../controllers/userController'
+import { AxiosError } from 'axios'
 
 const router = useRouter()
 const username = ref('')
@@ -189,8 +190,17 @@ const sendVerificationCode = async () => {
   try {
     await sendCode(email.value)
     startCountdown()
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('发送验证码失败:', error)
+    if (error instanceof AxiosError) {
+      if (error.response) {
+        console.error('响应错误:', error.response.data)
+      } else if (error.request) {
+        console.error('请求错误:', error.request)
+      } else {
+        console.error('错误信息:', error.message)
+      }
+    }
   }
 }
 
@@ -208,8 +218,17 @@ const validateCode = async () => {
     })
     showVerificationDialog.value = false
     router.push('/login')
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('验证失败:', error)
+    if (error instanceof AxiosError) {
+      if (error.response) {
+        console.error('响应错误:', error.response.data)
+      } else if (error.request) {
+        console.error('请求错误:', error.request)
+      } else {
+        console.error('错误信息:', error.message)
+      }
+    }
   } finally {
     validating.value = false
   }
@@ -263,18 +282,26 @@ const handleRegister = async () => {
     console.log('注册请求发送成功')
     await sendVerificationCode()
     showVerificationDialog.value = true
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('注册失败，详细错误:', error)
-    if (error.response) {
-      console.error('错误响应:', error.response.data)
-      console.error('错误状态码:', error.response.status)
-      if (error.response.status === 502) {
-        alert('服务器暂时无法访问，请稍后再试')
+    if (error instanceof AxiosError) {
+      if (error.response) {
+        console.error('错误响应:', error.response.data)
+        console.error('错误状态码:', error.response.status)
+        if (error.response.status === 502) {
+          alert('服务器暂时无法访问，请稍后再试')
+        } else {
+          alert('注册失败，请稍后重试')
+        }
+      } else if (error.request) {
+        console.error('请求错误:', error.request)
+        alert('网络连接失败，请检查网络设置')
       } else {
-        alert('注册失败，请稍后重试')
+        console.error('错误信息:', error.message)
+        alert('发生错误，请稍后重试')
       }
     } else {
-      alert('网络连接失败，请检查网络设置')
+      alert('发生未知错误，请稍后重试')
     }
   } finally {
     loading.value = false
