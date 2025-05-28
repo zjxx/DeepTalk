@@ -10,6 +10,7 @@
 import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const router = useRouter()
 
 onMounted(() => {
