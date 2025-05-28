@@ -38,6 +38,7 @@ export async function login(
   try {
     console.log('登录请求数据:', request)
     const res: LoginResponse = await loginApi(request)
+    console.log('登录响应数据:', res)
     userModel.email = request.email
     userModel.token = res.token
     userModel.isLoggedIn = true
