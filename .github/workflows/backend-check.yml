@@ -2,15 +2,18 @@ name: Backend PR Check
 
 on:
   pull_request:
-    paths:
-      - 'backend/**'
-      - '.github/workflows/backend-pr-check.yml'
+    branches:
+      - main # 假设 'main' 是你的主受保护分支，请按需修改
+      # - develop # 如果有其他受保护分支，也请添加
+    # 注意：移除了这里的 paths 过滤，以确保对 main 分支的 PR 总是触发
+
 
 jobs:
-  build-and-test:
+  build-and-test: # 这个 job ID (build-and-test) 需要与分支保护规则中的必需状态检查名称匹配
+    name: Backend Build and Test # 这是在 GitHub Checks UI 中显示的名称
     runs-on: ubuntu-latest
     
-    services:
+    services: # 服务会照常启动，但后续使用服务的步骤是条件性的
       postgres:
         image: postgres:latest
         env:
@@ -26,31 +29,75 @@ jobs:
           --health-retries 5
 
     steps:
-    - uses: actions/checkout@v3
-    
+    - name: Checkout code
+      uses: actions/checkout@v4 # 建议升级到 v4
+      with:
+        fetch-depth: 0 # 对于 tj-actions/changed-files 确保能正确比较历史记录
+
+    - name: Get changed backend files
+      id: changed-backend-files
+      uses: tj-actions/changed-files@v44 # 使用 v44 或最新稳定版
+      with:
+        files: |
+          backend/**
+          # 如果还有其他属于后端的文件或目录，也一并列出
+
+    # --- 后续步骤仅在后端文件实际更改时运行 ---
+
     - name: Set up JDK 17
-      uses: actions/setup-java@v3
+      if: steps.changed-backend-files.outputs.any_changed == 'true'
+      uses: actions/setup-java@v4 # 建议升级到 v4
       with:
         java-version: '17'
         distribution: 'temurin'
         cache: maven
     
     - name: Build with Maven
+      if: steps.changed-backend-files.outputs.any_changed == 'true'
       run: |
+        echo "Backend files changed. Building with Maven..."
         cd backend
         mvn clean verify
     
     - name: Test Application Startup
+      if: steps.changed-backend-files.outputs.any_changed == 'true'
       run: |
+        echo "Backend files changed. Testing application startup..."
         cd backend
+        # 后台启动 Spring Boot 应用
         mvn spring-boot:run &
-        # 等待应用启动
-        sleep 30
-        # 检查应用是否正常响应
-        curl -f http://localhost:8080/actuator/health || exit 1
+        APP_PID=$! # 获取后台进程的 PID
+        echo "Application starting with PID $APP_PID..."
+        
+        # 等待应用启动，增加更稳健的健康检查循环
+        echo "Waiting for application to start..."
+        for i in {1..15}; do # 最多等待 15 * 10 = 150 秒
+          sleep 10
+          if curl -sf --connect-timeout 5 http://localhost:8080/actuator/health; then
+            echo "Application started successfully."
+            # 可选：测试通过后，优雅地停止应用
+            # kill $APP_PID
+            # wait $APP_PID 2>/dev/null || true # 等待进程结束，忽略可能的错误
+            exit 0 # 测试成功
+          else
+            echo "Attempt $i: Application not ready yet or health check failed."
+          fi
+        done
+        
+        echo "Application did not start or health check failed after multiple attempts."
+        # 可选：如果应用未能启动或不健康，确保停止应用进程
+        # kill $APP_PID
+        # wait $APP_PID 2>/dev/null || true
+        exit 1 # 测试失败
       env:
         SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/deeptalk_test
         SPRING_DATASOURCE_USERNAME: postgres
         SPRING_DATASOURCE_PASSWORD: postgres
         SPRING_JPA_HIBERNATE_DDL_AUTO: create-drop
-        SPRING_JPA_SHOW_SQL: true 
+        SPRING_JPA_SHOW_SQL: true
+
+    - name: Report successful skip (if no backend changes)
+      if: steps.changed-backend-files.outputs.any_changed == 'false'
+      run: |
+        echo "No backend files changed. Backend build and test steps skipped. Reporting success."
+        # 这个步骤是成功的，确保整个 job 在这种情况下是成功的
