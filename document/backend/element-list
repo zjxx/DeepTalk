@@ -1,0 +1,7 @@
+com.example.deeptalk
+com.example.deeptalk.modules.auth.config
+com.example.deeptalk.modules.auth.controller
+com.example.deeptalk.modules.auth.entity
+com.example.deeptalk.modules.auth.repository
+com.example.deeptalk.modules.speech.controller
+com.example.deeptalk.modules.speech.entity

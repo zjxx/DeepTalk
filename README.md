@@ -14,6 +14,8 @@ DeepTalk/
 │   ├── src/          # 源代码
 │   ├── package.json  # NPM配置
 │   └── README.md     # 前端说明文档
+├── document          # 接口文档
+├── test              # 测试用例
 └── README.md         # 项目主说明文档
 ```
 
