@@ -3,7 +3,7 @@ import Login from './views/Login.vue'
 import Register from './views/Register.vue'
 import Profile from './views/Profile.vue'
 import ForgotPassword from './views/ForgotPassword.vue'
-import Community from './views/Community.vue'
+import Live2DView from './views/Live2DView.vue'
 // 你可以后续添加Profile等页面
 
 const routes = [
@@ -30,12 +30,13 @@ const routes = [
     path: '/profile',
     name: 'Profile',
     component: Profile,
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true }
   },
   {
-    path: '/community',
-    name: 'Community',
-    component: Community,
+    path: '/live2d',
+    name: 'Live2D',
+    component: Live2DView,
+    meta: { requiresAuth: false }
   },
   // { path: '/profile', component: () => import('./views/Profile.vue') },
 ]

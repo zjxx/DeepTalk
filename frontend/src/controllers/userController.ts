@@ -43,11 +43,11 @@ export async function login(request: LoginRequest, rememberMe: boolean): Promise
     // 记住我逻辑
     if (rememberMe) {
       localStorage.setItem('token', res.token)
-      localStorage.setItem('savedEmail', request.email)
+      localStorage.setItem('sravedEmail', request.email)
       localStorage.setItem('savedPassword', request.password)
     } else {
       // 如果取消记住我，清除保存的信息
-      localStorage.removeItem('token')
+      localStorage.setItem('token', res.token)
       localStorage.removeItem('savedEmail')
       localStorage.removeItem('savedPassword')
     }
