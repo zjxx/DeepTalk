@@ -3,9 +3,7 @@
     <v-row justify="center">
       <v-col cols="12" md="8" lg="6">
         <v-card class="pa-6">
-          <v-card-title class="text-h4 mb-6">
-            个人资料
-          </v-card-title>
+          <v-card-title class="text-h4 mb-6"> 个人资料 </v-card-title>
 
           <v-card-text>
             <div class="d-flex align-center mb-6">
@@ -20,13 +18,7 @@
 
             <v-divider class="mb-6"></v-divider>
 
-            <v-btn
-              color="error"
-              variant="outlined"
-              block
-              @click="handleLogout"
-              :loading="loading"
-            >
+            <v-btn color="error" variant="outlined" block @click="handleLogout" :loading="loading">
               退出登录
             </v-btn>
           </v-card-text>
@@ -77,4 +69,4 @@ const handleLogout = async () => {
 .v-card {
   border-radius: 12px;
 }
-</style> 
+</style>

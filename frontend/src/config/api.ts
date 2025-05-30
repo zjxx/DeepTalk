@@ -9,7 +9,7 @@ export const API_ENDPOINTS = {
     REGISTER: '/auth/register',
     SEND_VERIFICATION_CODE: '/auth/send-verification-code',
     VERIFY_CODE: '/auth/verify-code',
-    LOGOUT: '/auth/logout'
+    LOGOUT: '/auth/logout',
   },
   // 其他模块的 API 端点可以在这里添加
   // 例如：
@@ -22,4 +22,4 @@ export const API_ENDPOINTS = {
 // 构建完整的 API URL
 export const buildApiUrl = (endpoint: string): string => {
   return `${API_BASE_URL}${endpoint}`
-} 
+}

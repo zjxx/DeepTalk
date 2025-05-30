@@ -1,4 +1,11 @@
-import type { LoginRequest, LoginResponse, RegisterRequest, RegisterResponse, VerifyRequest, VerifyResponse } from '../interface/auth'
+import type {
+  LoginRequest,
+  LoginResponse,
+  RegisterRequest,
+  RegisterResponse,
+  VerifyRequest,
+  VerifyResponse,
+} from '../interface/auth'
 import { API_ENDPOINTS } from '../config/api'
 import { http } from '../utils/http'
 
@@ -30,4 +37,4 @@ export function logoutApi(email: string): Promise<void> {
 // 其他 API 函数可以在这里添加
 // export function registerApi(request: RegisterRequest): Promise<RegisterResponse> {
 //   return http.post<RegisterResponse, RegisterRequest>(API_ENDPOINTS.AUTH.REGISTER, request)
-// } 
+// }

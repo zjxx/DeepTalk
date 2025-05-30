@@ -13,8 +13,7 @@ import { useRouter } from 'vue-router'
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const router = useRouter()
 
-onMounted(() => {
-})
+onMounted(() => {})
 </script>
 
 <style>
@@ -27,4 +26,4 @@ body {
   width: 100%;
   min-height: 100vh;
 }
-</style> 
+</style>

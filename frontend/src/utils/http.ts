@@ -22,7 +22,7 @@ httpClient.interceptors.request.use(
   },
   (error) => {
     return Promise.reject(error)
-  }
+  },
 )
 
 // 响应拦截器
@@ -35,23 +35,27 @@ httpClient.interceptors.response.use(
       window.location.href = '/login'
     }
     return Promise.reject(error)
-  }
+  },
 )
 
 // 封装请求方法
 export const http = {
-  get: <T>(url: string, config?: AxiosRequestConfig) => 
+  get: <T>(url: string, config?: AxiosRequestConfig) =>
     httpClient.get<T>(url, config).then((res: AxiosResponse<T>) => res.data),
-  
-  post: <T, D = unknown>(url: string, data?: D, config?: AxiosRequestConfig) => 
-    httpClient.post<T, AxiosResponse<T>, D>(url, data, config).then((res: AxiosResponse<T>) => res.data),
-  
-  put: <T, D = unknown>(url: string, data?: D, config?: AxiosRequestConfig) => 
-    httpClient.put<T, AxiosResponse<T>, D>(url, data, config).then((res: AxiosResponse<T>) => res.data),
-  
-  delete: <T>(url: string, config?: AxiosRequestConfig) => 
+
+  post: <T, D = unknown>(url: string, data?: D, config?: AxiosRequestConfig) =>
+    httpClient
+      .post<T, AxiosResponse<T>, D>(url, data, config)
+      .then((res: AxiosResponse<T>) => res.data),
+
+  put: <T, D = unknown>(url: string, data?: D, config?: AxiosRequestConfig) =>
+    httpClient
+      .put<T, AxiosResponse<T>, D>(url, data, config)
+      .then((res: AxiosResponse<T>) => res.data),
+
+  delete: <T>(url: string, config?: AxiosRequestConfig) =>
     httpClient.delete<T>(url, config).then((res: AxiosResponse<T>) => res.data),
 }
 
 // 导出 axios 实例，以便需要时可以直接使用
-export { httpClient } 
+export { httpClient }

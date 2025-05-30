@@ -8,11 +8,11 @@ export async function autoLogin(): Promise<boolean> {
     const token = localStorage.getItem('token')
     const savedEmail = localStorage.getItem('savedEmail')
     const savedPassword = localStorage.getItem('savedPassword')
-    
+
     if (token && savedEmail && savedPassword) {
       const loginRequest: LoginRequest = {
         email: savedEmail,
-        password: savedPassword
+        password: savedPassword,
       }
       const res: LoginResponse = await loginApi(loginRequest)
       userModel.email = savedEmail
@@ -31,10 +31,7 @@ export async function autoLogin(): Promise<boolean> {
   }
 }
 
-export async function login(
-  request: LoginRequest,
-  rememberMe: boolean
-): Promise<void> {
+export async function login(request: LoginRequest, rememberMe: boolean): Promise<void> {
   try {
     console.log('登录请求数据:', request)
     const res: LoginResponse = await loginApi(request)
@@ -42,7 +39,7 @@ export async function login(
     userModel.email = request.email
     userModel.token = res.token
     userModel.isLoggedIn = true
-    
+
     // 记住我逻辑
     if (rememberMe) {
       localStorage.setItem('token', res.token)
@@ -108,4 +105,4 @@ export async function verify(request: VerifyRequest): Promise<void> {
 //     console.error('退出登录失败:', e)
 //     throw e
 //   }
-// } 
+// }

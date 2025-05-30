@@ -2,19 +2,18 @@
   <v-container fluid class="fill-height">
     <v-row no-gutters>
       <!-- 左侧图片区域 -->
-      <v-col cols="6" class="d-none d-md-flex align-center justify-center bg-grey-lighten-4 login-image-col">
-        <img 
-          src="/images/login-banner.png" 
-          alt="DeepTalk注册" 
-          class="login-banner"
-        />
+      <v-col
+        cols="6"
+        class="d-none d-md-flex align-center justify-center bg-grey-lighten-4 login-image-col"
+      >
+        <img src="/images/login-banner.png" alt="DeepTalk注册" class="login-banner" />
       </v-col>
 
       <!-- 右侧注册表单区域 -->
       <v-col cols="12" md="6" class="d-flex align-center justify-center">
         <v-sheet class="pa-8" width="100%" max-width="400">
           <h2 class="text-h4 font-weight-bold mb-6">注册</h2>
-          
+
           <v-form @submit.prevent="handleRegister" class="register-form">
             <v-text-field
               v-model="username"
@@ -47,7 +46,9 @@
               ></v-text-field>
               <v-tooltip text="密码必须包含至少6个字符，且必须同时包含字母和数字">
                 <template v-slot:activator="{ props }">
-                  <v-icon v-bind="props" color="grey" class="password-info-icon">mdi-information</v-icon>
+                  <v-icon v-bind="props" color="grey" class="password-info-icon"
+                    >mdi-information</v-icon
+                  >
                 </template>
               </v-tooltip>
             </div>
@@ -62,26 +63,14 @@
               class="form-field"
             ></v-text-field>
 
-            <v-btn
-              type="submit"
-              color="primary"
-              block
-              size="large"
-              :loading="loading"
-              class="mt-6"
-            >
+            <v-btn type="submit" color="primary" block size="large" :loading="loading" class="mt-6">
               注册
             </v-btn>
           </v-form>
 
           <div class="text-center mt-6 register-section">
             <span class="register-text">已有账号？</span>
-            <v-btn
-              variant="text"
-              color="primary"
-              class="text-none register-btn"
-              to="/login"
-            >
+            <v-btn variant="text" color="primary" class="text-none register-btn" to="/login">
               立即登录
             </v-btn>
           </div>
@@ -92,9 +81,7 @@
     <!-- 验证码弹窗 -->
     <v-dialog v-model="showVerificationDialog" max-width="420">
       <v-card class="py-12 px-8 text-center mx-auto">
-        <h3 class="text-h6 mb-2">
-          请输入验证码
-        </h3>
+        <h3 class="text-h6 mb-2">请输入验证码</h3>
 
         <div class="mb-6">验证码已发送至 {{ maskEmail(email) }}</div>
 
@@ -186,7 +173,7 @@ const sendVerificationCode = async () => {
     alert('请输入有效的邮箱地址')
     return
   }
-  
+
   try {
     await sendCode(email.value)
     startCountdown()
@@ -214,7 +201,7 @@ const validateCode = async () => {
   try {
     await verify({
       email: email.value,
-      code: verificationCode.value
+      code: verificationCode.value,
     })
     showVerificationDialog.value = false
     router.push('/login')
@@ -271,13 +258,13 @@ const handleRegister = async () => {
     console.log('注册数据:', {
       username: username.value,
       email: email.value,
-      password: password.value
+      password: password.value,
     })
-    
+
     await register({
       username: username.value,
       email: email.value,
-      password: password.value
+      password: password.value,
     })
     console.log('注册请求发送成功')
     // 注册成功后再发送验证码并显示弹窗

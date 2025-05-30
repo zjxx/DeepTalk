@@ -2,12 +2,11 @@
   <v-container fluid class="fill-height">
     <v-row no-gutters>
       <!-- 左侧图片区域 -->
-      <v-col cols="6" class="d-none d-md-flex align-center justify-center bg-grey-lighten-4 login-image-col">
-        <img 
-          src="/images/login-banner.png" 
-          alt="DeepTalk忘记密码" 
-          class="login-banner"
-        />
+      <v-col
+        cols="6"
+        class="d-none d-md-flex align-center justify-center bg-grey-lighten-4 login-image-col"
+      >
+        <img src="/images/login-banner.png" alt="DeepTalk忘记密码" class="login-banner" />
       </v-col>
 
       <!-- 右侧表单区域 -->
@@ -17,36 +16,40 @@
 
           <!-- 时间线 -->
           <v-timeline direction="horizontal" class="mb-8" side="end">
-            <v-timeline-item
-              :dot-color="currentStep >= 1 ? 'primary' : 'grey'"
-              size="small"
-            >
-              <div class="text-center mb-2" :class="currentStep >= 1 ? 'text-primary' : 'text-grey'">
+            <v-timeline-item :dot-color="currentStep >= 1 ? 'primary' : 'grey'" size="small">
+              <div
+                class="text-center mb-2"
+                :class="currentStep >= 1 ? 'text-primary' : 'text-grey'"
+              >
                 输入邮箱
               </div>
             </v-timeline-item>
 
-            <v-timeline-item
-              :dot-color="currentStep >= 2 ? 'primary' : 'grey'"
-              size="small"
-            >
-              <div class="text-center mb-2" :class="currentStep >= 2 ? 'text-primary' : 'text-grey'">
+            <v-timeline-item :dot-color="currentStep >= 2 ? 'primary' : 'grey'" size="small">
+              <div
+                class="text-center mb-2"
+                :class="currentStep >= 2 ? 'text-primary' : 'text-grey'"
+              >
                 验证码验证
               </div>
             </v-timeline-item>
 
-            <v-timeline-item
-              :dot-color="currentStep >= 3 ? 'primary' : 'grey'"
-              size="small"
-            >
-              <div class="text-center mb-2" :class="currentStep >= 3 ? 'text-primary' : 'text-grey'">
+            <v-timeline-item :dot-color="currentStep >= 3 ? 'primary' : 'grey'" size="small">
+              <div
+                class="text-center mb-2"
+                :class="currentStep >= 3 ? 'text-primary' : 'text-grey'"
+              >
                 重设密码
               </div>
             </v-timeline-item>
           </v-timeline>
 
           <!-- 步骤1：输入邮箱 -->
-          <v-form v-if="currentStep === 1" @submit.prevent="handleEmailSubmit" class="forgot-password-form">
+          <v-form
+            v-if="currentStep === 1"
+            @submit.prevent="handleEmailSubmit"
+            class="forgot-password-form"
+          >
             <v-text-field
               v-model="email"
               label="邮箱地址"
@@ -57,23 +60,18 @@
               class="form-field"
             ></v-text-field>
 
-            <v-btn
-              type="submit"
-              color="primary"
-              block
-              size="large"
-              :loading="loading"
-              class="mt-6"
-            >
+            <v-btn type="submit" color="primary" block size="large" :loading="loading" class="mt-6">
               发送验证码
             </v-btn>
           </v-form>
 
           <!-- 步骤2：验证码验证 -->
-          <v-form v-if="currentStep === 2" @submit.prevent="handleVerificationSubmit" class="forgot-password-form">
-            <div class="text-center mb-6">
-              验证码已发送至 {{ maskEmail(email) }}
-            </div>
+          <v-form
+            v-if="currentStep === 2"
+            @submit.prevent="handleVerificationSubmit"
+            class="forgot-password-form"
+          >
+            <div class="text-center mb-6">验证码已发送至 {{ maskEmail(email) }}</div>
 
             <v-otp-input
               v-model="verificationCode"
@@ -95,18 +93,16 @@
                 {{ countdown > 0 ? `${countdown}秒后重试` : '重新发送' }}
               </v-btn>
 
-              <v-btn
-                type="submit"
-                color="primary"
-                :loading="validating"
-              >
-                验证
-              </v-btn>
+              <v-btn type="submit" color="primary" :loading="validating"> 验证 </v-btn>
             </div>
           </v-form>
 
           <!-- 步骤3：重设密码 -->
-          <v-form v-if="currentStep === 3" @submit.prevent="handleResetPassword" class="forgot-password-form">
+          <v-form
+            v-if="currentStep === 3"
+            @submit.prevent="handleResetPassword"
+            class="forgot-password-form"
+          >
             <v-text-field
               v-model="newPassword"
               label="新密码"
@@ -127,27 +123,13 @@
               class="form-field mt-4"
             ></v-text-field>
 
-            <v-btn
-              type="submit"
-              color="primary"
-              block
-              size="large"
-              :loading="loading"
-              class="mt-6"
-            >
+            <v-btn type="submit" color="primary" block size="large" :loading="loading" class="mt-6">
               重置密码
             </v-btn>
           </v-form>
 
           <div class="text-center mt-6">
-            <v-btn
-              variant="text"
-              color="primary"
-              class="text-none"
-              to="/login"
-            >
-              返回登录
-            </v-btn>
+            <v-btn variant="text" color="primary" class="text-none" to="/login"> 返回登录 </v-btn>
           </div>
         </v-sheet>
       </v-col>
@@ -219,7 +201,7 @@ const handleEmailSubmit = async () => {
 
 const sendVerificationCode = async () => {
   if (countdown.value > 0) return
-  
+
   try {
     // TODO: 实现重新发送验证码的逻辑
     console.log('重新发送验证码到:', email.value)

@@ -2,19 +2,18 @@
   <v-container fluid class="fill-height">
     <v-row no-gutters>
       <!-- 左侧图片占位区域 -->
-      <v-col cols="6" class="d-none d-md-flex align-center justify-center bg-grey-lighten-4 login-image-col">
-        <img 
-          src="/images/login-banner.png" 
-          alt="DeepTalk登录" 
-          class="login-banner"
-        />
+      <v-col
+        cols="6"
+        class="d-none d-md-flex align-center justify-center bg-grey-lighten-4 login-image-col"
+      >
+        <img src="/images/login-banner.png" alt="DeepTalk登录" class="login-banner" />
       </v-col>
 
       <!-- 右侧登录表单区域 -->
       <v-col cols="12" md="6" class="d-flex align-center justify-center">
         <v-sheet class="pa-8" width="100%" max-width="400">
           <h2 class="text-h4 font-weight-bold mb-6">登录</h2>
-          
+
           <v-form @submit.prevent="handleLogin" class="login-form">
             <v-text-field
               v-model="email"
@@ -38,7 +37,9 @@
               ></v-text-field>
               <v-tooltip text="密码必须包含至少6个字符，包括字母、数字和符号">
                 <template v-slot:activator="{ props }">
-                  <v-icon v-bind="props" color="grey" class="password-info-icon">mdi-information</v-icon>
+                  <v-icon v-bind="props" color="grey" class="password-info-icon"
+                    >mdi-information</v-icon
+                  >
                 </template>
               </v-tooltip>
             </div>
@@ -61,25 +62,14 @@
               </v-btn>
             </div>
 
-            <v-btn
-              type="submit"
-              color="primary"
-              block
-              size="large"
-              :loading="loading"
-            >
+            <v-btn type="submit" color="primary" block size="large" :loading="loading">
               登录
             </v-btn>
           </v-form>
 
           <div class="text-center mt-6 register-section">
             <span class="register-text">还没有账号？</span>
-            <v-btn
-              variant="text"
-              color="primary"
-              class="text-none register-btn"
-              to="/register"
-            >
+            <v-btn variant="text" color="primary" class="text-none register-btn" to="/register">
               立即注册
             </v-btn>
           </div>
@@ -141,7 +131,7 @@ const handleLogin = async () => {
   try {
     const loginRequest: LoginRequest = {
       email: email.value,
-      password: password.value
+      password: password.value,
     }
     await login(loginRequest, rememberMe.value)
   } catch (error) {
@@ -194,7 +184,7 @@ const handleLogin = async () => {
 }
 
 .form-field + .password-field-container {
-  margin-top: 20px;  /* 添加输入框之间的间距 */
+  margin-top: 20px; /* 添加输入框之间的间距 */
 }
 
 .password-field-container {
