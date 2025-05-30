@@ -6,7 +6,7 @@
 
 <script setup lang="ts">
 import { onMounted } from 'vue'
-import { initLive2DModel } from '../assets/live2d'
+import { initLive2DModel } from '../utils/live2d'
 
 // 声明全局变量
 declare global {
@@ -19,7 +19,7 @@ declare global {
 onMounted(async () => {
   try {
     await initLive2DModel({
-      modelPath: '/src/assets/live2d/models/miku/runtime/miku.model3.json',
+      modelPath: '/live2d/miku/runtime/miku.model3.json',
       width: 400,
       height: 400,
       transparent: true,

@@ -4,7 +4,11 @@ import { Live2DModel } from 'pixi-live2d-display'
 // 设置全局 PIXI 实例
 window.PIXI = PIXI
 
-interface ModelConfig {
+interface ExtendedRenderer extends PIXI.Renderer {
+  events?: PIXI.InteractionManager
+}
+
+export interface ModelConfig {
   width?: number
   height?: number
   transparent?: boolean
@@ -16,7 +20,17 @@ interface ModelConfig {
   }
 }
 
-export async function initLive2DModel(config: ModelConfig) {
+export interface Live2DInstance {
+  app: PIXI.Application
+  model: Live2DModel
+}
+
+/**
+ * 初始化 Live2D 模型
+ * @param config 模型配置
+ * @returns Live2D 实例，包含 PIXI 应用和模型对象
+ */
+export async function initLive2DModel(config: ModelConfig): Promise<Live2DInstance> {
   const {
     width = 280,
     height = 300,
@@ -48,7 +62,10 @@ export async function initLive2DModel(config: ModelConfig) {
     app.stage.addChild(model)
 
     // 注册交互事件
-    model.registerInteraction(app.renderer.events)
+    const renderer = app.renderer as ExtendedRenderer
+    if (renderer.events) {
+      model.registerInteraction(renderer.events)
+    }
 
     // 添加拖拽功能
     model.buttonMode = true
