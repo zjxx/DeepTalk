@@ -33,3 +33,5 @@ logs/
 # System Files
 .DS_Store
 Thumbs.db 
+
+frontend/package-lock.json
