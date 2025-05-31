@@ -15,19 +15,27 @@
             </v-chip>
           </v-card-text>
         </v-card>
-      </v-col>
-
-      <!-- 视频区域 -->
-      <v-col cols="12" md="6" class="video-column">
-        <v-card class="video-card">
-          <div class="video-placeholder">
-            <v-avatar size="80" color="primary" class="mb-3">
-              <span class="text-h4">{{ userInitials }}</span>
-            </v-avatar>
-            <div class="text-h6">您 ({{ userModel.email || '用户' }})</div>
-            <div class="status" :class="{ 'status-active': isUserSpeaking }">{{ isUserSpeaking ? '正在发言' : '等待中' }}</div>
-          </div>
+      </v-col>      <!-- Live2D模型区域 -->
+      <v-col cols="12" md="6" class="model-column">
+        <v-card class="model-card">
+          <v-card-title class="text-center">
+            
+            <!-- 您 ({{ userModel.email || '用户' }}) -->
+          </v-card-title>
+          <v-card-text class="d-flex justify-center">
+            
+            <div class="live2d-user-container">
+              <canvas id="live2d-canvas" class="live2d-canvas"></canvas>
+            </div>
+          </v-card-text>
+          
           <v-card-actions class="d-flex justify-center">
+            <v-chip 
+              :color="isUserSpeaking ? 'success' : 'grey'" 
+              class="mr-2"
+            >
+              {{ isUserSpeaking ? '正在发言' : '等待中' }}
+            </v-chip>
             <v-btn
               color="error"
               variant="outlined"
@@ -38,26 +46,34 @@
         </v-card>
       </v-col>
 
-      <v-col cols="12" md="6" class="video-column">
-        <v-card class="video-card">
-          <div class="video-placeholder">
-            <v-avatar size="80" color="secondary" class="mb-3">
-              <span class="text-h4" v-if="matchType === '真人对战'">{{ partnerInitials }}</span>
-              <v-icon size="40" v-else>mdi-robot</v-icon>
-            </v-avatar>
-            <div class="text-h6">{{ matchType === '真人对战' ? '对方' : 'AI助手' }}</div>
-            <div class="status" :class="{ 'status-active': isPartnerSpeaking }">{{ isPartnerSpeaking ? '正在发言' : '等待中' }}</div>
-          </div>
-          <v-card-actions v-if="matchType === '真人对战'" class="d-flex justify-center">
-            <v-btn
-              disabled
-              color="grey"
-              variant="outlined"
-              icon="mdi-volume-high"
-            ></v-btn>
-          </v-card-actions>
-        </v-card>
-      </v-col>
+  <!-- 对方Live2D模型区域 -->
+  <v-col cols="12" md="6" class="model-column">
+    <v-card class="model-card">
+      <v-card-title class="text-center">
+        {{ matchType === '真人对战' ? '对方' : 'AI助手' }}
+      </v-card-title>
+      <v-card-text class="d-flex justify-center">
+        <div class="live2d-partner-container">
+          <canvas id="live2d-partner-canvas" class="live2d-canvas"></canvas>
+        </div>
+      </v-card-text>
+      <v-card-actions class="d-flex justify-center">
+        <v-chip 
+          :color="isPartnerSpeaking ? 'success' : 'grey'" 
+          class="mr-2"
+        >
+          {{ isPartnerSpeaking ? '正在发言' : '等待中' }}
+        </v-chip>
+        <v-btn
+          v-if="matchType === '真人对战'"
+          disabled
+          color="grey"
+          variant="outlined"
+          icon="mdi-volume-high"
+        ></v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-col>
 
       <!-- 对话提示区域 -->
       <v-col cols="12">
@@ -139,8 +155,16 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
-import userModel from '../models/user'
-
+//import userModel from '../models/user'
+// import Live2DModel from '../components/Live2DModel.vue'
+import { initLive2DModel } from '../utils/live2d'
+// 声明全局变量
+declare global {
+  interface Window {
+    PIXI: typeof import('pixi.js')
+    Live2DModel: typeof import('pixi-live2d-display').Live2DModel
+  }
+}
 const router = useRouter()
 
 // 状态变量
@@ -185,16 +209,9 @@ const transcriptMessages = ref<TranscriptMessage[]>([
 ])
 
 // 用户首字母
-const userInitials = computed(() => {
-  const email = userModel.email || ''
-  return email.charAt(0).toUpperCase()
-})
 
 // 对方首字母（随机生成）
-const partnerInitials = computed(() => {
-  const names = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'J', 'K']
-  return names[Math.floor(Math.random() * names.length)]
-})
+// 已移除未使用的 partnerInitials 变量
 
 // 计时器
 let timerInterval: number | null = null
@@ -285,10 +302,91 @@ const endMatch = () => {
     router.push('/profile')
   }
 }
+// 初始化用户模型（Miku）
+const initUserLive2D = async () => {
+  try {
+    // 临时修改全局canvas ID，让initLive2DModel使用用户canvas
+    const userCanvas = document.getElementById('live2d-user-canvas') as HTMLCanvasElement
+    const originalCanvas = document.getElementById('live2d-canvas')
+    
+    if (userCanvas && originalCanvas) {
+      // 暂时隐藏原canvas，让函数找到用户canvas
+      originalCanvas.id = 'temp-canvas'
+      userCanvas.id = 'live2d-canvas'
+    }
+    
+    await initLive2DModel({
+      modelPath: '/live2d/miku/runtime/miku.model3.json',
+      width: 400,
+      height: 400,
+      transparent: true,
+      position: {
+        scale: 0.8,
+        x: 0.5,
+        y: 0.5
+      }
+    })
+    
+    // 恢复ID
+    if (userCanvas && originalCanvas) {
+      userCanvas.id = 'live2d-user-canvas'
+      originalCanvas.id = 'live2d-canvas'
+    }
+    
+    console.log('用户Live2D模型（Miku）初始化成功')
+  } catch (error) {
+    console.error('初始化用户Live2D模型失败:', error)
+  }
+}
 
-onMounted(() => {
-  // 页面加载时的逻辑
+// 初始化对方模型（Mahiro）
+const initPartnerLive2D = async () => {
+  try {
+    // 临时修改canvas ID，让initLive2DModel使用对方canvas
+    const partnerCanvas = document.getElementById('live2d-partner-canvas') as HTMLCanvasElement
+    const originalCanvas = document.getElementById('live2d-canvas')
+    
+    if (partnerCanvas && originalCanvas) {
+      originalCanvas.id = 'temp-canvas'
+      partnerCanvas.id = 'live2d-canvas'
+    }
+    
+    await initLive2DModel({
+      modelPath: '/live2d/Mahiro_GG/Mahiro_V1.model3.json',
+      width: 400,
+      height: 400,
+      transparent: true,
+      position: {
+        scale: 0.25,
+        x: 0.5,
+        y: 0.5
+      }
+    })
+    
+    // 恢复ID
+    if (partnerCanvas && originalCanvas) {
+      partnerCanvas.id = 'live2d-partner-canvas'
+      originalCanvas.id = 'live2d-canvas'
+    }
+    
+    console.log('对方Live2D模型（Mahiro）初始化成功')
+  } catch (error) {
+    console.error('初始化对方Live2D模型失败:', error)
+  }
+}
+  
+
+onMounted(async () => {
+  // 初始化用户的Live2D模型
+  // 等待DOM渲染
+  await new Promise(resolve => setTimeout(resolve, 200))
+  
+  // 顺序初始化两个模型（避免ID冲突）
+  await initUserLive2D()
+  await new Promise(resolve => setTimeout(resolve, 500)) // 等待一段时间
+  await initPartnerLive2D()
 })
+
 
 onBeforeUnmount(() => {
   // 清除定时器
@@ -376,5 +474,56 @@ onBeforeUnmount(() => {
   margin: 4px 0;
   padding: 8px;
   border-radius: 8px;
+}
+.live2d-user-container {
+  width: 400px;
+  height: 400px;
+  position: relative;
+  background-color: transparent;
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #2196F3; /* 蓝色边框表示用户 */
+  box-shadow: 0 4px 12px rgba(33, 150, 243, 0.2);
+}
+
+.live2d-partner-container {
+  width: 400px;
+  height: 400px;
+  position: relative;
+  background-color: transparent;
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #f06292; /* 粉色边框表示对方 */
+  box-shadow: 0 4px 12px rgba(240, 98, 146, 0.2);
+}
+
+.live2d-canvas {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+}
+
+.model-card {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 500px; /* 增加高度 */
+}
+
+/* 确保card-text能够正确容纳模型 */
+.model-card .v-card-text {
+  flex-grow: 1;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  padding: 20px !important;
 }
 </style>
