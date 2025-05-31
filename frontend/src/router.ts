@@ -3,7 +3,6 @@ import Login from './views/Login.vue'
 import Register from './views/Register.vue'
 import Profile from './views/Profile.vue'
 import ForgotPassword from './views/ForgotPassword.vue'
-import Live2DView from './views/Live2DView.vue'
 import Versus from './views/Versus.vue'
 // 你可以后续添加Profile等页面
 
