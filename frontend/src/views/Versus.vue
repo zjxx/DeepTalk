@@ -15,73 +15,72 @@
             </v-chip>
           </v-card-text>
         </v-card>
-      </v-col>      <!-- Live2D模型区域 -->
-      <v-col cols="12" md="6" class="model-column">
-        <v-card class="model-card">
-          <v-card-title class="text-center">
-            
-            <!-- 您 ({{ userModel.email || '用户' }}) -->
+      </v-col>
+
+      <!-- 共享的 PIXI Canvas 容器 -->
+      <v-col cols="12" class="pixi-canvas-wrapper-col">
+        <div class="pixi-canvas-container" ref="pixiContainerRef">
+          <!-- PIXI Canvas 将被添加到这里 -->
+          <!-- Live2DModel 组件现在是这个共享Canvas的逻辑子元素 -->
+          <!-- 它们的实际渲染由PIXI控制，定位通过initialX/Y -->
+          <Live2DModel 
+            v-if="pixiAppInstance"
+            ref="userModelRef" 
+            :app="pixiAppInstance as PIXI.Application"
+            type="user"
+            modelPath="/live2d/miku/runtime/miku.model3.json"
+            :initialX="canvasWidth * 0.25" 
+            :initialY="canvasHeight * 0.5"
+            :scale="0.22" 
+          />
+          <Live2DModel 
+            v-if="pixiAppInstance"
+            ref="partnerModelRef"
+            :app="pixiAppInstance as PIXI.Application"
+            type="partner"
+            modelPath="/live2d/miku/runtime/miku.model3.json" 
+            :initialX="canvasWidth * 0.75" 
+            :initialY="canvasHeight * 0.5"
+            :scale="0.22"
+          />
+        </div>
+      </v-col>
+
+      <!-- 用户模型信息卡片 (视觉上覆盖在共享Canvas的左侧) -->
+      <v-col cols="12" md="6" class="model-column model-column-overlay">
+        <v-card class="model-card transparent-card">
+          <v-card-title class="text-center white-text">
+            您 ({{ userModelComputed.email || '用户' }})
           </v-card-title>
-          <v-card-text class="d-flex justify-center">
-            
-            <Live2DModel
-              type="user"
-              modelPath="/live2d/miku/runtime/miku.model3.json"
-              :width="400"
-              :height="400"
-              :scale="0.8"
-            />
+          <v-card-text class="d-flex justify-center live2d-placeholder-area">
+            <!-- 此处为空，因为模型由共享Canvas渲染 -->
           </v-card-text>
-          
           <v-card-actions class="d-flex justify-center">
-            <v-chip 
-              :color="isUserSpeaking ? 'success' : 'grey'" 
-              class="mr-2"
-            >
+            <v-chip :color="isUserSpeaking ? 'success' : 'grey'" class="mr-2">
               {{ isUserSpeaking ? '正在发言' : '等待中' }}
             </v-chip>
-            <v-btn
-              color="error"
-              variant="outlined"
-              :icon="userMuted ? 'mdi-microphone-off' : 'mdi-microphone'"
-              @click="toggleMute('user')"
-            ></v-btn>
+            <v-btn color="primary" variant="outlined" :icon="userMuted ? 'mdi-microphone-off' : 'mdi-microphone'" @click="toggleMute('user')"></v-btn>
           </v-card-actions>
         </v-card>
       </v-col>
 
-  <!-- 对方Live2D模型区域 -->
-  <v-col cols="12" md="6" class="model-column">
-    <v-card class="model-card">
-      <v-card-title class="text-center">
-        {{ matchType === '真人对战' ? '对方' : 'AI助手' }}
-      </v-card-title>
-      <v-card-text class="d-flex justify-center">
-        <Live2DModel
-          type="partner"
-          modelPath="/live2d/Mahiro_GG/Mahiro_V1.model3.json"
-          :width="400"
-          :height="400"
-          :scale="0.25"
-        />
-      </v-card-text>
-      <v-card-actions class="d-flex justify-center">
-        <v-chip 
-          :color="isPartnerSpeaking ? 'success' : 'grey'" 
-          class="mr-2"
-        >
-          {{ isPartnerSpeaking ? '正在发言' : '等待中' }}
-        </v-chip>
-        <v-btn
-          v-if="matchType === '真人对战'"
-          disabled
-          color="grey"
-          variant="outlined"
-          icon="mdi-volume-high"
-        ></v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-col>
+      <!-- 对方模型信息卡片 (视觉上覆盖在共享Canvas的右侧) -->
+      <v-col cols="12" md="6" class="model-column model-column-overlay">
+        <v-card class="model-card transparent-card">
+          <v-card-title class="text-center white-text">
+            {{ matchType === '真人对战' ? '对方' : 'AI助手' }}
+          </v-card-title>
+          <v-card-text class="d-flex justify-center live2d-placeholder-area">
+            <!-- 此处为空，因为模型由共享Canvas渲染 -->
+          </v-card-text>
+          <v-card-actions class="d-flex justify-center">
+            <v-chip :color="isPartnerSpeaking ? 'success' : 'grey'" class="mr-2">
+              {{ isPartnerSpeaking ? '正在发言' : '等待中' }}
+            </v-chip>
+            <v-btn v-if="matchType === '真人对战'" disabled color="grey" variant="outlined" icon="mdi-volume-high"></v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-col>
 
       <!-- 对话提示区域 -->
       <v-col cols="12">
@@ -161,20 +160,34 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import Live2DModel from '../components/Live2DModel.vue'
+import * as PIXI from 'pixi.js'
+
+// 为子组件引用创建类型别名
+type Live2DModelComponent = InstanceType<typeof Live2DModel>
 
 const router = useRouter()
 
+// PIXI App refs and state
+const pixiContainerRef = ref<HTMLDivElement | null>(null)
+const pixiAppInstance = ref<PIXI.Application | null>(null)
+const userModelRef = ref<Live2DModelComponent | null>(null)
+const partnerModelRef = ref<Live2DModelComponent | null>(null)
+let resizeObserver: ResizeObserver | null = null
+const canvasWidth = ref(0)
+const canvasHeight = ref(0)
+
 // 状态变量
 const matchStarted = ref(false)
-const remainingTime = ref(300) // 5分钟
+const remainingTime = ref(300)
 const userMuted = ref(false)
 const isUserSpeaking = ref(false)
 const isPartnerSpeaking = ref(false)
 const matchType = ref('真人对战')
 const difficultyLevel = ref('中级')
+const userModelComputed = computed(() => ({ email: 'test@example.com' }))
 
 // 对战内容
 const topics = ref([
@@ -203,7 +216,6 @@ interface TranscriptMessage {
   text: string
 }
 const transcriptMessages = ref<TranscriptMessage[]>([
-  // 示例消息，实际使用时应该是空数组
   // { isUser: true, text: 'I believe online education provides flexibility for students.' },
   // { isUser: false, text: 'That\'s true, but it lacks the social interaction of traditional classrooms.' }
 ])
@@ -222,8 +234,7 @@ const formatTime = (seconds: number): string => {
 const startMatch = () => {
   matchStarted.value = true
   startTimer()
-  
-  // 模拟数据 - 在实际项目中应通过WebSocket等获取实时数据
+  userModelRef.value?.playMotion('Flick', undefined)
   setTimeout(() => {
     isUserSpeaking.value = true
   }, 2000)
@@ -234,6 +245,7 @@ const startMatch = () => {
       isUser: true, 
       text: 'I think this topic is really interesting because it affects all of us in our daily lives.'
     })
+    partnerModelRef.value?.setExpression('F01')
     setTimeout(() => {
       isPartnerSpeaking.value = true
       setTimeout(() => {
@@ -264,6 +276,11 @@ const startTimer = () => {
 const toggleMute = (who: 'user' | 'partner') => {
   if (who === 'user') {
     userMuted.value = !userMuted.value
+    if (userMuted.value) {
+      userModelRef.value?.setExpression('MouthOff')
+    } else {
+      userModelRef.value?.setExpression('MouthOn')
+    }
   }
 }
 
@@ -276,7 +293,6 @@ const nextTopic = () => {
 
 // 更改对战类型
 const changeMatchType = () => {
-  // 这里可以重置相关状态或加载不同的内容
   transcriptMessages.value = []
   isPartnerSpeaking.value = false
   isUserSpeaking.value = false
@@ -298,14 +314,51 @@ const endMatch = () => {
   }
 }
 
-onMounted(() => {
-  // 不再需要手动初始化 Live2D 模型
+// 恢复 PIXI App 初始化和管理逻辑
+onMounted(async () => {
+  await nextTick()
+  if (pixiContainerRef.value) {
+    canvasWidth.value = pixiContainerRef.value.clientWidth
+    canvasHeight.value = pixiContainerRef.value.clientHeight
+
+    const app = new PIXI.Application({
+      width: canvasWidth.value,
+      height: canvasHeight.value,
+      backgroundAlpha: 0,
+      autoStart: true,
+      resolution: window.devicePixelRatio || 1,
+      autoDensity: true,
+    })
+
+    pixiContainerRef.value.appendChild(app.view as unknown as Node)
+    pixiAppInstance.value = app
+
+    resizeObserver = new ResizeObserver(entries => {
+      for (let entry of entries) {
+        const { width, height } = entry.contentRect
+        if (pixiAppInstance.value) {
+          pixiAppInstance.value.renderer.resize(width, height)
+          canvasWidth.value = width
+          canvasHeight.value = height
+        }
+      }
+    })
+    resizeObserver.observe(pixiContainerRef.value)
+  }
 })
 
 onBeforeUnmount(() => {
-  // 清除定时器
+  if (resizeObserver && pixiContainerRef.value) {
+    resizeObserver.unobserve(pixiContainerRef.value)
+    resizeObserver = null
+  }
+  if (pixiAppInstance.value) {
+    pixiAppInstance.value.destroy(true, { children: true, texture: true })
+    pixiAppInstance.value = null
+  }
   if (timerInterval) {
     clearInterval(timerInterval)
+    timerInterval = null
   }
 })
 </script>
@@ -316,37 +369,47 @@ onBeforeUnmount(() => {
   padding-bottom: 16px;
 }
 
-.video-column {
-  height: 300px;
-  display: flex;
+/* 新增：包裹PIXI Canvas的列的样式 */
+.pixi-canvas-wrapper-col {
+  padding-bottom: 0 !important;
+  margin-bottom: -70px;
+  z-index: 0;
 }
 
-.video-card {
+.pixi-canvas-container {
+  width: 100%;
+  height: 480px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 新增：用于覆盖在Canvas上的模型信息列 */
+.model-column-overlay {
+  position: relative;
+  z-index: 1;
+}
+
+.model-card {
   width: 100%;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  min-height: 450px;
 }
 
-.video-placeholder {
+.transparent-card {
+  background-color: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.white-text .v-card-title {
+  color: white !important;
+  text-shadow: 1px 1px 2px black;
+}
+
+.live2d-placeholder-area {
   flex-grow: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background-color: #f5f5f5;
-  border-radius: 8px;
-}
-
-.status {
-  margin-top: 8px;
-  font-size: 14px;
-  color: #666;
-}
-
-.status-active {
-  color: #4caf50;
-  font-weight: bold;
+  min-height: 300px;
 }
 
 .prompt-card {
@@ -362,7 +425,7 @@ onBeforeUnmount(() => {
 }
 
 .match-type-select, .difficulty-select {
-  width: 120px;
+  min-width: 120px;
 }
 
 .transcript-container {
@@ -389,30 +452,9 @@ onBeforeUnmount(() => {
   padding: 8px;
   border-radius: 8px;
 }
-.live2d-user-container,
-.live2d-partner-container {
-  display: none; /* 隐藏旧容器，因为现在使用组件 */
-}
 
-.live2d-canvas {
-  width: 100%;
-  height: 100%;
-  border-radius: 8px;
-}
-
-.model-card {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  min-height: 500px; /* 增加高度 */
-}
-
-/* 确保card-text能够正确容纳模型 */
-.model-card .v-card-text {
-  flex-grow: 1;
-  display: flex !important;
-  justify-content: center !important;
-  align-items: center !important;
-  padding: 20px !important;
+/* 隐藏旧的、不再直接包含Live2DModel组件的列 */
+.model-column:not(.model-column-overlay) {
+  display: none !important;
 }
 </style>

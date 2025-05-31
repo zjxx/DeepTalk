@@ -36,7 +36,7 @@ const routes = [
   {
     path: '/live2d',
     name: 'Live2D',
-    component: Live2DView,
+    component: Versus,
     meta: { requiresAuth: false }
   },
   // { path: '/profile', component: () => import('./views/Profile.vue') },
