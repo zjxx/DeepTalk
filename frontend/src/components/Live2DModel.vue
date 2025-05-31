@@ -1,269 +1,125 @@
 <template>
-  <div ref="live2dContainer" class="live2d-container" :style="containerStyle">
-    <!-- 模型加载状态 -->
-    <div v-if="loading" class="loading-overlay">
-      <v-progress-circular indeterminate color="primary"></v-progress-circular>
-      <div class="mt-2">加载模型中...</div>
-    </div>
-    
-    <!-- 模型加载失败时的备用头像 -->
-    <div v-else-if="!modelLoaded" class="fallback-avatar">
-      <v-avatar size="80" :color="getAvatarColor()" class="mb-3">
-        <span class="text-h4">{{ getAvatarInitial() }}</span>
-      </v-avatar>
-      <div class="text-body-2">{{ characterType === 'ai' ? 'AI助手' : '模型加载失败' }}</div>
-    </div>
-    
-    <!-- Live2D模型容器 -->
-    <canvas 
-      v-else
-      ref="live2dCanvas" 
-      class="live2d-canvas"
-      :width="width"
-      :height="height"
-    ></canvas>
-    
-    <!-- 说话状态指示器 -->
-    <div v-if="modelLoaded && isSpeaking" class="speaking-indicator">
-      <v-icon color="success" class="speaking-icon">mdi-microphone</v-icon>
-    </div>
-  </div>
+  <!-- Canvas 不再由这个组件创建和管理 -->
+  <!-- 这个 div 可以用于定位或添加特定模型的非 Pixi 元素 -->
+  <div class="live2d-model-wrapper" :class="containerClass" />
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
+import { onMounted, onBeforeUnmount, computed, ref, watch } from 'vue';
+import type { Application as PIXIApplication, DisplayObject } from 'pixi.js';
+import { initLive2DModel } from '../utils/live2d';
+import type { Live2DModel as Live2DModelType } from 'pixi-live2d-display';
+
+// 声明全局变量
+declare global {
+  interface Window {
+    PIXI: typeof import('pixi.js')
+    Live2DModel: typeof import('pixi-live2d-display').Live2DModel
+  }
+}
 
 interface Props {
-  modelUrl?: string
-  width?: number
-  height?: number
-  isSpeaking?: boolean
-  characterType?: 'user' | 'partner' | 'ai'
+  app: PIXIApplication; // 接收 PIXI Application
+  modelPath?: string;
+  initialX?: number;    // 新增: 初始位置 X
+  initialY?: number;    // 新增: 初始位置 Y
+  scale?: number;
+  type?: 'user' | 'partner';
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  modelUrl: '',
-  width: 280,
-  height: 280,
-  isSpeaking: false,
-  characterType: 'user'
-})
+  modelPath: '/live2d/miku/runtime/miku.model3.json',
+  initialX: 0,
+  initialY: 0,
+  scale: 0.25,
+  type: 'user',
+});
 
-const live2dContainer = ref<HTMLDivElement>()
-const live2dCanvas = ref<HTMLCanvasElement>()
-const loading = ref(true)
-const modelLoaded = ref(false)
+const containerClass = computed(() => ({
+  'live2d-user-model': props.type === 'user',
+  'live2d-partner-model': props.type === 'partner',
+  // 添加一个通用类名方便样式控制
+  'live2d-model-instance': true 
+}));
 
-// 计算容器样式
-const containerStyle = computed(() => ({
-  width: `${props.width}px`,
-  height: `${props.height}px`
-}))
-
-// 获取头像颜色
-const getAvatarColor = (): string => {
-  const colors = {
-    user: 'primary',
-    partner: 'secondary', 
-    ai: 'success'
-  }
-  return colors[props.characterType] || 'primary'
-}
-
-// 获取头像首字母
-const getAvatarInitial = (): string => {
-  const initials = {
-    user: 'U',
-    partner: 'P',
-    ai: 'AI'
-  }
-  return initials[props.characterType] || 'U'
-}
-
-// 获取模型URL
-const getModelUrl = (): string => {
-  if (props.modelUrl) return props.modelUrl
-  
-  const defaultUrls = {
-    user: '/models/user/user.model3.json',
-    partner: '/models/partner/partner.model3.json',
-    ai: '/models/ai/ai.model3.json'
-  }
-  return defaultUrls[props.characterType] || defaultUrls.user
-}
-
-// 初始化Live2D模型
-const initLive2D = async () => {
-  loading.value = true
-  modelLoaded.value = false
-  
-  try {
-    // 检查模型文件是否存在
-    const modelUrl = getModelUrl()
-    const response = await fetch(modelUrl)
-    
-    if (!response.ok) {
-      throw new Error(`模型文件不存在: ${modelUrl}`)
-    }
-    
-    // TODO: 这里集成真实的Live2D库
-    // 目前使用模拟实现
-    await simulateModelLoading()
-    
-    console.log(`${props.characterType} 模型加载成功:`, modelUrl)
-    modelLoaded.value = true
-  } catch (error) {
-    console.warn(`Live2D模型加载失败:`, error)
-    modelLoaded.value = false
-  } finally {
-    loading.value = false
-  }
-}
-
-// 模拟模型加载过程
-const simulateModelLoading = async (): Promise<void> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      // 模拟绘制简单的模型替代
-      if (live2dCanvas.value) {
-        const ctx = live2dCanvas.value.getContext('2d')
-        if (ctx) {
-          // 清除画布
-          ctx.clearRect(0, 0, props.width, props.height)
-          
-          // 绘制简单的人物轮廓
-          const centerX = props.width / 2
-          const centerY = props.height / 2
-          
-          // 绘制头部
-          ctx.fillStyle = getAvatarColor() === 'primary' ? '#2196F3' : 
-                          getAvatarColor() === 'secondary' ? '#FF9800' : '#4CAF50'
-          ctx.beginPath()
-          ctx.arc(centerX, centerY - 20, 40, 0, 2 * Math.PI)
-          ctx.fill()
-          
-          // 绘制身体
-          ctx.fillStyle = '#E0E0E0'
-          ctx.fillRect(centerX - 30, centerY + 20, 60, 80)
-          
-          // 绘制文字
-          ctx.fillStyle = '#FFFFFF'
-          ctx.font = '16px sans-serif'
-          ctx.textAlign = 'center'
-          ctx.fillText(getAvatarInitial(), centerX, centerY - 15)
-        }
-      }
-      resolve()
-    }, 1500) // 模拟1.5秒加载时间
-  })
-}
-
-// 播放说话动画
-const playAnimation = (animationType: 'idle' | 'speak' | 'interact') => {
-  if (!modelLoaded.value || !live2dCanvas.value) return
-  
-  const ctx = live2dCanvas.value.getContext('2d')
-  if (!ctx) return
-  
-  // 简单的动画效果
-  if (animationType === 'speak') {
-    // 说话时添加一些简单的效果
-    const centerX = props.width / 2
-    const centerY = props.height / 2
-    
-    ctx.strokeStyle = '#4CAF50'
-    ctx.lineWidth = 3
-    ctx.beginPath()
-    ctx.arc(centerX, centerY - 20, 50, 0, 2 * Math.PI)
-    ctx.stroke()
-  }
-  
-  console.log(`${props.characterType} 播放动画:`, animationType)
-}
-
-// 监听说话状态变化
-watch(() => props.isSpeaking, (newValue) => {
-  if (modelLoaded.value) {
-    playAnimation(newValue ? 'speak' : 'idle')
-  }
-})
-
-// 监听模型URL变化
-watch(() => [props.modelUrl, props.characterType], () => {
-  initLive2D()
-}, { immediate: false })
+const live2dModelInstance = ref<Live2DModelType | null>(null);
 
 onMounted(async () => {
-  await nextTick()
-  initLive2D()
-})
+  if (props.app && props.app.stage) { // 确保 app 和 app.stage 存在
+    try {
+      const model = await initLive2DModel({
+        app: props.app,
+        modelPath: props.modelPath,
+        position: {
+          scale: props.scale,
+          x: props.initialX,
+          y: props.initialY,
+        }
+      });
+      live2dModelInstance.value = model;
+    } catch (error) {
+      console.error(`初始化 ${props.type} Live2D 模型失败:`, error);
+    }
+  }
+});
 
 onBeforeUnmount(() => {
-  // 清理资源
-  console.log('清理Live2D资源')
-})
+  if (live2dModelInstance.value) {
+    if (props.app && props.app.stage) { // 确保 app 和 app.stage 仍然存在
+        props.app.stage.removeChild(live2dModelInstance.value as unknown as DisplayObject);
+    }
+    live2dModelInstance.value.destroy(); // 销毁模型自身资源
+    live2dModelInstance.value = null;
+  }
+});
+
+watch(() => props.scale, (newScale) => {
+  if (live2dModelInstance.value && newScale !== undefined) {
+    live2dModelInstance.value.scale.set(newScale);
+  }
+});
+
+watch(() => [props.initialX, props.initialY], ([newX, newY]) => {
+  if (live2dModelInstance.value) {
+    if (newX !== undefined) live2dModelInstance.value.x = newX;
+    if (newY !== undefined) live2dModelInstance.value.y = newY;
+  }
+});
+
+// 暴露方法给父组件，用于独立控制，例如播放动画
+const playMotion = (motionGroup: string, motionIndex?: number) => {
+  if (live2dModelInstance.value) {
+    live2dModelInstance.value.motion(motionGroup, motionIndex);
+  }
+};
+
+const setExpression = (expressionId?: string | number) => {
+  if (live2dModelInstance.value) {
+    live2dModelInstance.value.expression(expressionId);
+  }
+};
+
+defineExpose({
+  playMotion,
+  setExpression,
+  getModel: () => live2dModelInstance.value // 可以暴露模型实例本身以进行更细致的控制
+});
+
 </script>
 
 <style scoped>
-.live2d-container {
-  position: relative;
-  border-radius: 8px;
-  overflow: hidden;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+.live2d-model-wrapper {
+  /* 这个 div 本身不显示，只是一个逻辑包装器或用于非 Pixi 的 DOM 元素 */
+  position: absolute; /* 如果需要相对于父元素进行定位控制 */
+  /* width: 0; height: 0; */ /* 避免干扰布局 */
 }
 
-.loading-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background-color: rgba(245, 245, 245, 0.9);
-  z-index: 10;
+/* 可以为不同类型的模型添加一些特定的占位符样式（如果需要） */
+.live2d-user-model {
+  /* background-color: rgba(0, 0, 255, 0.1); */ /* 调试用 */
 }
 
-.fallback-avatar {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-.live2d-canvas {
-  border-radius: 8px;
-}
-
-.speaking-indicator {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background-color: rgba(76, 175, 80, 0.9);
-  border-radius: 50%;
-  padding: 8px;
-  z-index: 5;
-}
-
-.speaking-icon {
-  animation: pulse 1s infinite;
-}
-
-@keyframes pulse {
-  0% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.2);
-  }
-  100% {
-    transform: scale(1);
-  }
+.live2d-partner-model {
+  /* background-color: rgba(255, 0, 0, 0.1); */ /* 调试用 */
 }
 </style>

@@ -24,9 +24,13 @@
           </v-card-title>
           <v-card-text class="d-flex justify-center">
             
-            <div class="live2d-user-container">
-              <canvas id="live2d-canvas" class="live2d-canvas"></canvas>
-            </div>
+            <Live2DModel
+              type="user"
+              modelPath="/live2d/miku/runtime/miku.model3.json"
+              :width="400"
+              :height="400"
+              :scale="0.8"
+            />
           </v-card-text>
           
           <v-card-actions class="d-flex justify-center">
@@ -53,9 +57,13 @@
         {{ matchType === '真人对战' ? '对方' : 'AI助手' }}
       </v-card-title>
       <v-card-text class="d-flex justify-center">
-        <div class="live2d-partner-container">
-          <canvas id="live2d-partner-canvas" class="live2d-canvas"></canvas>
-        </div>
+        <Live2DModel
+          type="partner"
+          modelPath="/live2d/Mahiro_GG/Mahiro_V1.model3.json"
+          :width="400"
+          :height="400"
+          :scale="0.25"
+        />
       </v-card-text>
       <v-card-actions class="d-flex justify-center">
         <v-chip 
@@ -155,16 +163,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
-//import userModel from '../models/user'
-// import Live2DModel from '../components/Live2DModel.vue'
-import { initLive2DModel } from '../utils/live2d'
-// 声明全局变量
-declare global {
-  interface Window {
-    PIXI: typeof import('pixi.js')
-    Live2DModel: typeof import('pixi-live2d-display').Live2DModel
-  }
-}
+import Live2DModel from '../components/Live2DModel.vue'
+
 const router = useRouter()
 
 // 状态变量
@@ -207,11 +207,6 @@ const transcriptMessages = ref<TranscriptMessage[]>([
   // { isUser: true, text: 'I believe online education provides flexibility for students.' },
   // { isUser: false, text: 'That\'s true, but it lacks the social interaction of traditional classrooms.' }
 ])
-
-// 用户首字母
-
-// 对方首字母（随机生成）
-// 已移除未使用的 partnerInitials 变量
 
 // 计时器
 let timerInterval: number | null = null
@@ -302,91 +297,10 @@ const endMatch = () => {
     router.push('/profile')
   }
 }
-// 初始化用户模型（Miku）
-const initUserLive2D = async () => {
-  try {
-    // 临时修改全局canvas ID，让initLive2DModel使用用户canvas
-    const userCanvas = document.getElementById('live2d-user-canvas') as HTMLCanvasElement
-    const originalCanvas = document.getElementById('live2d-canvas')
-    
-    if (userCanvas && originalCanvas) {
-      // 暂时隐藏原canvas，让函数找到用户canvas
-      originalCanvas.id = 'temp-canvas'
-      userCanvas.id = 'live2d-canvas'
-    }
-    
-    await initLive2DModel({
-      modelPath: '/live2d/miku/runtime/miku.model3.json',
-      width: 400,
-      height: 400,
-      transparent: true,
-      position: {
-        scale: 0.8,
-        x: 0.5,
-        y: 0.5
-      }
-    })
-    
-    // 恢复ID
-    if (userCanvas && originalCanvas) {
-      userCanvas.id = 'live2d-user-canvas'
-      originalCanvas.id = 'live2d-canvas'
-    }
-    
-    console.log('用户Live2D模型（Miku）初始化成功')
-  } catch (error) {
-    console.error('初始化用户Live2D模型失败:', error)
-  }
-}
 
-// 初始化对方模型（Mahiro）
-const initPartnerLive2D = async () => {
-  try {
-    // 临时修改canvas ID，让initLive2DModel使用对方canvas
-    const partnerCanvas = document.getElementById('live2d-partner-canvas') as HTMLCanvasElement
-    const originalCanvas = document.getElementById('live2d-canvas')
-    
-    if (partnerCanvas && originalCanvas) {
-      originalCanvas.id = 'temp-canvas'
-      partnerCanvas.id = 'live2d-canvas'
-    }
-    
-    await initLive2DModel({
-      modelPath: '/live2d/Mahiro_GG/Mahiro_V1.model3.json',
-      width: 400,
-      height: 400,
-      transparent: true,
-      position: {
-        scale: 0.25,
-        x: 0.5,
-        y: 0.5
-      }
-    })
-    
-    // 恢复ID
-    if (partnerCanvas && originalCanvas) {
-      partnerCanvas.id = 'live2d-partner-canvas'
-      originalCanvas.id = 'live2d-canvas'
-    }
-    
-    console.log('对方Live2D模型（Mahiro）初始化成功')
-  } catch (error) {
-    console.error('初始化对方Live2D模型失败:', error)
-  }
-}
-  
-
-onMounted(async () => {
-  // 初始化用户的Live2D模型
-  // 等待DOM渲染
-  await new Promise(resolve => setTimeout(resolve, 200))
-  
-  // 顺序初始化两个模型（避免ID冲突）
-  await initUserLive2D()
-  await new Promise(resolve => setTimeout(resolve, 500)) // 等待一段时间
-  await initPartnerLive2D()
+onMounted(() => {
+  // 不再需要手动初始化 Live2D 模型
 })
-
 
 onBeforeUnmount(() => {
   // 清除定时器
@@ -475,34 +389,9 @@ onBeforeUnmount(() => {
   padding: 8px;
   border-radius: 8px;
 }
-.live2d-user-container {
-  width: 400px;
-  height: 400px;
-  position: relative;
-  background-color: transparent;
-  border-radius: 8px;
-  overflow: hidden;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid #2196F3; /* 蓝色边框表示用户 */
-  box-shadow: 0 4px 12px rgba(33, 150, 243, 0.2);
-}
-
+.live2d-user-container,
 .live2d-partner-container {
-  width: 400px;
-  height: 400px;
-  position: relative;
-  background-color: transparent;
-  border-radius: 8px;
-  overflow: hidden;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid #f06292; /* 粉色边框表示对方 */
-  box-shadow: 0 4px 12px rgba(240, 98, 146, 0.2);
+  display: none; /* 隐藏旧容器，因为现在使用组件 */
 }
 
 .live2d-canvas {
