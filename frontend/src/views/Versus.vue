@@ -1,9 +1,9 @@
 <template>
   <v-container fluid class="versus-container">
-    <v-row>
+    <v-row class="versus-row">
       <!-- 顶部信息栏 -->
-      <v-col cols="12" class="py-2">
-        <v-card class="mb-4">
+      <v-col cols="12" class="py-1">
+        <v-card class="mb-2">
           <v-card-text class="text-center">
             <div class="text-h5 mb-2">口语对战 - {{ matchType }}</div>
             <div class="text-body-1">
@@ -46,16 +46,13 @@
         </div>
       </v-col>
 
-      <!-- 用户模型信息卡片 (视觉上覆盖在共享Canvas的左侧) -->
+      <!-- 用户模型信息卡片 -->
       <v-col cols="12" md="6" class="model-column model-column-overlay">
         <v-card class="model-card transparent-card">
-          <v-card-title class="text-center white-text">
+          <v-card-title class="text-center white-text py-2">
             您 ({{ userModelComputed.email || '用户' }})
           </v-card-title>
-          <v-card-text class="d-flex justify-center live2d-placeholder-area">
-            <!-- 此处为空，因为模型由共享Canvas渲染 -->
-          </v-card-text>
-          <v-card-actions class="d-flex justify-center">
+          <v-card-actions class="d-flex justify-center py-2">
             <v-chip :color="isUserSpeaking ? 'success' : 'grey'" class="mr-2">
               {{ isUserSpeaking ? '正在发言' : '等待中' }}
             </v-chip>
@@ -64,16 +61,13 @@
         </v-card>
       </v-col>
 
-      <!-- 对方模型信息卡片 (视觉上覆盖在共享Canvas的右侧) -->
+      <!-- 对方模型信息卡片 -->
       <v-col cols="12" md="6" class="model-column model-column-overlay">
         <v-card class="model-card transparent-card">
-          <v-card-title class="text-center white-text">
+          <v-card-title class="text-center white-text py-2">
             {{ matchType === '真人对战' ? '对方' : 'AI助手' }}
           </v-card-title>
-          <v-card-text class="d-flex justify-center live2d-placeholder-area">
-            <!-- 此处为空，因为模型由共享Canvas渲染 -->
-          </v-card-text>
-          <v-card-actions class="d-flex justify-center">
+          <v-card-actions class="d-flex justify-center py-2">
             <v-chip :color="isPartnerSpeaking ? 'success' : 'grey'" class="mr-2">
               {{ isPartnerSpeaking ? '正在发言' : '等待中' }}
             </v-chip>
@@ -83,7 +77,7 @@
       </v-col>
 
       <!-- 对话提示区域 -->
-      <v-col cols="12">
+      <v-col cols="12" class="py-1">
         <v-card class="prompt-card">
           <v-card-title>
             <v-icon start color="primary" class="mr-2">mdi-text-box-outline</v-icon>
@@ -96,7 +90,7 @@
       </v-col>
 
       <!-- 控制面板 -->
-      <v-col cols="12">
+      <v-col cols="12" class="py-1">
         <v-card>
           <v-card-text class="d-flex justify-space-between align-center flex-wrap">
             <v-btn-group class="my-2">
@@ -135,7 +129,7 @@
       </v-col>
 
       <!-- 实时转写面板 -->
-      <v-col cols="12" v-if="matchStarted">
+      <v-col cols="12" v-if="matchStarted" class="py-1">
         <v-card>
           <v-card-title class="d-flex justify-space-between">
             <span>实时转写</span>
@@ -365,35 +359,39 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .versus-container {
-  padding-top: 16px;
-  padding-bottom: 16px;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  overflow: hidden;
 }
 
-/* 新增：包裹PIXI Canvas的列的样式 */
+.versus-row {
+  height: 100%;
+  overflow-y: auto;
+}
+
 .pixi-canvas-wrapper-col {
   padding-bottom: 0 !important;
-  margin-bottom: -70px;
+  margin-bottom: -40px;
   z-index: 0;
 }
 
 .pixi-canvas-container {
   width: 100%;
-  height: 480px;
+  height: 360px;
   position: relative;
   overflow: hidden;
-}
-
-/* 新增：用于覆盖在Canvas上的模型信息列 */
-.model-column-overlay {
-  position: relative;
-  z-index: 1;
 }
 
 .model-card {
   width: 100%;
   display: flex;
   flex-direction: column;
-  min-height: 450px;
+  min-height: auto;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
 }
 
 .transparent-card {
@@ -405,20 +403,16 @@ onBeforeUnmount(() => {
 .white-text .v-card-title {
   color: white !important;
   text-shadow: 1px 1px 2px black;
-}
-
-.live2d-placeholder-area {
-  flex-grow: 1;
-  min-height: 300px;
+  font-size: 1rem;
 }
 
 .prompt-card {
-  margin-top: 16px;
+  margin-top: 8px;
 }
 
 .prompt-text {
-  font-size: 18px;
-  padding: 16px;
+  font-size: 16px;
+  padding: 12px;
   background-color: #f8f9fa;
   border-radius: 8px;
   font-style: italic;
@@ -429,17 +423,18 @@ onBeforeUnmount(() => {
 }
 
 .transcript-container {
-  max-height: 200px;
+  max-height: 150px;
   overflow-y: auto;
   border: 1px solid #e0e0e0;
   border-radius: 8px;
-  padding: 16px;
+  padding: 12px;
   background-color: #fafafa;
 }
 
 .transcript-message {
-  padding: 8px 0;
+  padding: 6px 0;
   border-bottom: 1px solid #eee;
+  font-size: 14px;
 }
 
 .transcript-message:last-child {
@@ -448,13 +443,26 @@ onBeforeUnmount(() => {
 
 .user-message {
   background-color: #e3f2fd;
-  margin: 4px 0;
-  padding: 8px;
+  margin: 2px 0;
+  padding: 6px;
   border-radius: 8px;
 }
 
-/* 隐藏旧的、不再直接包含Live2DModel组件的列 */
+/* 移除旧的样式 */
 .model-column:not(.model-column-overlay) {
   display: none !important;
+}
+
+/* 调整间距 */
+.v-card-text {
+  padding: 8px !important;
+}
+
+.v-card-title {
+  padding: 8px !important;
+}
+
+.v-card-actions {
+  padding: 4px !important;
 }
 </style>
