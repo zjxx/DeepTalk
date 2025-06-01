@@ -14,4 +14,21 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-        format_sql: true 
+        format_sql: true
+  mail:
+    host: smtp.qq.com
+    port: 587
+    username: 1602113776@qq.com  # 替换为您的QQ邮箱
+    password: jhxxemecrsgjhhca    # 替换为您的QQ邮箱授权码
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+
+jwt:
+  expiration:
+    normal: 86400000  # 24小时
+    remember-me: 2592000000  # 30天 
