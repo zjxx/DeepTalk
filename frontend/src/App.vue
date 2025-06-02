@@ -158,7 +158,7 @@ export default defineComponent({
       try {
         const email = localStorage.getItem('savedEmail')
         if (email) {
-          await logoutApi(email)
+          await logoutApi()
         }
         // 清除本地存储
         localStorage.removeItem('token')
