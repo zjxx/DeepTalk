@@ -1,6 +1,6 @@
 import userModel from '../models/user'
-import { loginApi, registerApi, sendVerificationCodeApi, verifyApi } from '../api/user'
-import type { LoginRequest, LoginResponse, RegisterRequest, VerifyRequest } from '../interface/auth'
+import { loginApi, registerApi, sendVerificationCodeApi, verifyApi, sendForgotPasswordCodeApi, resetPasswordApi, logoutApi } from '../api/user'
+import type { LoginRequest, LoginResponse, RegisterRequest, VerifyRequest, ResetPasswordRequest } from '../interface/auth'
 
 // 添加自动登录函数
 export async function autoLogin(): Promise<boolean> {
@@ -8,16 +8,29 @@ export async function autoLogin(): Promise<boolean> {
     const token = localStorage.getItem('token')
     const savedEmail = localStorage.getItem('savedEmail')
     const savedPassword = localStorage.getItem('savedPassword')
+    const expiration = localStorage.getItem('expiration')
     
-    if (token && savedEmail && savedPassword) {
+    if (token && savedEmail && savedPassword && expiration) {
+      // 检查 token 是否过期
+      const expirationDate = new Date(expiration)
+      if (expirationDate < new Date()) {
+        throw new Error('Token expired')
+      }
+
       const loginRequest: LoginRequest = {
         email: savedEmail,
-        password: savedPassword
+        password: savedPassword,
+        rememberMe: true
       }
       const res: LoginResponse = await loginApi(loginRequest)
-      userModel.email = savedEmail
+      
+      // 更新用户模型
+      userModel.username = res.username
+      userModel.email = res.email
       userModel.token = res.token
+      userModel.expiration = res.expiration
       userModel.isLoggedIn = true
+      
       return true
     }
     return false
@@ -27,6 +40,7 @@ export async function autoLogin(): Promise<boolean> {
     localStorage.removeItem('token')
     localStorage.removeItem('savedEmail')
     localStorage.removeItem('savedPassword')
+    localStorage.removeItem('expiration')
     return false
   }
 }
@@ -37,24 +51,31 @@ export async function login(
 ): Promise<void> {
   try {
     console.log('登录请求数据:', request)
-    const res: LoginResponse = await loginApi(request)
+    const loginRequest: LoginRequest = {
+      ...request,
+      rememberMe
+    }
+    const res: LoginResponse = await loginApi(loginRequest)
     console.log('登录响应数据:', res)
-    userModel.email = request.email
+    
+    userModel.username = res.username
+    userModel.email = res.email
     userModel.token = res.token
+    userModel.expiration = res.expiration
     userModel.isLoggedIn = true
     
-    // 记住我逻辑
     if (rememberMe) {
       localStorage.setItem('token', res.token)
-      localStorage.setItem('sravedEmail', request.email)
+      localStorage.setItem('savedEmail', request.email)
       localStorage.setItem('savedPassword', request.password)
+      localStorage.setItem('expiration', res.expiration)
     } else {
-      // 如果取消记住我，清除保存的信息
       localStorage.setItem('token', res.token)
+      localStorage.setItem('expiration', res.expiration)
       localStorage.removeItem('savedEmail')
       localStorage.removeItem('savedPassword')
     }
-    // 跳转到个人资料页
+    
     window.location.href = '/profile'
   } catch (e) {
     alert('登录失败，请检查邮箱和密码')
@@ -72,10 +93,11 @@ export async function register(request: RegisterRequest): Promise<void> {
   }
 }
 
-export async function sendVerificationCode(email: string): Promise<void> {
+export async function sendVerificationCode(email: string, username: string, password: string): Promise<void> {
   try {
     console.log('发送验证码到:', email)
-    await sendVerificationCodeApi(email)
+    const response = await sendVerificationCodeApi(email, username, password)
+    console.log('验证码发送响应:', response)
   } catch (e) {
     alert('发送验证码失败，请稍后重试')
     throw e
@@ -86,8 +108,8 @@ export async function verify(request: VerifyRequest): Promise<void> {
   try {
     console.log('验证码验证请求:', request)
     const response = await verifyApi(request)
-    if (!response.success) {
-      alert(response.message || '验证码验证失败')
+    if (response.message !== '注册成功') {
+      alert(response.message)
       throw new Error(response.message)
     }
   } catch (e) {
@@ -96,16 +118,55 @@ export async function verify(request: VerifyRequest): Promise<void> {
   }
 }
 
-// 暂时注释掉退出登录函数
-// export async function logout(email: string): Promise<void> {
-//   try {
-//     console.log('退出登录:', email)
-//     await logoutApi(email)
-//     userModel.email = ''
-//     userModel.token = ''
-//     userModel.isLoggedIn = false
-//   } catch (e) {
-//     console.error('退出登录失败:', e)
-//     throw e
-//   }
-// } 
+export async function sendForgotPasswordCode(email: string): Promise<void> {
+  try {
+    console.log('发送重置密码验证码到:', email)
+    const response = await sendForgotPasswordCodeApi({ email })
+    console.log('重置密码验证码发送响应:', response)
+  } catch (e) {
+    alert('发送验证码失败，请稍后重试')
+    throw e
+  }
+}
+
+export async function resetPassword(request: ResetPasswordRequest): Promise<void> {
+  try {
+    console.log('重置密码请求:', request)
+    const response = await resetPasswordApi(request)
+    console.log('重置密码响应:', response)
+    if (response.message !== '密码重置成功') {
+      alert(response.message)
+      throw new Error(response.message)
+    }
+  } catch (e) {
+    alert('重置密码失败，请重试')
+    throw e
+  }
+}
+
+export async function logout(): Promise<void> {
+  try {
+    console.log('执行登出操作')
+    const response = await logoutApi()
+    console.log('登出响应:', response)
+    
+    // 清除本地存储
+    localStorage.removeItem('token')
+    localStorage.removeItem('savedEmail')
+    localStorage.removeItem('savedPassword')
+    localStorage.removeItem('expiration')
+    
+    // 重置用户模型
+    userModel.username = ''
+    userModel.email = ''
+    userModel.token = ''
+    userModel.expiration = ''
+    userModel.isLoggedIn = false
+    
+    // 重定向到登录页面
+    window.location.href = '/login'
+  } catch (e) {
+    console.error('登出失败:', e)
+    throw e
+  }
+} 

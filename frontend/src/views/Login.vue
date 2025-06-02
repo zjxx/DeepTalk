@@ -141,7 +141,8 @@ const handleLogin = async () => {
   try {
     const loginRequest: LoginRequest = {
       email: email.value,
-      password: password.value
+      password: password.value,
+      rememberMe: rememberMe.value
     }
     await login(loginRequest, rememberMe.value)
   } catch (error) {
