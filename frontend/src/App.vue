@@ -104,8 +104,9 @@
 
 <script lang="ts">
 import { defineComponent, ref, onMounted, watch } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRoute } from 'vue-router'
 import Navbar from './components/Navbar.vue'
+import { logout } from './controllers/userController'
 
 export default defineComponent({
   name: 'App',
@@ -113,7 +114,6 @@ export default defineComponent({
     Navbar,
   },
   setup() {
-    const router = useRouter()
     const route = useRoute()
     
     const showNavbar = ref(false)
@@ -135,11 +135,13 @@ export default defineComponent({
 
     onMounted(checkRoute)
 
-    const handleLogout = () => {
-      localStorage.removeItem('token')
-      localStorage.removeItem('savedEmail')
-      localStorage.removeItem('savedPassword')
-      router.push('/login')
+    const handleLogout = async () => {
+      try {
+        await logout()
+      } catch (error) {
+        console.error('登出失败:', error)
+        alert(error instanceof Error ? error.message : '登出失败，请重试')
+      }
     }
 
     return {

@@ -140,6 +140,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { sendForgotPasswordCode, verifyForgotPasswordCode, resetPassword } from '../controllers/userController'
 
 const router = useRouter()
 const currentStep = ref(1)
@@ -187,13 +188,14 @@ const handleEmailSubmit = async () => {
 
   loading.value = true
   try {
-    // TODO: 实现发送验证码的逻辑
-    console.log('发送验证码到:', email.value)
+    console.log('准备发送验证码到:', email.value)
+    await sendForgotPasswordCode(email.value)
+    console.log('验证码发送成功')
     startCountdown()
     currentStep.value = 2
   } catch (error) {
     console.error('发送验证码失败:', error)
-    alert('发送验证码失败，请稍后重试')
+    alert(error instanceof Error ? error.message : '发送验证码失败，请稍后重试')
   } finally {
     loading.value = false
   }
@@ -203,12 +205,13 @@ const sendVerificationCode = async () => {
   if (countdown.value > 0) return
 
   try {
-    // TODO: 实现重新发送验证码的逻辑
-    console.log('重新发送验证码到:', email.value)
+    console.log('准备重新发送验证码到:', email.value)
+    await sendForgotPasswordCode(email.value)
+    console.log('验证码重新发送成功')
     startCountdown()
   } catch (error) {
     console.error('发送验证码失败:', error)
-    alert('发送验证码失败，请稍后重试')
+    alert(error instanceof Error ? error.message : '发送验证码失败，请稍后重试')
   }
 }
 
@@ -220,12 +223,15 @@ const handleVerificationSubmit = async () => {
 
   validating.value = true
   try {
-    // TODO: 实现验证码验证的逻辑
     console.log('验证码:', verificationCode.value)
+    const resetToken = await verifyForgotPasswordCode(email.value, verificationCode.value)
+    console.log('获取到重置令牌:', resetToken)
+    // 保存重置令牌
+    localStorage.setItem('resetToken', resetToken)
     currentStep.value = 3
   } catch (error) {
     console.error('验证失败:', error)
-    alert('验证失败，请检查验证码')
+    alert(error instanceof Error ? error.message : '验证失败，请检查验证码')
   } finally {
     validating.value = false
   }
@@ -256,13 +262,23 @@ const handleResetPassword = async () => {
 
   loading.value = true
   try {
-    // TODO: 实现重置密码的逻辑
-    console.log('重置密码:', newPassword.value)
-    alert('密码重置成功')
+    const resetToken = localStorage.getItem('resetToken')
+    if (!resetToken) {
+      throw new Error('重置令牌已失效，请重新验证')
+    }
+
+    console.log('准备重置密码:', {
+      resetToken,
+      newPassword: newPassword.value
+    })
+    await resetPassword(resetToken, newPassword.value)
+    console.log('密码重置成功')
+    // 清除重置令牌
+    localStorage.removeItem('resetToken')
     router.push('/login')
   } catch (error) {
     console.error('重置密码失败:', error)
-    alert('重置密码失败，请稍后重试')
+    alert(error instanceof Error ? error.message : '重置密码失败，请稍后重试')
   } finally {
     loading.value = false
   }

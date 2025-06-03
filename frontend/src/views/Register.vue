@@ -126,8 +126,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { register, sendVerificationCode as sendCode, verify } from '../controllers/userController'
-import { AxiosError } from 'axios'
+import { sendVerificationCode as sendCode, verify } from '../controllers/userController'
 
 const router = useRouter()
 const username = ref('')
@@ -166,61 +165,6 @@ const startCountdown = () => {
       clearInterval(timer)
     }
   }, 1000)
-}
-
-const sendVerificationCode = async (email: string, username: string, password: string) => {
-  if (!validateEmail(email)) {
-    alert('请输入有效的邮箱地址')
-    return
-  }
-
-  try {
-    await sendCode(email, username, password)
-    startCountdown()
-  } catch (error: unknown) {
-    console.error('发送验证码失败:', error)
-    if (error instanceof AxiosError) {
-      if (error.response) {
-        console.error('响应错误:', error.response.data)
-      } else if (error.request) {
-        console.error('请求错误:', error.request)
-      } else {
-        console.error('错误信息:', error.message)
-      }
-    }
-  }
-}
-
-const validateCode = async () => {
-  if (!verificationCode.value) {
-    alert('请输入验证码')
-    return
-  }
-
-  validating.value = true
-  try {
-    await verify({
-      username: username.value,
-      password: password.value,
-      email: email.value,
-      verificationCode: verificationCode.value
-    })
-    showVerificationDialog.value = false
-    router.push('/login')
-  } catch (error: unknown) {
-    console.error('验证失败:', error)
-    if (error instanceof AxiosError) {
-      if (error.response) {
-        console.error('响应错误:', error.response.data)
-      } else if (error.request) {
-        console.error('请求错误:', error.request)
-      } else {
-        console.error('错误信息:', error.message)
-      }
-    }
-  } finally {
-    validating.value = false
-  }
 }
 
 const handleRegister = async () => {
@@ -263,25 +207,71 @@ const handleRegister = async () => {
       password: password.value,
     })
 
-    await register({
-      username: username.value,
-      email: email.value,
-      password: password.value,
-    })
-    console.log('注册请求发送成功')
-    // 注册成功后再发送验证码并显示弹窗
-    try {
-      await sendVerificationCode(email.value, username.value, password.value)
+    // 发送验证码
+    const response = await sendVerificationCode()
+    console.log('后端返回的消息:', response)
+    console.log('response类型:', typeof response)
+    console.log('response内容:', JSON.stringify(response))
+    
+    if (response.message === '验证码已发送') {
       showVerificationDialog.value = true
-    } catch (error) {
-      console.error('发送验证码失败:', error)
-      alert('注册成功，但发送验证码失败，请稍后重试')
     }
-  } catch (error) {
-    // 错误处理已经在 controller 中完成
-    console.error('注册失败:', error)
   } finally {
     loading.value = false
+  }
+}
+
+const sendVerificationCode = async () => {
+  if (!validateEmail(email.value)) {
+    alert('请输入有效的邮箱地址')
+    return { message: '请输入有效的邮箱地址' }
+  }
+
+  try {
+    const response = await sendCode(email.value, username.value, password.value)
+    if (response.message === '验证码已发送') {
+      startCountdown()
+    } else {
+      alert(response.message)
+    }
+    return response
+  } catch (error: unknown) {
+    console.error('发送验证码失败:', error)
+    if (error instanceof Error) {
+      alert(error.message)
+    } else {
+      alert('发送验证码失败，请稍后重试')
+    }
+    throw error
+  }
+}
+
+const validateCode = async () => {
+  if (!verificationCode.value) {
+    alert('请输入验证码')
+    return
+  }
+
+  validating.value = true
+  try {
+    await verify({
+      username: username.value,
+      password: password.value,
+      email: email.value,
+      verificationCode: verificationCode.value
+    })
+    showVerificationDialog.value = false
+    alert('注册成功！')
+    router.push('/login')
+  } catch (error: unknown) {
+    console.error('验证失败:', error)
+    if (error instanceof Error) {
+      alert(error.message)
+    } else {
+      alert('验证失败，请重试')
+    }
+  } finally {
+    validating.value = false
   }
 }
 
