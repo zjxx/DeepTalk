@@ -49,4 +49,4 @@ export function resetPasswordApi(request: ResetPasswordRequest): Promise<ResetPa
 // 其他 API 函数可以在这里添加
 // export function registerApi(request: RegisterRequest): Promise<RegisterResponse> {
 //   return http.post<RegisterResponse, RegisterRequest>(API_ENDPOINTS.AUTH.REGISTER, request)
-// } 
+// }

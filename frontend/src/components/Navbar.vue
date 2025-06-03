@@ -7,11 +7,18 @@
       class="main-menu"
     >
       <a-menu-item key="home">
+        <router-link to="/home">
+          <compass-outlined />
+          主页
+        </router-link>
+      </a-menu-item>
+      <a-menu-item key="profile">
         <router-link to="/profile">
           <home-outlined />
           个人资料
         </router-link>
       </a-menu-item>
+      
       <a-menu-item key="explore">
         <router-link to="/explore">
           <compass-outlined />

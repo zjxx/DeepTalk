@@ -99,14 +99,6 @@
     <v-main>
       <router-view></router-view>
     </v-main>
-
-    <v-snackbar
-      v-model="snackbar"
-      :color="snackbarColor"
-      timeout="3000"
-    >
-      {{ snackbarText }}
-    </v-snackbar>
   </v-app>
 </template>
 
@@ -114,8 +106,6 @@
 import { defineComponent, ref, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import Navbar from './components/Navbar.vue'
-import { logoutApi } from './api/user'
-import type { AxiosError } from 'axios'
 
 export default defineComponent({
   name: 'App',
@@ -130,11 +120,8 @@ export default defineComponent({
     const drawer = ref(true)
     const rail = ref(false)
     const showSideDrawer = ref(false)
-    const snackbar = ref(false)
-    const snackbarText = ref('')
-    const snackbarColor = ref('success')
 
-    const navRoutes = ['/profile', '/explore', '/community', '/shop', '/settings']
+    const navRoutes = ['/home', '/profile', '/explore', '/community', '/shop', '/settings']
     
     const sideDrawerRoutes = ['/profile', '/']
 
@@ -148,28 +135,11 @@ export default defineComponent({
 
     onMounted(checkRoute)
 
-    const showMessage = (text: string, color: string = 'success') => {
-      snackbarText.value = text
-      snackbarColor.value = color
-      snackbar.value = true
-    }
-
-    const handleLogout = async () => {
-      try {
-        const email = localStorage.getItem('savedEmail')
-        if (email) {
-          await logoutApi()
-        }
-        // 清除本地存储
-        localStorage.removeItem('token')
-        localStorage.removeItem('savedEmail')
-        localStorage.removeItem('savedPassword')
-        showMessage('登出成功')
-        router.push('/login')
-      } catch (error) {
-        const axiosError = error as AxiosError<{ message: string }>
-        showMessage(axiosError.response?.data?.message || '登出失败，请稍后重试', 'error')
-      }
+    const handleLogout = () => {
+      localStorage.removeItem('token')
+      localStorage.removeItem('savedEmail')
+      localStorage.removeItem('savedPassword')
+      router.push('/login')
     }
 
     return {
@@ -178,21 +148,19 @@ export default defineComponent({
       rail,
       showSideDrawer,
       handleLogout,
-      snackbar,
-      snackbarText,
-      snackbarColor,
     }
   }
 })
 </script>
 
 <style>
-/* 移除原有的 .content 样式，Vuetify 的 v-main 会有自己的默认样式 */
-/* .content {
-  padding: 0 24px 24px;
-  min-height: calc(100vh - 64px);
-  background: #fff;
-} */
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+}
 
-/* 可以根据需要添加全局样式 */
+#app {
+  width: 100%;
+  min-height: 100vh;
+}
 </style> 

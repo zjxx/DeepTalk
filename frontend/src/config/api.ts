@@ -26,4 +26,4 @@ export const API_ENDPOINTS = {
 // 构建完整的 API URL
 export const buildApiUrl = (endpoint: string): string => {
   return `${API_BASE_URL}${endpoint}`
-} 
+}

@@ -16,4 +16,4 @@ const userModel: UserModel = {
   expiration: ''
 }
 
-export default userModel 
+export default userModel
