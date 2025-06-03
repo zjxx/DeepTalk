@@ -9,6 +9,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.http.ResponseEntity;
 
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+
 
 /**
  * The type Speech controller.
@@ -22,6 +27,9 @@ import org.springframework.http.ResponseEntity;
 @RestController
 @RequestMapping("/api/speech")
 public class SpeechController {
+
+    private final static int MAX_PENDING_TIME = 10; // maximum waiting time, in seconds
+    private final static Map<String, CompletableFuture<String>> tokenNotifier = new ConcurrentHashMap<>();
 
     /**
      * connect response entity.
@@ -44,15 +52,32 @@ public class SpeechController {
         }
         // Find a matching opponent
         String opponentId = SpeechService.findMatching(request.getUserId());
+        String token = null;
         if (opponentId == null) {
             // no matching opponent found, pend the user into the waiting queue
             opponentId = SpeechService.pendMatching(request.getUserId());
             if (opponentId == null) {
                 return ResponseEntity.status(503).body("匹配失败，请稍后再试");
             }
+            // 从动方等待主动方返回token
+            try {
+                CompletableFuture<String> tokenFuture = new CompletableFuture<>();
+                token = tokenFuture.get(MAX_PENDING_TIME, TimeUnit.SECONDS);
+                tokenNotifier.put(request.getUserId(), tokenFuture);
+            } catch (Exception e) {
+                return ResponseEntity.status(503).body("匹配失败，请稍后再试");
+            }
+            tokenNotifier.remove(request.getUserId());
+        } else {
+            // 主动方需要主动调用创建连接方法，生成实际的session
+            token = SpeechService.makeConnection(request.getUserId(), opponentId);
+            CompletableFuture<String> opponentFuture = tokenNotifier.get(opponentId);
+            if (opponentFuture == null) {
+                return ResponseEntity.status(503).body("对手未准备好，请稍后再试");
+            } else {
+                opponentFuture.complete(token); // 将token发送给对手
+            }
         }
-
-        String token = SpeechService.makeConnection(request.getUserId(), opponentId);
 
         if (token != null) {
             return ResponseEntity.ok(token); // 这里应当返回一个可用的连接信息
