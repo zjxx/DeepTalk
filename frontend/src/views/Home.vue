@@ -1,22 +1,10 @@
 <template>
   <v-container fluid class="fill-height pa-0">
     <div class="home-container">
+      <!-- 使用 Navbar 组件 -->
+      <Navbar />
+      
       <v-sheet class="main-content">
-        <!-- 顶部导航栏 -->
-        <v-card class="nav-section mb-4" flat>
-          <v-tabs
-            v-model="activeTab"
-            align-tabs="start"
-            grow
-            color="primary"
-          >
-            <v-tab value="recommend">首页</v-tab>
-            <v-tab value="following">社区</v-tab>
-            <v-tab value="hot">交流</v-tab>
-            <v-tab value="latest">商城</v-tab>
-          </v-tabs>
-        </v-card>
-
         <!-- 双栏布局区域 -->
         <div class="content-layout">
           <!-- 左侧主要内容区 -->
@@ -46,10 +34,9 @@
   </v-container>
 </template>
 
-<script setup lang="ts">
-import { ref } from 'vue';
 
-const activeTab = ref('recommend');
+<script setup lang="ts">
+import Navbar from '../components/Navbar.vue';
 </script>
 
 <style scoped>
@@ -58,7 +45,12 @@ const activeTab = ref('recommend');
   min-height: 100vh;
   background-color: #f5f5f5;
   display: flex;
-  justify-content: center;
+  flex-direction: column;  /* 修改为纵向排列 */
+  position: absolute; /* 添加固定定位 */
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
 }
 
 .main-content {
@@ -66,14 +58,10 @@ const activeTab = ref('recommend');
   margin: 0 auto;
   padding: 20px;
   background-color: transparent;
+  flex: 1;  /* 让主内容区域占满剩余空间 */
 }
 
-.nav-section {
-  width: 100%;
-  background-color: white;
-  border-radius: 8px;
-}
-
+/* 移除原导航栏相关样式 */
 .content-layout {
   display: grid;
   grid-template-columns: repeat(2, 1fr);

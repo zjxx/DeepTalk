@@ -5,6 +5,7 @@ import Profile from './views/Profile.vue'
 import ForgotPassword from './views/ForgotPassword.vue'
 import Versus from './views/Versus.vue'
 import Home from './views/Home.vue'
+import Community from './views/Community.vue'
 // 你可以后续添加Profile等页面
 
 const routes = [
@@ -45,12 +46,21 @@ const routes = [
     component: Home,
     meta: { requiresAuth: true }
   },
+  {
+    path: '/community',
+    name: 'Community',
+    component: Community,
+    meta: { requiresAuth: true }
+  },
   // { path: '/profile', component: () => import('./views/Profile.vue') },
 ]
 
 const router = createRouter({
   history: createWebHistory(),
   routes,
+  scrollBehavior() {
+    return { top: 0 } // 统一滚动行为
+  }
 })
 
 // 添加导航守卫来调试路由问题
@@ -58,17 +68,22 @@ router.beforeEach((to, from, next) => {
   console.log('路由跳转:', { to, from })
   const token = localStorage.getItem('token')
 
-  // 如果页面需要认证
-  if (to.meta.requiresAuth) {
-    // 没有token则跳转到登录页
-    if (!token) {
-      next('/login')
-      return
-    }
+  // 特殊处理根路径
+  if (to.path === '/') {
+    next('/login')
+    return
   }
 
-  // 如果已登录用户访问登录/注册页面，重定向到首页
+  // 需要登录的页面且没有token
+  if (to.meta.requiresAuth && !token) {
+    console.log('需要登录权限，重定向到登录页')
+    next('/login')
+    return
+  }
+
+  // 已登录用户访问登录相关页面
   if (token && (to.path === '/login' || to.path === '/register')) {
+    console.log('已登录，重定向到首页')
     next('/home')
     return
   }

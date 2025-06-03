@@ -97,6 +97,8 @@ onMounted(async () => {
   try {
     const success = await autoLogin()
     if (success) {
+      // 添加 500ms 延迟
+      await new Promise(resolve => setTimeout(resolve, 500))
       // 自动登录成功，直接跳转到个人资料页
       router.push('/home')
     }

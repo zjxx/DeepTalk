@@ -73,7 +73,7 @@ export const login = async (request: LoginRequest, rememberMe: boolean): Promise
       localStorage.removeItem('savedPassword')
     }
     
-    window.location.href = '/profile'
+    //window.location.href = '/profile'
     return true
   } catch (e) {
     alert('登录失败，请检查邮箱和密码')
