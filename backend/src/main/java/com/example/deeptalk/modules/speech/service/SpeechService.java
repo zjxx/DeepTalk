@@ -54,6 +54,8 @@ public class SpeechService {
             // 超时未匹配成功，手动移除用户
             pendingUsers.remove(userId);
         }
+        // 无论匹配成功与否，均需要移除新建的Future
+        pendingNotifier.remove(userId);
         return has_matching;
     }
 
