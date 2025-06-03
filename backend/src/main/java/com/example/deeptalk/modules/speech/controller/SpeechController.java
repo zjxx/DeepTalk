@@ -73,7 +73,8 @@ public class SpeechController {
         if (!SpeechService.checkIsConnected(request.getUserId())) {
             return ResponseEntity.badRequest().body("用户未连接");
         }
-        // TODO
+        // Disconnect the user
+        SpeechService.disconnect(request.getUserId());
         return ResponseEntity.ok("断开连接成功");
     }
 
