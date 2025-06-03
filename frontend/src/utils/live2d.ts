@@ -1,17 +1,14 @@
 import * as PIXI from 'pixi.js'
 import { Live2DModel } from 'pixi-live2d-display'
+import type { Live2DModel as Live2DModelType } from 'pixi-live2d-display'
 
-// 设置全局 PIXI 实例
-window.PIXI = PIXI
+Live2DModel.registerTicker(PIXI.Ticker);
 
 interface ExtendedRenderer extends PIXI.Renderer {
   events?: PIXI.InteractionManager
 }
 
 export interface ModelConfig {
-  width?: number
-  height?: number
-  transparent?: boolean
   modelPath: string
   position?: {
     x?: number
@@ -20,34 +17,21 @@ export interface ModelConfig {
   }
 }
 
-export interface Live2DInstance {
-  app: PIXI.Application
-  model: Live2DModel
+export interface ModelConfigSharedApp extends Omit<ModelConfig, 'width' | 'height' | 'transparent' | 'canvasId'> {
+  app: PIXI.Application;
 }
 
 /**
- * 初始化 Live2D 模型
- * @param config 模型配置
- * @returns Live2D 实例，包含 PIXI 应用和模型对象
+ * 初始化 Live2D 模型并将其添加到提供的 PIXI 应用中
+ * @param config 模型配置，包含 PIXI 应用实例
+ * @returns 加载的 Live2D 模型对象
  */
-export async function initLive2DModel(config: ModelConfig): Promise<Live2DInstance> {
+export async function initLive2DModel(config: ModelConfigSharedApp): Promise<Live2DModelType> {
   const {
-    width = 280,
-    height = 300,
-    transparent = true,
+    app,
     modelPath,
-    position = { x: 0, y: 0, scale: 0.25 }
+    position = { x: 0, y: 0, scale: 0.25 },
   } = config
-
-  // 构建画布
-  const app = new PIXI.Application({
-    view: document.getElementById('live2d-canvas') as HTMLCanvasElement,
-    autoStart: true,
-    width,
-    height,
-    transparent,
-    backgroundColor: 0xffffff
-  })
 
   try {
     // 加载模型
@@ -55,8 +39,8 @@ export async function initLive2DModel(config: ModelConfig): Promise<Live2DInstan
     
     // 设置模型位置和缩放
     model.scale.set(position.scale || 0.25)
-    model.x = position.x || app.screen.width / 2
-    model.y = position.y || app.screen.height / 2
+    model.x = position.x || 0
+    model.y = position.y || 0
     
     // 添加到舞台
     app.stage.addChild(model)
@@ -74,21 +58,24 @@ export async function initLive2DModel(config: ModelConfig): Promise<Live2DInstan
 
     model.on('pointerdown', (e: PIXI.InteractionEvent) => {
       isDragging = true
-      dragPoint = e.data.getLocalPosition(model.parent)
+      const localPos = e.data.getLocalPosition(app.stage);
+      dragPoint = { x: localPos.x - model.x, y: localPos.y - model.y };
     })
 
     model.on('pointermove', (e: PIXI.InteractionEvent) => {
       if (isDragging) {
-        const newPosition = e.data.getLocalPosition(model.parent)
-        model.x += (newPosition.x - dragPoint.x)
-        model.y += (newPosition.y - dragPoint.y)
-        dragPoint = newPosition
+        const newPosition = e.data.getLocalPosition(app.stage);
+        model.x = newPosition.x - dragPoint.x;
+        model.y = newPosition.y - dragPoint.y;
       }
     })
 
     model.on('pointerup', () => {
       isDragging = false
     })
+    model.on('pointerupoutside', () => {
+        isDragging = false;
+    });
 
     // 监听模型点击事件
     model.on('hit', (hitAreas: string[]) => {
@@ -99,18 +86,7 @@ export async function initLive2DModel(config: ModelConfig): Promise<Live2DInstan
       // }
     })
 
-    // 添加窗口大小改变事件
-    window.addEventListener('resize', () => {
-      const canvas = document.getElementById('live2d-canvas') as HTMLCanvasElement
-      if (canvas?.parentElement) {
-        app.renderer.resize(
-          canvas.parentElement.clientWidth,
-          canvas.parentElement.clientHeight
-        )
-      }
-    })
-
-    return { app, model }
+    return model
   } catch (error) {
     console.error('加载模型失败:', error)
     throw error

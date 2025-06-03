@@ -3,7 +3,7 @@ import Login from './views/Login.vue'
 import Register from './views/Register.vue'
 import Profile from './views/Profile.vue'
 import ForgotPassword from './views/ForgotPassword.vue'
-import Live2DView from './views/Live2DView.vue'
+import Versus from './views/Versus.vue'
 import Home from './views/Home.vue'
 // 你可以后续添加Profile等页面
 
@@ -36,7 +36,7 @@ const routes = [
   {
     path: '/live2d',
     name: 'Live2D',
-    component: Live2DView,
+    component: Versus,
     meta: { requiresAuth: false }
   },
   {
