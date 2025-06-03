@@ -7,9 +7,13 @@ export const API_ENDPOINTS = {
   AUTH: {
     LOGIN: '/auth/login',
     REGISTER: '/auth/register',
-    SEND_VERIFICATION_CODE: '/auth/send-verification-code',
-    VERIFY_CODE: '/auth/verify-code',
-    LOGOUT: '/auth/logout'
+    SEND_VERIFICATION_CODE: '/auth/register/check',
+    VERIFY_CODE: '/auth/register/verify',
+    LOGOUT: '/auth/logout',
+    FORGOT_PASSWORD: {
+      SEND_CODE: '/auth/forgot-password/send-code',
+      RESET_PASSWORD: '/auth/forgot-password/reset'
+    }
   },
   // 其他模块的 API 端点可以在这里添加
   // 例如：

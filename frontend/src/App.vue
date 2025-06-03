@@ -99,6 +99,14 @@
     <v-main>
       <router-view></router-view>
     </v-main>
+
+    <v-snackbar
+      v-model="snackbar"
+      :color="snackbarColor"
+      timeout="3000"
+    >
+      {{ snackbarText }}
+    </v-snackbar>
   </v-app>
 </template>
 
@@ -106,6 +114,8 @@
 import { defineComponent, ref, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import Navbar from './components/Navbar.vue'
+import { logoutApi } from './api/user'
+import type { AxiosError } from 'axios'
 
 export default defineComponent({
   name: 'App',
@@ -120,6 +130,9 @@ export default defineComponent({
     const drawer = ref(true)
     const rail = ref(false)
     const showSideDrawer = ref(false)
+    const snackbar = ref(false)
+    const snackbarText = ref('')
+    const snackbarColor = ref('success')
 
     const navRoutes = ['/profile', '/explore', '/community', '/shop', '/settings']
     
@@ -135,11 +148,28 @@ export default defineComponent({
 
     onMounted(checkRoute)
 
-    const handleLogout = () => {
-      localStorage.removeItem('token')
-      localStorage.removeItem('savedEmail')
-      localStorage.removeItem('savedPassword')
-      router.push('/login')
+    const showMessage = (text: string, color: string = 'success') => {
+      snackbarText.value = text
+      snackbarColor.value = color
+      snackbar.value = true
+    }
+
+    const handleLogout = async () => {
+      try {
+        const email = localStorage.getItem('savedEmail')
+        if (email) {
+          await logoutApi()
+        }
+        // 清除本地存储
+        localStorage.removeItem('token')
+        localStorage.removeItem('savedEmail')
+        localStorage.removeItem('savedPassword')
+        showMessage('登出成功')
+        router.push('/login')
+      } catch (error) {
+        const axiosError = error as AxiosError<{ message: string }>
+        showMessage(axiosError.response?.data?.message || '登出失败，请稍后重试', 'error')
+      }
     }
 
     return {
@@ -148,6 +178,9 @@ export default defineComponent({
       rail,
       showSideDrawer,
       handleLogout,
+      snackbar,
+      snackbarText,
+      snackbarColor,
     }
   }
 })
