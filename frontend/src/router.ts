@@ -66,7 +66,9 @@ const router = createRouter({
 // 添加导航守卫来调试路由问题
 router.beforeEach((to, from, next) => {
   console.log('路由跳转:', { to, from })
-  const token = localStorage.getItem('token')
+  const localToken = localStorage.getItem('token')
+  const sessionToken = sessionStorage.getItem('token')
+  const token = localToken || sessionToken
 
   // 特殊处理根路径
   if (to.path === '/') {
@@ -78,13 +80,6 @@ router.beforeEach((to, from, next) => {
   if (to.meta.requiresAuth && !token) {
     console.log('需要登录权限，重定向到登录页')
     next('/login')
-    return
-  }
-
-  // 已登录用户访问登录相关页面
-  if (token && (to.path === '/login' || to.path === '/register')) {
-    console.log('已登录，重定向到首页')
-    next('/home')
     return
   }
 

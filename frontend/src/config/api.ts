@@ -1,19 +1,21 @@
 // API 基础配置
-export const API_BASE_URL = 'http://115.175.45.173:8080/api'
+export const API_BASE_URL = 'http://115.175.45.173:8080'
 
 // API 端点配置
 export const API_ENDPOINTS = {
   // 用户相关
   AUTH: {
-    LOGIN: '/auth/login',
-    REGISTER: '/auth/register',
-    SEND_VERIFICATION_CODE: '/auth/register/check',
-    VERIFY_CODE: '/auth/register/verify',
-    LOGOUT: '/auth/logout',
+    LOGIN: '/api/auth/login',
+    REGISTER: {
+      CHECK: '/api/auth/register/check',
+      VERIFY: '/api/auth/register/verify'
+    },
     FORGOT_PASSWORD: {
-      SEND_CODE: '/auth/forgot-password/send-code',
-      RESET_PASSWORD: '/auth/forgot-password/reset'
-    }
+      SEND_CODE: '/api/auth/forgot-password/send-code',
+      VERIFY_CODE: '/api/auth/forgot-password/verify-code',
+      RESET_PASSWORD: '/api/auth/forgot-password/reset'
+    },
+    LOGOUT: '/api/auth/logout'
   },
   // 其他模块的 API 端点可以在这里添加
   // 例如：
