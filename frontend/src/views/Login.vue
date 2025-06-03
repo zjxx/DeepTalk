@@ -83,7 +83,9 @@
 import { ref, onMounted } from 'vue'
 import { login, autoLogin } from '../controllers/userController'
 import type { LoginRequest } from '../interface/auth'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const email = ref('')
 const password = ref('')
 const rememberMe = ref(false)
@@ -96,7 +98,7 @@ onMounted(async () => {
     const success = await autoLogin()
     if (success) {
       // 自动登录成功，直接跳转到个人资料页
-      window.location.href = '/profile'
+      router.push('/home')
     }
   } catch (error) {
     console.error('自动登录失败: ', error)
@@ -133,7 +135,10 @@ const handleLogin = async () => {
       email: email.value,
       password: password.value,
     }
-    await login(loginRequest, rememberMe.value)
+    const success = await login(loginRequest, rememberMe.value)
+    if (success) {
+      await router.push('/home')  // 登录成功后跳转到 home 页面
+    }
   } catch (error) {
     // 错误处理已经在 controller 中完成
     console.error('登录失败:', error)

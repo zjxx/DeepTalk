@@ -31,20 +31,20 @@ export async function autoLogin(): Promise<boolean> {
   }
 }
 
-export async function login(request: LoginRequest, rememberMe: boolean): Promise<void> {
+export const login = async (loginRequest: LoginRequest, rememberMe: boolean): Promise<boolean> => {
   try {
-    console.log('登录请求数据:', request)
-    const res: LoginResponse = await loginApi(request)
+    console.log('登录请求数据:', loginRequest)
+    const res: LoginResponse = await loginApi(loginRequest)
     console.log('登录响应数据:', res)
-    userModel.email = request.email
+    userModel.email = loginRequest.email
     userModel.token = res.token
     userModel.isLoggedIn = true
 
     // 记住我逻辑
     if (rememberMe) {
       localStorage.setItem('token', res.token)
-      localStorage.setItem('sravedEmail', request.email)
-      localStorage.setItem('savedPassword', request.password)
+      localStorage.setItem('savedEmail', loginRequest.email)
+      localStorage.setItem('savedPassword', loginRequest.password)
     } else {
       // 如果取消记住我，清除保存的信息
       localStorage.setItem('token', res.token)
@@ -52,10 +52,12 @@ export async function login(request: LoginRequest, rememberMe: boolean): Promise
       localStorage.removeItem('savedPassword')
     }
     // 跳转到个人资料页
-    window.location.href = '/profile'
+    //window.location.href = '/profile'
+    return true
   } catch (e) {
     alert('登录失败，请检查邮箱和密码')
     console.error('登录失败:', e)
+    return false
   }
 }
 

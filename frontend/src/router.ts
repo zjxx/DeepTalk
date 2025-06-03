@@ -4,6 +4,7 @@ import Register from './views/Register.vue'
 import Profile from './views/Profile.vue'
 import ForgotPassword from './views/ForgotPassword.vue'
 import Live2DView from './views/Live2DView.vue'
+import Home from './views/Home.vue'
 // 你可以后续添加Profile等页面
 
 const routes = [
@@ -38,6 +39,12 @@ const routes = [
     component: Live2DView,
     meta: { requiresAuth: false }
   },
+  {
+    path: '/home',
+    name: 'Home',
+    component: Home,
+    meta: { requiresAuth: true }
+  },
   // { path: '/profile', component: () => import('./views/Profile.vue') },
 ]
 
@@ -49,15 +56,21 @@ const router = createRouter({
 // 添加导航守卫来调试路由问题
 router.beforeEach((to, from, next) => {
   console.log('路由跳转:', { to, from })
+  const token = localStorage.getItem('token')
 
-  // 检查是否需要登录权限
+  // 如果页面需要认证
   if (to.meta.requiresAuth) {
-    const token = localStorage.getItem('token')
+    // 没有token则跳转到登录页
     if (!token) {
-      // 如果没有token，重定向到登录页
       next('/login')
       return
     }
+  }
+
+  // 如果已登录用户访问登录/注册页面，重定向到首页
+  if (token && (to.path === '/login' || to.path === '/register')) {
+    next('/home')
+    return
   }
 
   next()
