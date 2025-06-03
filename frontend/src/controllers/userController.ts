@@ -45,7 +45,7 @@ export async function autoLogin(): Promise<boolean> {
   }
 }
 
-export const login = async (loginRequest: LoginRequest, rememberMe: boolean): Promise<boolean> => {
+export const login = async (request: LoginRequest, rememberMe: boolean): Promise<boolean> => {
   try {
     console.log('登录请求数据:', request)
     const loginRequest: LoginRequest = {
@@ -74,6 +74,7 @@ export const login = async (loginRequest: LoginRequest, rememberMe: boolean): Pr
     }
     
     window.location.href = '/profile'
+    return true
   } catch (e) {
     alert('登录失败，请检查邮箱和密码')
     console.error('登录失败:', e)
