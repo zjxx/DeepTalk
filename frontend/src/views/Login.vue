@@ -134,6 +134,7 @@ const handleLogin = async () => {
     const loginRequest: LoginRequest = {
       email: email.value,
       password: password.value,
+      rememberMe: rememberMe.value
     }
     const success = await login(loginRequest, rememberMe.value)
     if (success) {

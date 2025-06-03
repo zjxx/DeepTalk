@@ -168,14 +168,14 @@ const startCountdown = () => {
   }, 1000)
 }
 
-const sendVerificationCode = async () => {
-  if (!validateEmail(email.value)) {
+const sendVerificationCode = async (email: string, username: string, password: string) => {
+  if (!validateEmail(email)) {
     alert('请输入有效的邮箱地址')
     return
   }
 
   try {
-    await sendCode(email.value)
+    await sendCode(email, username, password)
     startCountdown()
   } catch (error: unknown) {
     console.error('发送验证码失败:', error)
@@ -200,8 +200,10 @@ const validateCode = async () => {
   validating.value = true
   try {
     await verify({
+      username: username.value,
+      password: password.value,
       email: email.value,
-      code: verificationCode.value,
+      verificationCode: verificationCode.value
     })
     showVerificationDialog.value = false
     router.push('/login')
@@ -269,7 +271,7 @@ const handleRegister = async () => {
     console.log('注册请求发送成功')
     // 注册成功后再发送验证码并显示弹窗
     try {
-      await sendVerificationCode()
+      await sendVerificationCode(email.value, username.value, password.value)
       showVerificationDialog.value = true
     } catch (error) {
       console.error('发送验证码失败:', error)

@@ -1,5 +1,15 @@
 import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse } from 'axios'
-import { API_BASE_URL } from '../config/api'
+import { API_BASE_URL, API_ENDPOINTS } from '../config/api'
+
+// 不需要 token 的路径列表
+const NO_TOKEN_PATHS = [
+  API_ENDPOINTS.AUTH.LOGIN,
+  API_ENDPOINTS.AUTH.REGISTER,
+  API_ENDPOINTS.AUTH.SEND_VERIFICATION_CODE,
+  API_ENDPOINTS.AUTH.VERIFY_CODE,
+  API_ENDPOINTS.AUTH.FORGOT_PASSWORD.SEND_CODE,
+  API_ENDPOINTS.AUTH.FORGOT_PASSWORD.RESET_PASSWORD
+]
 
 // 创建 axios 实例
 const httpClient: AxiosInstance = axios.create({
@@ -13,9 +23,18 @@ const httpClient: AxiosInstance = axios.create({
 // 请求拦截器
 httpClient.interceptors.request.use(
   (config) => {
-    // 从 localStorage 获取 token
-    const token = localStorage.getItem('token')
-    if (token) {
+    // 检查是否需要添加 token
+    const url = config.url || ''
+    const needsToken = !NO_TOKEN_PATHS.some(path => url.includes(path))
+    
+    if (needsToken) {
+      // 从 localStorage 获取 token
+      const token = localStorage.getItem('token')
+      if (!token) {
+        // 如果没有 token，重定向到登录页面
+        window.location.href = '/login'
+        return Promise.reject(new Error('未登录或登录已过期'))
+      }
       config.headers.Authorization = `Bearer ${token}`
     }
     return config
@@ -32,6 +51,9 @@ httpClient.interceptors.response.use(
     if (error.response?.status === 401) {
       // 处理未授权错误
       localStorage.removeItem('token')
+      localStorage.removeItem('savedEmail')
+      localStorage.removeItem('savedPassword')
+      localStorage.removeItem('expiration')
       window.location.href = '/login'
     }
     return Promise.reject(error)
