@@ -99,7 +99,7 @@ onMounted(async () => {
     if (success) {
       // 添加 500ms 延迟
       await new Promise(resolve => setTimeout(resolve, 500))
-      // 自动登录成功，直接跳转到个人资料页
+      // 自动登录成功，直接跳转到首页
       router.push('/home')
     }
   } catch (error) {
@@ -140,7 +140,7 @@ const handleLogin = async () => {
     }
     const success = await login(loginRequest, rememberMe.value)
     if (success) {
-      await router.push('/home')  // 登录成功后跳转到 home 页面
+      await router.push('/home')  // 登录成功后跳转到首页
     }
   } catch (error) {
     // 错误处理已经在 controller 中完成
