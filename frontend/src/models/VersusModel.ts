@@ -25,11 +25,8 @@ export interface VersusState {
   audioLevel: number
   lastRecordedAudio: Blob | null
   isPlayingAudio: boolean
-  
-  // 发言权管理
+    // 发言权管理
   speakingTurn: 'user' | 'partner'
-  speakingTimeLeft: number
-  isSpeakingTimerActive: boolean
   
   // 对话内容
   currentTopicIndex: number
@@ -57,11 +54,8 @@ export class VersusModel {
       isPartnerSpeaking: false,
       isRecording: false,
       audioLevel: 0,
-      lastRecordedAudio: null,
-      isPlayingAudio: false,
+      lastRecordedAudio: null,      isPlayingAudio: false,
       speakingTurn: 'user',
-      speakingTimeLeft: 30,
-      isSpeakingTimerActive: false,
       currentTopicIndex: 0,
       currentPromptIndex: 0,
       transcriptMessages: []
@@ -72,9 +66,8 @@ export class VersusModel {
   getState(): VersusState {
     return { ...this.state }
   }
-
   get canUserSpeak(): boolean {
-    return this.state.speakingTurn === 'user' && this.state.isSpeakingTimerActive
+    return this.state.speakingTurn === 'user'
   }
 
   get currentTopic(): string {
@@ -108,10 +101,8 @@ export class VersusModel {
   updateMatchState(updates: Partial<VersusState>): void {
     Object.assign(this.state, updates)
   }
-
   switchSpeakingTurn(): void {
     this.state.speakingTurn = this.state.speakingTurn === 'user' ? 'partner' : 'user'
-    this.state.speakingTimeLeft = 30
   }
 
   addTranscriptMessage(message: TranscriptMessage): void {
@@ -129,13 +120,10 @@ export class VersusModel {
     this.state.currentPromptIndex = (this.state.currentPromptIndex + 1) % promptsLength
     this.clearTranscriptMessages()
   }
-
   resetMatch(): void {
     this.state.matchStarted = false
     this.state.remainingTime = 300
     this.state.speakingTurn = 'user'
-    this.state.isSpeakingTimerActive = false
-    this.state.speakingTimeLeft = 30
     this.state.isUserSpeaking = false
     this.state.isPartnerSpeaking = false
     this.state.isRecording = false

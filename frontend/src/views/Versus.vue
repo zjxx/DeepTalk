@@ -15,29 +15,6 @@
                 总时间: {{ controller.formatTime(state.remainingTime) }}
               </v-chip>
               
-              <!-- 发言权和倒计时显示 -->
-              <v-chip 
-                v-if="state.matchStarted && state.isSpeakingTimerActive"
-                :color="state.speakingTurn === 'user' ? 'success' : 'warning'"
-                class="mr-2"
-              >
-                <v-icon start>mdi-account-voice</v-icon>
-                {{ state.speakingTurn === 'user' ? '您的' : '对方' }}发言时间: {{ state.speakingTimeLeft }}s
-              </v-chip>
-              
-              <!-- 测试用跳过按钮 -->
-              <v-btn 
-                v-if="state.matchStarted && state.speakingTurn === 'partner' && isDev"
-                color="orange"
-                variant="outlined"
-                size="small"
-                @click="handleSkipPartnerTurn"
-                class="mr-2"
-              >
-                <v-icon start size="small">mdi-skip-next</v-icon>
-                跳过对方发言 (测试)
-              </v-btn>
-              
               <v-chip 
                 v-if="!state.matchStarted"
                 color="grey"
@@ -81,24 +58,16 @@
         <v-card class="model-card transparent-card">
           <v-card-title class="text-center white-text py-2">
             您 ({{ userModel.email || '用户' }})
-            <v-icon 
-              v-if="state.speakingTurn === 'user' && state.isSpeakingTimerActive"
-              color="success"
-              class="ml-2"
-            >
-              mdi-microphone
-            </v-icon>
           </v-card-title>
           <v-card-actions class="d-flex justify-center py-2">
             <v-chip 
-              :color="state.isUserSpeaking ? 'success' : (controller.canUserSpeak ? 'primary' : 'grey')" 
+              :color="state.isUserSpeaking ? 'success' : 'primary'" 
               class="mr-2"
               :class="{ 'speaking-pulse': state.isRecording }"
             >
               {{ 
                 state.isRecording ? '录音中... (再按一次结束)' : 
-                (state.isUserSpeaking ? '正在发言' : 
-                (controller.canUserSpeak ? '您的发言时间' : '等待发言权'))
+                (state.isUserSpeaking ? '正在发言' : '可以随时发言')
               }}
             </v-chip>
             
@@ -114,22 +83,21 @@
               :icon="state.isRecording ? 'mdi-stop' : (state.userMuted ? 'mdi-microphone-off' : 'mdi-microphone')"
               @click="handleToggleRecording"
               :class="{ 'recording-btn': state.isRecording }"
-              :disabled="!controller.canUserSpeak && !state.isRecording"
+              :disabled="!state.matchStarted || state.isPlayingAudio"
               class="mr-2"
             >
               <v-tooltip activator="parent" location="top">
-                {{ state.isRecording ? '停止录音并结束发言' : (controller.canUserSpeak ? '开始录音' : '等待发言权') }}
+                {{ state.isRecording ? '停止录音并结束发言' : '开始录音' }}
               </v-tooltip>
             </v-btn>
             
-            <!-- 播放上次录音按钮 -->
             <v-btn 
               v-if="state.lastRecordedAudio"
               :color="state.isPlayingAudio ? 'success' : 'secondary'" 
               variant="outlined" 
               :icon="state.isPlayingAudio ? 'mdi-stop' : 'mdi-play'"
               @click="handleTogglePlayback"
-              :disabled="state.isRecording || (state.speakingTurn !== 'user' && state.isSpeakingTimerActive)"
+              :disabled="state.isRecording"
               class="mr-2"
             >
               <v-tooltip activator="parent" location="top">
@@ -160,28 +128,21 @@
         <v-card class="model-card transparent-card">
           <v-card-title class="text-center white-text py-2">
             {{ state.matchType === '真人对战' ? '对方' : 'AI助手' }}
-            <v-icon 
-              v-if="state.speakingTurn === 'partner' && state.isSpeakingTimerActive"
-              color="warning"
-              class="ml-2"
-            >
-              mdi-account-voice
-            </v-icon>
           </v-card-title>
           <v-card-actions class="d-flex justify-center py-2">
             <v-chip 
-              :color="state.isPartnerSpeaking ? 'success' : (state.speakingTurn === 'partner' && state.isSpeakingTimerActive ? 'warning' : 'grey')" 
+              :color="state.isPartnerSpeaking ? 'success' : (state.speakingTurn === 'partner' ? 'warning' : 'grey')" 
               class="mr-2"
             >
               {{ 
                 state.isPartnerSpeaking ? '正在发言' : 
-                (state.speakingTurn === 'partner' && state.isSpeakingTimerActive ? '对方发言时间' : '等待发言权')
+                (state.speakingTurn === 'partner' ? '对方正在思考' : '等待轮换')
               }}
             </v-chip>
             
             <!-- 对方发言时的跳过按钮（仅开发模式显示） -->
             <v-btn 
-              v-if="state.speakingTurn === 'partner' && state.isSpeakingTimerActive && isDev"
+              v-if="state.speakingTurn === 'partner' && isDev"
               color="orange"
               variant="outlined"
               size="small"
@@ -303,7 +264,7 @@ import { VersusController } from '../controllers/VersusController'
 type Live2DModelComponent = InstanceType<typeof Live2DModel>
 
 const router = useRouter()
-const isDev = import.meta.env.DEV
+const isDev = true // 或者根据您的需要设置
 
 // PIXI App refs and state
 const pixiContainerRef = ref<HTMLDivElement | null>(null)
@@ -398,8 +359,6 @@ controller.setStateChangeCallback(() => {
 
 // PIXI App 初始化
 onMounted(async () => {
-  console.log('=== versus.vue onMounted ===')
-  
   await nextTick()
   if (pixiContainerRef.value) {
     const width = pixiContainerRef.value.clientWidth

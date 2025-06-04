@@ -42,21 +42,11 @@ export class VersusController {
     this.audioService.onPlaybackStateChange = (isPlaying) => {
       this.model.updateMatchState({ isPlayingAudio: isPlaying })
       this.notifyStateChange()
-    }
-
-    // 计时器事件监听
+    }    // 计时器事件监听
     this.timerService.onMainTimerTick = (timeLeft) => {
       this.model.updateMatchState({ remainingTime: timeLeft })
       if (timeLeft <= 0) {
         this.endMatch()
-      }
-      this.notifyStateChange()
-    }
-
-    this.timerService.onSpeakingTimerTick = (timeLeft) => {
-      this.model.updateMatchState({ speakingTimeLeft: timeLeft })
-      if (timeLeft <= 0) {
-        this.switchSpeakingTurn()
       }
       this.notifyStateChange()
     }
@@ -100,27 +90,16 @@ export class VersusController {
 
   get currentPrompt(): string {
     return this.model.currentPrompt
-  }
-
-  // 重要：录音功能实现
+  }  // 重要：录音功能实现
   async toggleRecording(): Promise<void> {
-    console.log('VersusController: toggleRecording 被调用')
     const state = this.model.getState()
     
     if (state.isRecording) {
-      console.log('VersusController: 停止录音')
       // 停止录音并结束发言
       this.audioService.stopRecording()
       this.endUserSpeaking()
     } else {
-      // 检查发言权
-      if (!this.model.canUserSpeak) {
-        const currentSpeaker = state.speakingTurn === 'partner' ? '对方' : '您'
-        throw new Error(`现在是${currentSpeaker}的发言时间，请等待...`)
-      }
-      
-      console.log('VersusController: 开始录音')
-      // 停止播放并开始录音
+      // 用户可以随时开始录音，无需检查发言权
       if (state.isPlayingAudio) {
         this.audioService.stopPlayback()
       }
@@ -131,22 +110,18 @@ export class VersusController {
     
     this.notifyStateChange()
   }
-
   // 业务逻辑方法
   async startMatch(): Promise<void> {
     this.model.updateMatchState({ 
       matchStarted: true,
-      speakingTurn: 'user',
-      isSpeakingTimerActive: true 
+      speakingTurn: 'user'
     })
     
     this.timerService.startMainTimer(this.model.getState().remainingTime)
-    this.timerService.startSpeakingTimer(30)
     
     this.notifyStateChange()
-    console.log('对战开始，用户先发言')
+    console.log('对战开始，用户可随时发言')
   }
-
   endMatch(): void {
     const state = this.model.getState()
     if (state.matchStarted) {
@@ -173,7 +148,6 @@ export class VersusController {
       }, 300)
     }
   }
-
   private switchSpeakingTurn(): void {
     const state = this.model.getState()
     
@@ -189,7 +163,6 @@ export class VersusController {
     })
     
     this.model.switchSpeakingTurn()
-    this.timerService.startSpeakingTimer(30)
     
     const newState = this.model.getState()
     if (newState.speakingTurn === 'partner' && newState.matchType === 'AI辅助') {
