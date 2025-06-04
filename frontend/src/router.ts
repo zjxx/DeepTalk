@@ -4,14 +4,13 @@ import Register from './views/Register.vue'
 import Profile from './views/Profile.vue'
 import ForgotPassword from './views/ForgotPassword.vue'
 import Versus from './views/Versus.vue'
-import Home from './views/Home.vue'
 import Community from './views/Community.vue'
 // 你可以后续添加Profile等页面
 
 const routes = [
   {
     path: '/',
-    redirect: '/login',
+    redirect: '/home',
   },
   {
     path: '/login',
@@ -29,8 +28,8 @@ const routes = [
     component: ForgotPassword,
   },
   {
-    path: '/profile',
-    name: 'Profile',
+    path: '/home',
+    name: 'Home',
     component: Profile,
     meta: { requiresAuth: true }
   },
@@ -39,12 +38,6 @@ const routes = [
     name: 'Live2D',
     component: Versus,
     meta: { requiresAuth: false }
-  },
-  {
-    path: '/home',
-    name: 'Home',
-    component: Home,
-    meta: { requiresAuth: true }
   },
   {
     path: '/community',
