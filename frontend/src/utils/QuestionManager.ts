@@ -5,7 +5,7 @@ export class QuestionManager {
   private currentQuestion: QuestionData | null = null
   private usedQuestionIds: string[] = []
 
-  // »ñÈ¡ĞÂµÄËæ»úÌâÄ¿
+  // è·å–æ–°çš„éšæœºé¢˜ç›®
   async loadNewQuestion(difficulty?: 'beginner' | 'intermediate' | 'advanced'): Promise<QuestionData | null> {
     try {
       const request: QuestionRequest = {
@@ -22,7 +22,7 @@ export class QuestionManager {
         this.currentQuestion = response.data
         this.usedQuestionIds.push(response.data.id)
         
-        // ÏŞÖÆÀúÊ·¼ÇÂ¼ÊıÁ¿£¬±ÜÃâÎŞÏŞÔö³¤
+        // é™åˆ¶å†å²è®°å½•æ•°é‡ï¼Œé¿å…æ— é™å¢é•¿
         if (this.usedQuestionIds.length > 50) {
           this.usedQuestionIds = this.usedQuestionIds.slice(-25)
         }
@@ -32,44 +32,44 @@ export class QuestionManager {
 
       return null
     } catch (error) {
-      console.error('¼ÓÔØĞÂÌâÄ¿Ê§°Ü:', error)
+      console.error('åŠ è½½æ–°é¢˜ç›®å¤±è´¥:', error)
       return null
     }
   }
 
-  // ¸ù¾İÄÑ¶È¼¶±ğÓ³Éä»ñÈ¡ÌâÄ¿
-  async loadQuestionByLevel(difficultyLevel: '³õ¼¶' | 'ÖĞ¼¶' | '¸ß¼¶'): Promise<QuestionData | null> {
+  // æ ¹æ®éš¾åº¦çº§åˆ«æ˜ å°„è·å–é¢˜ç›®
+  async loadQuestionByLevel(difficultyLevel: 'åˆçº§' | 'ä¸­çº§' | 'é«˜çº§'): Promise<QuestionData | null> {
     const difficultyMap = {
-      '³õ¼¶': 'beginner' as const,
-      'ÖĞ¼¶': 'intermediate' as const,
-      '¸ß¼¶': 'advanced' as const
+      'åˆçº§': 'beginner' as const,
+      'ä¸­çº§': 'intermediate' as const,
+      'é«˜çº§': 'advanced' as const
     }
 
     const difficulty = difficultyMap[difficultyLevel]
     return this.loadNewQuestion(difficulty)
   }
 
-  // »ñÈ¡µ±Ç°ÌâÄ¿
+  // è·å–å½“å‰é¢˜ç›®
   getCurrentQuestion(): QuestionData | null {
     return this.currentQuestion
   }
 
-  // »ñÈ¡µ±Ç°ÌâÄ¿µÄÖ÷Ìâ
+  // è·å–å½“å‰é¢˜ç›®çš„ä¸»é¢˜
   getCurrentTopic(): string {
     return this.currentQuestion?.topic || ''
   }
 
-  // »ñÈ¡µ±Ç°ÌâÄ¿µÄÃèÊö
+  // è·å–å½“å‰é¢˜ç›®çš„æè¿°
   getCurrentDescription(): string {
     return this.currentQuestion?.description || ''
   }
 
-  // »ñÈ¡µ±Ç°ÌâÄ¿µÄÌáÊ¾ÁĞ±í
+  // è·å–å½“å‰é¢˜ç›®çš„æç¤ºåˆ—è¡¨
   getCurrentPrompts(): string[] {
     return this.currentQuestion?.prompts || []
   }
 
-  // »ñÈ¡Ö¸¶¨Ë÷ÒıµÄÌáÊ¾
+  // è·å–æŒ‡å®šç´¢å¼•çš„æç¤º
   getPromptByIndex(index: number): string {
     const prompts = this.getCurrentPrompts()
     if (prompts.length === 0) return ''
@@ -78,7 +78,7 @@ export class QuestionManager {
     return prompts[validIndex]
   }
 
-  // »ñÈ¡ÏÂÒ»¸öÌáÊ¾£¨Ñ­»·£©
+  // è·å–ä¸‹ä¸€ä¸ªæç¤ºï¼ˆå¾ªç¯ï¼‰
   getNextPrompt(currentIndex: number): { prompt: string; nextIndex: number } {
     const prompts = this.getCurrentPrompts()
     if (prompts.length === 0) {
@@ -92,17 +92,17 @@ export class QuestionManager {
     }
   }
 
-  // Çå³ıÊ¹ÓÃÀúÊ·
+  // æ¸…é™¤ä½¿ç”¨å†å²
   clearHistory(): void {
     this.usedQuestionIds = []
   }
 
-  // ÖØÖÃµ±Ç°ÌâÄ¿
+  // é‡ç½®å½“å‰é¢˜ç›®
   reset(): void {
     this.currentQuestion = null
   }
 
-  // »ñÈ¡ÌâÄ¿Í³¼ÆĞÅÏ¢
+  // è·å–é¢˜ç›®ç»Ÿè®¡ä¿¡æ¯
   getQuestionInfo() {
     if (!this.currentQuestion) return null
 
