@@ -49,42 +49,7 @@
           </v-card-text>
         </v-card>
       </v-col>
-      <!-- 添加音频调试面板（仅开发模式） -->
-  <v-col cols="12" v-if="isDev" class="py-1">
-    <v-card>
-      <v-card-title>音频调试信息</v-card-title>
-      <v-card-text>
-        <v-row>
-          <v-col cols="12" md="6">
-            <h4>浏览器支持</h4>
-            <p>Audio API: {{ audioDebug.hasAudioAPI ? '✅' : '❌' }}</p>
-            <p>MediaRecorder: {{ audioDebug.hasMediaRecorder ? '✅' : '❌' }}</p>
-            <p>getUserMedia: {{ audioDebug.hasGetUserMedia ? '✅' : '❌' }}</p>
-            <p>AudioContext: {{ audioDebug.hasAudioContext ? '✅' : '❌' }}</p>
-          </v-col>
-          <v-col cols="12" md="6">
-            <h4>当前状态</h4>
-            <p>录音状态: {{ state.isRecording ? '录音中' : '未录音' }}</p>
-            <p>播放状态: {{ state.isPlayingAudio ? '播放中' : '未播放' }}</p>
-            <p>录音文件: {{ state.lastRecordedAudio ? `${state.lastRecordedAudio.size} bytes` : '无' }}</p>
-            <p>文件类型: {{ state.lastRecordedAudio?.type || '无' }}</p>
-          </v-col>
-        </v-row>
-        <v-divider class="my-3"></v-divider>
-        <v-btn-group>
-          <v-btn @click="testBasicAudioPlayback" color="info" size="small">
-            测试基础播放
-          </v-btn>
-          <v-btn @click="testAudioContext" color="success" size="small">
-            测试AudioContext
-          </v-btn>
-          <v-btn @click="downloadRecording" color="warning" size="small" v-if="state.lastRecordedAudio">
-            下载录音文件
-          </v-btn>
-        </v-btn-group>
-      </v-card-text>
-    </v-card>
-  </v-col>
+
       <!-- 共享的 PIXI Canvas 容器 -->
       <v-col cols="12" class="pixi-canvas-wrapper-col">
         <div class="pixi-canvas-container" ref="pixiContainerRef">
@@ -271,33 +236,6 @@
               >
                 下一话题
               </v-btn>
-              <!-- 添加测试按钮 -->
-          <v-btn 
-            v-if="isDev"
-            prepend-icon="mdi-microphone-settings" 
-            color="info" 
-            @click="testMicrophoneDirectly"
-            class="mr-2"
-          >
-            直接测试麦克风
-          </v-btn>
-          <v-btn 
-            v-if="isDev"
-            prepend-icon="mdi-bug" 
-            color="warning" 
-            @click="debugController"
-          >
-            调试 Controller
-          </v-btn>
-          <v-btn 
-            v-if="isDev && state.lastRecordedAudio"
-            prepend-icon="mdi-play-circle" 
-            color="purple" 
-            @click="testAudioPlayback"
-            class="mr-2"
-          >
-            测试播放
-          </v-btn>
             </v-btn-group>
 
             <div class="d-flex my-2">
@@ -382,101 +320,6 @@ const state = reactive(controller.getState())
 
 // 用户模型数据
 const userModel = computed(() => ({ email: 'test@example.com' }))
-// 添加音频调试信息
-const audioDebug = ref({
-  hasAudioAPI: typeof Audio !== 'undefined',
-  hasMediaRecorder: typeof MediaRecorder !== 'undefined',
-  hasGetUserMedia: !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia),
-  hasAudioContext: typeof AudioContext !== 'undefined' || typeof (window as Window & typeof globalThis).webkitAudioContext !== 'undefined'
-})
-// 测试基础音频播放功能
-const testBasicAudioPlayback = async () => {
-  console.log('=== 测试基础音频播放 ===')
-  
-  try {
-    // 创建一个简单的音频测试
-    const audioContext = new ((window as Window & typeof globalThis).AudioContext || (window as Window & typeof globalThis).webkitAudioContext)()
-    
-    // 检查音频上下文状态
-    console.log('AudioContext 状态:', audioContext.state)
-    
-    if (audioContext.state === 'suspended') {
-      console.log('尝试恢复 AudioContext...')
-      await audioContext.resume()
-    }
-    
-    // 生成一个简单的测试音频（440Hz正弦波，持续0.5秒）
-    const sampleRate = audioContext.sampleRate
-    const duration = 0.5
-    const buffer = audioContext.createBuffer(1, sampleRate * duration, sampleRate)
-    const data = buffer.getChannelData(0)
-    
-    for (let i = 0; i < data.length; i++) {
-      data[i] = Math.sin(2 * Math.PI * 440 * i / sampleRate) * 0.1
-    }
-    
-    const source = audioContext.createBufferSource()
-    source.buffer = buffer
-    source.connect(audioContext.destination)
-    
-    console.log('播放测试音频...')
-    source.start()
-    
-    alert('如果听到了短暂的蜂鸣声，说明音频播放功能正常')
-    
-  } catch (error) {
-    console.error('基础音频播放测试失败:', error)
-    alert(`基础音频播放测试失败: ${(error as Error).message}`)
-  }
-}
-// 测试AudioContext
-const testAudioContext = async () => {
-  console.log('=== 测试 AudioContext ===')
-  
-  try {
-    const audioContext = new (
-      window.AudioContext ||
-      (window as Window & typeof globalThis & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
-    )()
-    console.log('AudioContext 创建成功')
-    console.log('状态:', audioContext.state)
-    console.log('采样率:', audioContext.sampleRate)
-    
-    if (audioContext.state === 'suspended') {
-      await audioContext.resume()
-      console.log('AudioContext 已恢复')
-    }
-    
-    alert('AudioContext 测试成功，请查看控制台')
-    
-  } catch (error) {
-    console.error('AudioContext 测试失败:', error)
-    alert(`AudioContext 测试失败: ${(error as Error).message}`)
-  }
-}
-// 下载录音文件进行检查
-const downloadRecording = () => {
-  if (!state.lastRecordedAudio) {
-    alert('没有录音文件')
-    return
-  }
-  
-  console.log('=== 下载录音文件 ===')
-  console.log('文件大小:', state.lastRecordedAudio.size)
-  console.log('文件类型:', state.lastRecordedAudio.type)
-  
-  const url = URL.createObjectURL(state.lastRecordedAudio)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `recording_${Date.now()}.${state.lastRecordedAudio.type.split('/')[1] || 'webm'}`
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
-  
-  console.log('录音文件已下载，请用外部播放器测试')
-}
-// 事件处理函数
 const handleStartMatch = async () => {
   try {
     await controller.startMatch()
@@ -485,128 +328,6 @@ const handleStartMatch = async () => {
     }
   } catch (error) {
     console.error('开始对战失败:', error)
-  }
-}
-// 添加直接测试麦克风的功能
-const testMicrophoneDirectly = async () => {
-  console.log('=== 直接测试麦克风 ===')
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-    console.log('✅ 麦克风权限获取成功!')
-    console.log('音频轨道:', stream.getAudioTracks())
-    
-    // 测试录音
-    const mediaRecorder = new MediaRecorder(stream)
-    const audioChunks: Blob[] = []
-    
-    mediaRecorder.ondataavailable = (event) => {
-      audioChunks.push(event.data)
-      console.log('收到音频数据:', event.data.size, 'bytes')
-    }
-    
-    mediaRecorder.onstop = () => {
-      console.log('录音停止，总计', audioChunks.length, '个音频块')
-      const audioBlob = new Blob(audioChunks, { type: 'audio/webm' })
-      console.log('音频文件大小:', audioBlob.size, 'bytes')
-    }
-    
-    mediaRecorder.start()
-    console.log('开始录音...')
-    
-    setTimeout(() => {
-      mediaRecorder.stop()
-      stream.getTracks().forEach(track => track.stop())
-      console.log('测试完成')
-    }, 2000)
-    
-    alert('麦克风测试成功！请查看控制台输出。')
-  } catch (error) {
-    console.error('❌ 麦克风测试失败:', error)
-    alert(`麦克风测试失败: ${(error as Error).message}`)
-  }
-}
-// 添加调试信息
-const debugController = () => {
-  console.log('=== Controller 调试信息 ===')
-  console.log('Controller 实例:', controller)
-  console.log('当前状态:', controller.getState())
-  console.log('canUserSpeak:', controller.canUserSpeak)
-  // 如果 VersusController 没有 audioService 类型声明，可以用 unknown 断言
-  console.log('AudioService 是否存在:', !!(controller as unknown as { audioService?: unknown }).audioService)
-}
-// 修改 handleToggleRecording，添加更多调试信息
-// 添加直接测试音频播放的功能
-const testAudioPlayback = async () => {
-  console.log('=== 改进的音频播放测试 ===')
-  
-  if (!state.lastRecordedAudio) {
-    alert('没有录音文件可供测试')
-    return
-  }
-  
-  try {
-    console.log('录音文件信息:')
-    console.log('- 大小:', state.lastRecordedAudio.size, 'bytes')
-    console.log('- 类型:', state.lastRecordedAudio.type)
-    
-    // 检查音频上下文
-    const audioContext = new (
-      window.AudioContext ||
-      (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext!
-    )()
-    if (audioContext.state === 'suspended') {
-      await audioContext.resume()
-      console.log('AudioContext 已恢复')
-    }
-    
-    // 方法1：直接使用Audio对象
-    console.log('方法1: 使用 Audio 对象播放')
-    const audioUrl = URL.createObjectURL(state.lastRecordedAudio)
-    const audio = new Audio(audioUrl)
-    
-    audio.volume = 1.0
-    audio.preload = 'auto'
-    
-    // 添加详细的事件监听
-    audio.addEventListener('loadstart', () => console.log('Audio: loadstart'))
-    audio.addEventListener('loadedmetadata', () => {
-      console.log('Audio: loadedmetadata')
-      console.log('- 时长:', audio.duration)
-      console.log('- 音量:', audio.volume)
-    })
-    audio.addEventListener('loadeddata', () => console.log('Audio: loadeddata'))
-    audio.addEventListener('canplay', () => console.log('Audio: canplay'))
-    audio.addEventListener('canplaythrough', () => console.log('Audio: canplaythrough'))
-    audio.addEventListener('play', () => console.log('Audio: play 事件'))
-    audio.addEventListener('playing', () => console.log('Audio: playing 事件'))
-    audio.addEventListener('pause', () => console.log('Audio: pause 事件'))
-    audio.addEventListener('ended', () => {
-      console.log('Audio: ended 事件')
-      URL.revokeObjectURL(audioUrl)
-    })
-    audio.addEventListener('error', (e) => {
-      console.error('Audio: error 事件', e)
-      console.error('Audio error details:', audio.error)
-    })
-    
-    console.log('开始播放...')
-    const playPromise = audio.play()
-    
-    if (playPromise !== undefined) {
-      playPromise
-        .then(() => {
-          console.log('✅ 播放成功启动')
-          alert('音频开始播放，请检查是否有声音输出')
-        })
-        .catch(error => {
-          console.error('❌ 播放失败:', error)
-          alert(`播放失败: ${error.message}`)
-        })
-    }
-    
-  } catch (error) {
-    console.error('音频播放测试失败:', error)
-    alert(`测试失败: ${(error as Error).message}`)
   }
 }
 const handleEndMatch = () => {
@@ -621,14 +342,6 @@ const handleEndMatch = () => {
 }
 
 const handleToggleRecording = async () => {
-  console.log('=== handleToggleRecording 被调用 ===')
-  console.log('当前状态:', {
-    isRecording: state.isRecording,
-    canUserSpeak: controller.canUserSpeak,
-    speakingTurn: state.speakingTurn,
-    isSpeakingTimerActive: state.isSpeakingTimerActive
-  })
-  
   try {
     await controller.toggleRecording()
     
@@ -643,10 +356,6 @@ const handleToggleRecording = async () => {
 }
 
 const handleTogglePlayback = () => {
-  console.log('=== handleTogglePlayback 被调用 ===')
-  console.log('当前播放状态:', state.isPlayingAudio)
-  console.log('是否有录音文件:', !!state.lastRecordedAudio)
-  
   if (state.lastRecordedAudio) {
     console.log('录音文件信息:')
     console.log('- 大小:', state.lastRecordedAudio.size, 'bytes')
@@ -691,8 +400,6 @@ controller.setStateChangeCallback(() => {
 onMounted(async () => {
   console.log('=== versus.vue onMounted ===')
   
-  // 调试 Controller
-  debugController()
   await nextTick()
   if (pixiContainerRef.value) {
     const width = pixiContainerRef.value.clientWidth
