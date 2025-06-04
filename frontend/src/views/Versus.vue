@@ -6,8 +6,11 @@
         <v-card class="mb-2">
           <v-card-text class="text-center">
             <div class="text-h5 mb-2">口语对战 - {{ state.matchType }}</div>
-            <div class="text-body-1">
+            <div class="text-body-1" v-if="state.matchStarted && controller.currentTopic">
               当前主题: <span class="font-weight-bold">{{ controller.currentTopic }}</span>
+            </div>
+            <div class="text-body-1" v-else-if="!state.matchStarted">
+              <span class="text-grey-5">点击"开始对话"来获取随机题目</span>
             </div>
             <div class="d-flex justify-center align-center mt-2">
               <v-chip color="primary" class="mr-2">

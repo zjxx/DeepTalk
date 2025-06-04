@@ -3,12 +3,14 @@ import { VersusModel } from '../models/VersusModel'
 import { AudioService } from '../services/AudioService'
 import { TimerService } from '../services/TimerService'
 import { AIService } from '../services/AIService'
+import { QuestionManager } from '../utils/QuestionManager'
 
 export class VersusController {
   private model: VersusModel
   private audioService: AudioService
   private timerService: TimerService
   private aiService: AIService
+  private questionManager: QuestionManager
   
   // 回调函数，用于通知 View 层状态变化
   private onStateChange?: () => void
@@ -18,6 +20,7 @@ export class VersusController {
     this.audioService = new AudioService()
     this.timerService = new TimerService()
     this.aiService = new AIService()
+    this.questionManager = new QuestionManager()
     
     this.setupEventListeners()
   }
@@ -85,10 +88,38 @@ export class VersusController {
   }
 
   get currentTopic(): string {
+    const state = this.model.getState()
+    
+    // 如果对话还没开始，不显示任何主题
+    if (!state.matchStarted) {
+      return ''
+    }
+    
+    // 对话开始后，优先使用题库中的题目
+    const questionTopic = this.questionManager.getCurrentTopic()
+    if (questionTopic) {
+      return questionTopic
+    }
+    
+    // 备用：使用VersusModel中的原有主题（但通常不会用到）
     return this.model.currentTopic
   }
 
   get currentPrompt(): string {
+    const state = this.model.getState()
+    
+    // 如果对话还没开始，显示默认提示
+    if (!state.matchStarted) {
+      return '准备好了吗？点击"开始对话"来开始练习！'
+    }
+    
+    // 优先使用题库中的提示
+    const questionPrompt = this.questionManager.getPromptByIndex(state.currentPromptIndex)
+    if (questionPrompt) {
+      return questionPrompt
+    }
+    
+    // 备用：使用VersusModel中的原有提示
     return this.model.currentPrompt
   }  // 重要：录音功能实现
   async toggleRecording(): Promise<void> {
@@ -112,15 +143,22 @@ export class VersusController {
   }
   // 业务逻辑方法
   async startMatch(): Promise<void> {
+    // 开始对战时加载一个随机题目
+    const state = this.model.getState()
+    
+    // 首先启动对战状态
     this.model.updateMatchState({ 
       matchStarted: true,
       speakingTurn: 'user'
     })
     
+    // 然后加载题目
+    await this.questionManager.loadQuestionByLevel(state.difficultyLevel)
+    
     this.timerService.startMainTimer(this.model.getState().remainingTime)
     
     this.notifyStateChange()
-    console.log('对战开始，用户可随时发言')
+    console.log('对战开始，已加载新题目:', this.questionManager.getCurrentTopic())
   }
   endMatch(): void {
     const state = this.model.getState()
@@ -129,6 +167,9 @@ export class VersusController {
       this.audioService.stopRecording()
       this.audioService.stopPlayback()
       this.aiService.stopSpeaking()
+      
+      // 重置题库状态
+      this.questionManager.reset()
       
       this.model.resetMatch()
       this.notifyStateChange()
@@ -202,6 +243,16 @@ export class VersusController {
   }
 
   nextTopic(): void {
+    const state = this.model.getState()
+    
+    // 只有在对话已开始时才加载新题目
+    if (state.matchStarted) {
+      this.questionManager.loadQuestionByLevel(state.difficultyLevel).then(() => {
+        this.notifyStateChange()
+      })
+    }
+    
+    // 同时执行原有的逻辑作为备用
     this.model.nextTopic()
     this.notifyStateChange()
   }
