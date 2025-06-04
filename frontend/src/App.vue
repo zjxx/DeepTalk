@@ -30,11 +30,13 @@ export default defineComponent({
     const showNavbar = ref(false)
     const showSideDrawer = ref(false)
 
-    const navRoutes = ['/home', '/explore', '/community', '/shop', '/settings']
-    const sideDrawerRoutes = ['/home', '/']
+    const navRoutes = ['/home', '/explore', '/community', '/shop', '/settings', '/security', '/privacy', '/profile', '/messages', '/private-messages']
+    const sideDrawerRoutes = ['/home', '/profile', '/', '/security', '/privacy',  '/messages', '/private-messages']
 
     const checkRoute = () => {
       const currentPath = route.path
+      console.log('当前路由路径:', currentPath);
+      console.log('navRoutes 包含当前路径:', navRoutes.includes(currentPath));
       showNavbar.value = navRoutes.includes(currentPath)
       showSideDrawer.value = sideDrawerRoutes.includes(currentPath)
     }

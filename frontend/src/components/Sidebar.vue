@@ -14,43 +14,18 @@
         to="/home"
       ></v-list-item>
       <v-list-item
-        prepend-icon="mdi-shield-account"
-        title="账号安全"
-        value="security"
-        to="/security"
-      ></v-list-item>
-      <v-list-item
         prepend-icon="mdi-account-cog"
         title="个人信息"
         value="profile"
         to="/profile"
       ></v-list-item>
-      <v-divider></v-divider>
       <v-list-item
-        prepend-icon="mdi-post"
-        title="我的帖子"
-        value="posts"
-        to="/posts"
-      ></v-list-item>
-      <v-list-item
-        prepend-icon="mdi-bookmark"
-        title="我的收藏"
-        value="favorites"
-        to="/favorites"
-      ></v-list-item>
-      <v-list-item
-        prepend-icon="mdi-history"
-        title="浏览历史"
-        value="history"
-        to="/history"
+        prepend-icon="mdi-shield-account"
+        title="隐私与安全"
+        value="security"
+        to="/security"
       ></v-list-item>
       <v-divider></v-divider>
-      <v-list-item
-        prepend-icon="mdi-bell"
-        title="系统通知"
-        value="notifications"
-        to="/notifications"
-      ></v-list-item>
       <v-list-item
         prepend-icon="mdi-message"
         title="互动消息"

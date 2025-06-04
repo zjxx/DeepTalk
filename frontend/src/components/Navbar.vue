@@ -72,9 +72,9 @@ export default defineComponent({
   },
   setup() {
     const router = useRouter()
-    const selectedKeys = ref(['home'])
-    const userAvatar = ref('https://randomuser.me/api/portraits/men/85.jpg')
-    const username = ref('您的用户名或邮箱')
+    const selectedKeys = ref<string[]>(['home'])
+    const userAvatar = ref('https://sns-avatar-qc.xhscdn.com/avatar/1040g2jo31b593h86ng005p4rmeo7531ts9tr1og?imageView2/2/w/540/format/webp|imageMogr2/strip2')
+    const username = ref('山有木兮')
 
     const handleLogout = async () => {
       try {
@@ -84,6 +84,8 @@ export default defineComponent({
         console.error('登出失败:', error)
         alert(error instanceof Error ? error.message : '登出失败，请重试')
       }
+
+      // 登出成功后已经在 userController 中跳转到登录页，这里无需额外操作
     }
 
     return {
@@ -104,6 +106,7 @@ export default defineComponent({
   background: #fff;
   box-shadow: none;
   width: 100%;
+
 }
 
 .logo {
@@ -111,11 +114,19 @@ export default defineComponent({
   font-weight: bold;
   color: #1890ff;
   padding: 0 24px;
+  width: 256px; /* 设置logo宽度与侧边栏展开时一致 */
+  flex-shrink: 0; /* 防止logo被压缩 */
+  text-align: center; /* 使内容居中 */
 }
 
 .main-menu {
   flex: 1;
   border-bottom: none;
+}
+
+.main-menu :deep(.ant-menu-item) {
+  min-width: 120px !important;
+  text-align: center;
 }
 
 .ant-menu-horizontal.ant-menu-root {
@@ -125,7 +136,9 @@ export default defineComponent({
 
 .ant-menu-horizontal.ant-menu-root > .ant-menu-item,
 .ant-menu-horizontal.ant-menu-root > .ant-menu-submenu {
-  padding: 0 16px;
+  padding: 0 16px; /* 进一步增加左右内边距 */
+  min-width: 100px; /* 设置最小宽度 */
+  text-align: center; /* 文字居中 */
 }
 
 .user-info {
@@ -138,6 +151,7 @@ export default defineComponent({
 .username {
   margin-left: 8px;
   color: rgba(0, 0, 0, 0.85);
+
 }
 
 :deep(.ant-dropdown-menu) {
@@ -153,5 +167,6 @@ export default defineComponent({
 
 :deep(.ant-dropdown-menu-item .anticon) {
   margin-right: 8px;
+
 }
 </style> 

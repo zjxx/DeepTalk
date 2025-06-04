@@ -5,6 +5,7 @@ import Profile from './views/Profile.vue'
 import ForgotPassword from './views/ForgotPassword.vue'
 import Versus from './views/Versus.vue'
 import Community from './views/Community.vue'
+import Home from './views/Home.vue'
 // 你可以后续添加Profile等页面
 
 const routes = [
@@ -30,6 +31,12 @@ const routes = [
   {
     path: '/home',
     name: 'Home',
+    component: Home,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/profile',
+    name: 'Profile',
     component: Profile,
     meta: { requiresAuth: true }
   },
