@@ -52,6 +52,12 @@ const routes = [
     component: Community,
     meta: { requiresAuth: true }
   },
+  {
+    path: '/versus',
+    name: 'Versus',
+    component: Versus,
+    meta: { requiresAuth: false }
+  }
   // { path: '/profile', component: () => import('./views/Profile.vue') },
 ]
 
