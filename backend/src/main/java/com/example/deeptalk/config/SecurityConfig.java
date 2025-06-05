@@ -22,7 +22,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         http
             .csrf().disable()
             .authorizeRequests()
-            .antMatchers("/api/auth/**", "/api/verification/**","/actuator/health").permitAll()
+            .antMatchers("/api/auth/**", "/api/speech/**", "/api/verification/**","/actuator/health").permitAll()
             .anyRequest().authenticated()
             .and()
             .cors();
