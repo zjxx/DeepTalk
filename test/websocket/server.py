@@ -43,7 +43,7 @@ async def broadcast(message):
             *[client.send(message_str) for client in connected_clients]
         )
 
-async def handle_client(websocket, path):
+async def handle_client(websocket):
     """处理客户端连接"""
     await register(websocket)
     try:
