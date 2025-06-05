@@ -1,8 +1,11 @@
 package com.example.deeptalk.modules.speech.service;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Async;
+import com.example.deeptalk.modules.speech.entity.SpeechSessionInfo;
+import org.kurento.client.KurentoClient;
+import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Service;
+import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
+import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
 
 import java.util.HashSet;
 import java.util.Map;
@@ -15,12 +18,20 @@ import java.util.concurrent.*;
 @Service
 public class SpeechService {
 
-    private static HashSet<String> pendingUsers;
+    public static final KurentoHandler kurentoHandler = new KurentoHandler();
 
-    private static HashSet<String> connectedUsers;
+    @Bean
+    public KurentoClient kurentoClient()
+    {
+        return KurentoClient.create();
+    }
+
+    private final static ConcurrentLinkedQueue<String> pendingUsers = new ConcurrentLinkedQueue<>();
+    private final static ConcurrentLinkedQueue<String> connectedUsers = new ConcurrentLinkedQueue<>();
+    private final static ConcurrentHashMap<String, SpeechSessionInfo> sessions = new ConcurrentHashMap<>();
 
     private final static int MAX_PENDING_TIME = 10; // maximum waiting time, in seconds
-    private final static Map<String, CompletableFuture<String>> pendingNotifier = new ConcurrentHashMap<>();
+    private final static ConcurrentHashMap<String, CompletableFuture<String>> pendingNotifier = new ConcurrentHashMap<>();
     /**
      * 为用户进行匹配，该函数包含具体的匹配逻辑
      * 这一操作是原子的，因为我们不希望同时有多个用户被匹配到同一个对手
@@ -31,7 +42,7 @@ public class SpeechService {
     public static synchronized String findMatching(String userId) {
         String opponentId = null;
         if (!pendingUsers.isEmpty()) {
-            // 随机选择一个对手
+            // 选择队首的用户作为对手
             opponentId = pendingUsers.iterator().next();
             // 通知对手已经匹配成功
             CompletableFuture<String> opponentFuture = pendingNotifier.get(opponentId);
@@ -46,8 +57,8 @@ public class SpeechService {
         String has_matching = null;
         try {
             CompletableFuture<String> future = new CompletableFuture<>();
-            has_matching = future.get(MAX_PENDING_TIME, TimeUnit.SECONDS);
             pendingNotifier.put(userId, future);
+            has_matching = future.get(MAX_PENDING_TIME, TimeUnit.SECONDS);
         } catch(InterruptedException | ExecutionException e){
             System.err.println(e.getMessage());
         } catch (TimeoutException e) {
@@ -94,8 +105,14 @@ public class SpeechService {
         connectedUsers.add(userId);
         connectedUsers.add(opponentId);
         // 生成一个连接token
-        String token = null; // TODO: 联系Websocket组件与rtc客户端得到token
-        return token;
+        SpeechSessionInfo session = kurentoHandler.createSession(userId, opponentId);
+
+        if (session == null) {
+            System.err.println("Unable to create session");
+            return null;
+        }
+        sessions.put(session.getSessionId(), session);
+        return session.getSessionId();
     }
 
     /**
@@ -103,8 +120,22 @@ public class SpeechService {
      *
      * @param userId the user id
      */
-    public static void disconnect(String userId) {
+    public static synchronized void disconnect(String userId, String sessionId) {
         // 断开连接，移除用户
+        SpeechSessionInfo session = sessions.get(sessionId);
+        if (session == null) {
+            System.err.println("Session not found for sessionId: " + sessionId);
+            return; // 如果会话不存在，则直接返回
+        }
+
+        String opponentId = session.getOpponentId(userId);
+
         connectedUsers.remove(userId);
+
+        if (!connectedUsers.contains(opponentId)) {
+            // 如果对手也断开了连接，则结束Kurento会话
+            kurentoHandler.terminateSession(sessionId);
+            sessions.remove(session.getSessionId());
+        }
     }
 }
