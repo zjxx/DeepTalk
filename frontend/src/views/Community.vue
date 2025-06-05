@@ -4,14 +4,43 @@
       <v-sheet class="main-content">
         <!-- 搜索栏 -->
         <v-card class="search-section" flat>
-          <v-text-field
-            placeholder="搜索社区内容..."
-            prepend-inner-icon="mdi-magnify"
-            variant="outlined"
-            hide-details
-            class="search-input"
-          ></v-text-field>
-        </v-card>
+  <div class="search-container">
+    <!-- 搜索类型下拉选择框 -->
+    <v-select
+      v-model="searchType"
+      :items="searchOptions"
+      item-title="text"
+      item-value="value"
+      variant="outlined"
+      hide-details
+      class="search-type-select"
+      density="compact"
+    ></v-select>
+    
+    <!-- 搜索输入框 -->
+    <v-text-field
+      v-model="searchQuery"
+      placeholder="搜索社区内容..."
+      prepend-inner-icon="mdi-magnify"
+      variant="outlined"
+      hide-details
+      class="search-input"
+      @update:model-value="handleSearch"
+      @keyup.enter="handleSearch"
+    ></v-text-field>
+
+    <!-- 搜索按钮 -->
+    <!-- 搜索按钮 -->
+    <v-btn
+      color="primary"
+      variant="elevated"
+      class="search-button"
+      @click="handleSearch"
+    >
+      搜索
+    </v-btn>
+  </div>
+</v-card>
 
         <!-- 三栏布局区域 -->
         <div class="content-layout">
@@ -20,6 +49,7 @@
             <v-card-title class="text-h6 font-weight-bold">关注列表</v-card-title>
             <v-card-text class="following-list">
               <!-- 这里后续添加关注列表组件 -->
+
             </v-card-text>
           </v-card>
 
@@ -27,6 +57,7 @@
           <v-card class="center-content" elevation="1">
             <v-card-text class="posts-container">
               <!-- 这里后续添加帖子列表组件 -->
+
             </v-card-text>
           </v-card>
 
@@ -36,12 +67,14 @@
               <v-card-title class="text-h6 font-weight-bold">推荐作者</v-card-title>
               <v-card-text>
                 <!-- 这里后续添加作者组件 -->
+
               </v-card-text>
             </v-card>
             <v-card class="toolbox" elevation="1">
               <v-card-title class="text-h6 font-weight-bold">工具箱</v-card-title>
               <v-card-text>
                 <!-- 这里后续添加工具组件 -->
+                 
               </v-card-text>
             </v-card>
           </div>
@@ -52,7 +85,34 @@
 </template>
 
 <script setup lang="ts">
-// 组件逻辑部分
+import { ref } from 'vue'
+import { useCommunityController } from '../controllers/CommunityController'
+
+const {
+  searchPosts,
+  searchAuthors
+} = useCommunityController()
+
+// 搜索相关状态
+const searchQuery = ref('')
+const searchType = ref('posts')
+
+// 搜索选项
+const searchOptions = [
+  { text: '按内容搜索', value: 'posts' },
+  { text: '按作者搜索', value: 'authors' }
+]
+
+// 处理搜索
+const handleSearch = async () => {
+  if (!searchQuery.value.trim()) return
+  
+  if (searchType.value === 'posts') {
+    await searchPosts(searchQuery.value)
+  } else if (searchType.value === 'authors') {
+    await searchAuthors(searchQuery.value)
+  }
+}
 </script>
 
 <style scoped>
@@ -76,11 +136,30 @@
   width: 100%;
   margin-bottom: 20px;
   background-color: white;
-  border-radius: 8px;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow:  0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.search-container {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.search-type-select {
+  width: 18%;
+  flex-shrink: 0;
 }
 
 .search-input {
-  padding: 8px 16px;
+  width: 70%;
+  flex-shrink: 0;
+}
+
+.search-button {
+  width: 8%;
+  flex-shrink: 0;
 }
 
 .content-layout {
@@ -128,7 +207,7 @@
 }
 
 /* 修改响应式设计部分 */
-@media (max-width: 960px) {
+/* @media (max-width: 960px) {
   .main-content {
     width: 95%;
   }
@@ -140,13 +219,9 @@
 
   .left-sidebar,
   .right-sidebar {
-    position: static; /* 在移动端取消固定定位 */
+    position: static; //在移动端取消固定定位 
     max-height: none;
   }
-}
+} */
 </style>
 
-<script setup lang="ts">
-
-
-</script>
