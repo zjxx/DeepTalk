@@ -247,7 +247,6 @@ export async function logout(): Promise<void> {
       console.log('数据清理完成，准备跳转到登录页')
       window.location.href = '/login'
     } else {
-      alert('登出失败：服务器未返回成功响应')
       throw new Error('登出失败：服务器未返回成功响应')
     }
   } catch (error) {
@@ -255,10 +254,8 @@ export async function logout(): Promise<void> {
     if (axios.isAxiosError(error)) {
       console.log('错误响应:', error.response)
       if (error.response?.status === 400) {
-        alert('登出失败：' + (error.response.data?.message || '未知错误'))
         throw new Error('登出失败：' + (error.response.data?.message || '未知错误'))
       }
-      alert('登出失败：' + (error.response?.data?.message || '网络错误'))
       throw new Error('登出失败：' + (error.response?.data?.message || '网络错误'))
     }
     throw error
