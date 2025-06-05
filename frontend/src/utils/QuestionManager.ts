@@ -5,7 +5,7 @@ export class QuestionManager {
   private currentQuestion: QuestionData | null = null
   private usedQuestionIds: string[] = []
 
-  // »ñÈ¡ĞÂµÄËæ»úÌâÄ¿
+  // ï¿½ï¿½È¡ï¿½Âµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿
   async loadNewQuestion(difficulty?: 'beginner' | 'intermediate' | 'advanced'): Promise<QuestionData | null> {
     try {
       const request: QuestionRequest = {
@@ -22,7 +22,7 @@ export class QuestionManager {
         this.currentQuestion = response.data
         this.usedQuestionIds.push(response.data.id)
         
-        // ÏŞÖÆÀúÊ·¼ÇÂ¼ÊıÁ¿£¬±ÜÃâÎŞÏŞÔö³¤
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê·ï¿½ï¿½Â¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         if (this.usedQuestionIds.length > 50) {
           this.usedQuestionIds = this.usedQuestionIds.slice(-25)
         }
@@ -32,44 +32,42 @@ export class QuestionManager {
 
       return null
     } catch (error) {
-      console.error('¼ÓÔØĞÂÌâÄ¿Ê§°Ü:', error)
+      console.error('åŠ è½½æ–°é¢˜ç›®å¤±è´¥:', error)
       return null
     }
   }
 
-  // ¸ù¾İÄÑ¶È¼¶±ğÓ³Éä»ñÈ¡ÌâÄ¿
-  async loadQuestionByLevel(difficultyLevel: '³õ¼¶' | 'ÖĞ¼¶' | '¸ß¼¶'): Promise<QuestionData | null> {
+  // ï¿½ï¿½ï¿½ï¿½ï¿½Ñ¶È¼ï¿½ï¿½ï¿½Ó³ï¿½ï¿½ï¿½È¡ï¿½ï¿½Ä¿
+  async loadQuestionByLevel(difficultyLevel: 'åˆçº§' | 'ä¸­çº§' | 'é«˜çº§'): Promise<QuestionData | null> {
     const difficultyMap = {
-      '³õ¼¶': 'beginner' as const,
-      'ÖĞ¼¶': 'intermediate' as const,
-      '¸ß¼¶': 'advanced' as const
+      'åˆçº§': 'beginner' as const,
+      'ä¸­çº§': 'intermediate' as const,
+      'é«˜çº§': 'advanced' as const
     }
 
     const difficulty = difficultyMap[difficultyLevel]
     return this.loadNewQuestion(difficulty)
   }
 
-  // »ñÈ¡µ±Ç°ÌâÄ¿
+  // ï¿½ï¿½È¡ï¿½ï¿½Ç°ï¿½ï¿½Ä¿
   getCurrentQuestion(): QuestionData | null {
     return this.currentQuestion
   }
 
-  // »ñÈ¡µ±Ç°ÌâÄ¿µÄÖ÷Ìâ
+  // ï¿½ï¿½È¡ï¿½ï¿½Ç°ï¿½ï¿½Ä¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
   getCurrentTopic(): string {
     return this.currentQuestion?.topic || ''
   }
 
-  // »ñÈ¡µ±Ç°ÌâÄ¿µÄÃèÊö
+  // ï¿½ï¿½È¡ï¿½ï¿½Ç°ï¿½ï¿½Ä¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
   getCurrentDescription(): string {
     return this.currentQuestion?.description || ''
   }
 
-  // »ñÈ¡µ±Ç°ÌâÄ¿µÄÌáÊ¾ÁĞ±í
   getCurrentPrompts(): string[] {
     return this.currentQuestion?.prompts || []
   }
 
-  // »ñÈ¡Ö¸¶¨Ë÷ÒıµÄÌáÊ¾
   getPromptByIndex(index: number): string {
     const prompts = this.getCurrentPrompts()
     if (prompts.length === 0) return ''
@@ -78,7 +76,6 @@ export class QuestionManager {
     return prompts[validIndex]
   }
 
-  // »ñÈ¡ÏÂÒ»¸öÌáÊ¾£¨Ñ­»·£©
   getNextPrompt(currentIndex: number): { prompt: string; nextIndex: number } {
     const prompts = this.getCurrentPrompts()
     if (prompts.length === 0) {
@@ -92,17 +89,17 @@ export class QuestionManager {
     }
   }
 
-  // Çå³ıÊ¹ÓÃÀúÊ·
+  // ï¿½ï¿½ï¿½Ê¹ï¿½ï¿½ï¿½ï¿½Ê·
   clearHistory(): void {
     this.usedQuestionIds = []
   }
 
-  // ÖØÖÃµ±Ç°ÌâÄ¿
+  // ï¿½ï¿½ï¿½Ãµï¿½Ç°ï¿½ï¿½Ä¿
   reset(): void {
     this.currentQuestion = null
   }
 
-  // »ñÈ¡ÌâÄ¿Í³¼ÆĞÅÏ¢
+  // ï¿½ï¿½È¡ï¿½ï¿½Ä¿Í³ï¿½ï¿½ï¿½ï¿½Ï¢
   getQuestionInfo() {
     if (!this.currentQuestion) return null
 
