@@ -53,7 +53,7 @@
   }
   
   const connectWebSocket = () => {
-    const wsUrl = 'ws://10.208.90.113:8765'
+    const wsUrl = 'ws://115.175.45.173:8765'
   
     try {
       ws.value = new WebSocket(wsUrl)
