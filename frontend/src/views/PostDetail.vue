@@ -6,15 +6,17 @@
 
     <v-main>
       <v-container fluid class="fill-height pa-0">
-        <v-sheet class="main-content">
+        <!-- 页面容器：左右各留空0.125 -->
+        <div class="page-container">
           <!-- 返回按钮 -->
           <v-btn
             variant="text"
             prepend-icon="mdi-arrow-left"
             class="mb-4"
             @click="goBack"
+            color="rgba(10, 100, 200, 0.8)"
           >
-            返回社区
+            返回
           </v-btn>
 
           <!-- 加载状态 -->
@@ -23,58 +25,52 @@
             <p class="mt-4">加载中...</p>
           </div>
 
-          <!-- 主要内容布局 -->
+          <!-- 主要内容布局：两栏布局 0.7 + 0.3 -->
           <div v-else-if="currentPost" class="content-layout">
-            <!-- 左侧和中间：帖子详情 -->
-            <v-card class="post-detail-card" elevation="1">
-              <!-- 帖子头部 -->
+            <!-- 左侧：帖子主要内容 -->
+            <v-card class="post-content-card" elevation="1">
+              <!-- 标题和点赞按钮 -->
               <v-card-text class="post-header">
-                <div class="author-section">
-                  <v-avatar size="48" class="mr-3">
-                    <v-img :src="currentPost.author.avatar || '/default-avatar.png'" />
-                  </v-avatar>
-                  <div class="author-info">
-                    <h3 class="author-name">{{ currentPost.author.username }}</h3>
-                    <p class="post-time">{{ formatTime(currentPost.time) }}</p>
-                  </div>
-                </div>
-                
+                <h1 class="post-title">{{ currentPost.title }}</h1>
                 <v-btn
                   :icon="isLiked ? 'mdi-heart' : 'mdi-heart-outline'"
                   :color="isLiked ? 'red' : 'grey'"
                   variant="text"
+                  size="large"
                   @click="handleLike"
                 >
                 </v-btn>
               </v-card-text>
 
-              <v-divider></v-divider>
-
-              <!-- 帖子内容 -->
-              <v-card-text class="post-content">
-                <h1 class="post-title">{{ currentPost.title }}</h1>
-                <div class="post-body">{{ currentPost.content }}</div>
+              <!-- 时间行 -->
+              <v-card-text class="post-time-section">
+                <span class="post-time">{{ formatTime(currentPost.time) }}</span>
+                <span class="post-likes">
+                  <v-icon size="16" color="red">mdi-heart</v-icon>
+                  {{ currentPost.likes }} 点赞
+                </span>
               </v-card-text>
 
               <v-divider></v-divider>
 
-              <!-- 点赞统计 -->
-              <v-card-text class="post-stats">
-                <div class="stat-item">
-                  <v-icon size="20" color="red">mdi-heart</v-icon>
-                  <span>{{ currentPost.likes }} 点赞</span>
-                </div>
+              <!-- 正文内容 -->
+              <v-card-text class="post-body-section">
+                <div class="post-body">{{ currentPost.content }}</div>
               </v-card-text>
             </v-card>
 
             <!-- 右侧：作者信息 -->
             <v-card class="author-info-card" elevation="1">
               <v-card-text class="author-profile">
-                <v-avatar size="80" class="mb-3">
-                  <v-img :src="currentPost.author.avatar || '/default-avatar.png'" />
-                </v-avatar>
-                <h2 class="author-name">{{ currentPost.author.username }}</h2>
-                
+                <!-- 作者头像和名称 -->
+                <div class="author-basic-info">
+                  <v-avatar size="80" class="mb-3">
+                    <v-img :src="currentPost.author.avatar || '/default-avatar.png'" />
+                  </v-avatar>
+                  <h2 class="author-name">{{ currentPost.author.username }}</h2>
+                </div>
+
+                <!-- 作者统计信息 -->
                 <div class="author-stats">
                   <div class="stat-item">
                     <span class="stat-number">{{ currentPost.author.posts }}</span>
@@ -84,6 +80,11 @@
                     <span class="stat-number">{{ currentPost.author.likes }}</span>
                     <span class="stat-label">获赞</span>
                   </div>
+                </div>
+
+                <!-- 预留扩展空间 -->
+                <div class="extension-area">
+                  <!-- 这里预留给未来功能扩展 -->
                 </div>
               </v-card-text>
             </v-card>
@@ -95,7 +96,7 @@
             <p class="mt-4 text-grey">帖子不存在</p>
             <v-btn color="primary" @click="goBack" class="mt-4">返回社区</v-btn>
           </div>
-        </v-sheet>
+        </div>
       </v-container>
     </v-main>
   </v-app>
@@ -178,73 +179,88 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.main-content {
-  width: 75%;
-  margin: 0 auto;
-  padding: 20px;
+/* 页面容器：左右各留空0.125 */
+.page-container {
+  margin: 0 12.5%;
+  padding: 20px 0;
+  min-height: calc(100vh - 64px);
+  display: flex;
+  flex-direction: column;
 }
 
+/* 返回按钮容器 - 控制在左侧0.2的范围内 */
+.mb-4 {
+  width: 10%;
+  margin-bottom: 1rem;
+  box-shadow:  0 2px 4px rgba(65, 65, 217, 0.2);
+}
+
+/* 两栏布局：0.7 + 0.3 */
 .content-layout {
   display: grid;
-  grid-template-columns: 1fr 300px;
-  gap: 20px;
+  grid-template-columns: 0.7fr 0.3fr;
+  gap: 24px;
+  flex: 1;
+  min-height: 0;
 }
 
-.post-detail-card {
-  width: 100%;
+/* 左侧帖子内容卡片 */
+.post-content-card {
+  height: 100%;
+  flex-direction: column;
 }
 
 .post-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  padding: 20px;
+  align-items: flex-start;
+  padding: 24px;
+  padding-bottom: 16px;
+  flex-shrink: 0;
 }
 
-.author-section {
-  display: flex;
-  align-items: center;
-}
-
-.author-info .author-name {
-  font-size: 16px;
-  font-weight: 600;
+.post-title {
+  font-size: 28px;
+  font-weight: 700;
   margin: 0;
+  line-height: 1.3;
+  flex: 1;
+  margin-right: 16px;
+}
+
+.post-time-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 24px 16px 24px;
 }
 
 .post-time {
   font-size: 14px;
   color: #666;
-  margin: 4px 0 0 0;
 }
 
-.post-content {
-  padding: 20px;
+.post-likes {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  color: #666;
 }
 
-.post-title {
-  font-size: 24px;
-  font-weight: 700;
-  margin-bottom: 16px;
+.post-body-section {
+  padding: 24px;
+  padding-top: 16px;
 }
 
 .post-body {
   font-size: 16px;
-  line-height: 1.6;
+  line-height: 1.8;
+  color: #333;
   white-space: pre-wrap;
 }
 
-.post-stats {
-  padding: 16px 20px;
-}
-
-.stat-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-}
-
+/* 右侧作者信息卡片 */
 .author-info-card {
   height: fit-content;
   position: sticky;
@@ -252,28 +268,39 @@ onMounted(() => {
 }
 
 .author-profile {
+  padding: 24px;
   text-align: center;
-  padding: 20px;
 }
 
-.author-profile .author-name {
+.author-basic-info {
+  margin-bottom: 20px;
+}
+
+.author-name {
   font-size: 18px;
   font-weight: 600;
-  margin: 8px 0 16px 0;
+  margin: 0;
+  color: #333;
 }
 
 .author-stats {
   display: flex;
   justify-content: space-around;
+  margin-bottom: 24px;
+  padding: 16px 0;
+  border-top: 1px solid #e0e0e0;
+  border-bottom: 1px solid #e0e0e0;
 }
 
-.author-stats .stat-item {
+.stat-item {
+  display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 4px;
 }
 
 .stat-number {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 600;
   color: #1976d2;
 }
@@ -283,10 +310,30 @@ onMounted(() => {
   color: #666;
 }
 
+/* 预留扩展空间 */
+.extension-area {
+  min-height: 100px;
+  border: 2px dashed #e0e0e0;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  font-size: 14px;
+}
+
+.extension-area::before {
+  content: "预留扩展区域";
+}
+
+.empty-state {
+  color: #666;
+}
+
 /* 响应式设计 */
 @media (max-width: 960px) {
-  .main-content {
-    width: 95%;
+  .page-container {
+    margin: 0 5%;
   }
 
   .content-layout {
@@ -296,6 +343,16 @@ onMounted(() => {
 
   .author-info-card {
     position: static;
+  }
+
+  .post-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .post-title {
+    margin-right: 0;
+    margin-bottom: 16px;
   }
 }
 </style>
