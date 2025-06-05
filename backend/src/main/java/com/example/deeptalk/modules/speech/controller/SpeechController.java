@@ -3,16 +3,17 @@ package com.example.deeptalk.modules.speech.controller;
 import com.example.deeptalk.modules.speech.service.SpeechService;
 import lombok.Data;
 import lombok.Getter;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
+import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+
+import static com.example.deeptalk.modules.speech.service.SpeechService.kurentoHandler;
 
 
 /**
@@ -26,7 +27,14 @@ import java.util.concurrent.TimeUnit;
  */
 @RestController
 @RequestMapping("/api/speech")
-public class SpeechController {
+@CrossOrigin(origins = "*")
+public class SpeechController implements WebSocketConfigurer {
+
+    @Override
+    public void registerWebSocketHandlers(WebSocketHandlerRegistry registry)
+    {
+        registry.addHandler(kurentoHandler, "/kurento");
+    }
 
     private final static int MAX_PENDING_TIME = 10; // maximum waiting time, in seconds
     private final static Map<String, CompletableFuture<String>> tokenNotifier = new ConcurrentHashMap<>();
@@ -62,8 +70,8 @@ public class SpeechController {
             // 从动方等待主动方返回token
             try {
                 CompletableFuture<String> tokenFuture = new CompletableFuture<>();
-                token = tokenFuture.get(MAX_PENDING_TIME, TimeUnit.SECONDS);
                 tokenNotifier.put(request.getUserId(), tokenFuture);
+                token = tokenFuture.get(MAX_PENDING_TIME, TimeUnit.SECONDS);
             } catch (Exception e) {
                 return ResponseEntity.status(503).body("匹配失败，请稍后再试");
             }
@@ -99,7 +107,7 @@ public class SpeechController {
             return ResponseEntity.badRequest().body("用户未连接");
         }
         // Disconnect the user
-        SpeechService.disconnect(request.getUserId());
+        SpeechService.disconnect(request.getUserId(), request.getSessionId());
         return ResponseEntity.ok("断开连接成功");
     }
 
@@ -129,7 +137,7 @@ public class SpeechController {
 @Getter
 class ConnectRequest {
     private String userId;
-    private String token; // 连接的token
+    private String sessionId; // 连接的sessionId， 如果是匹配请求，则未定义
 }
 
 /**
