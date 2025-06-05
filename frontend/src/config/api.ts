@@ -17,6 +17,15 @@ export const API_ENDPOINTS = {
     },
     LOGOUT: '/api/auth/logout'
   },
+  // 社区相关
+  COMMUNITY: {
+    SEARCH: '/api/community/search',
+    POSTS: {
+      LIKE: '/api/community/posts/like',
+      ADD: '/api/community/posts/add',
+      CHECK_AUTHOR: '/api/community/posts/check-author'
+    },
+  },
   // 其他模块的 API 端点可以在这里添加
   // 例如：
   // CHAT: {
