@@ -12,4 +12,4 @@ fi
 
 # 启动Spring Boot应用
 echo "启动Spring Boot应用..."
-mvn spring-boot:run 
+mvn spring-boot:run

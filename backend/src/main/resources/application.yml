@@ -31,4 +31,10 @@ spring:
 jwt:
   expiration:
     normal: 86400000  # 24小时
-    remember-me: 2592000000  # 30天 
+    remember-me: 2592000000  # 30天
+
+kurento:
+  client:
+    kms:
+      ws:
+        uri: ws://127.0.0.1:8888/kurento
