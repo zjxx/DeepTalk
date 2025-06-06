@@ -8,6 +8,7 @@ import Community from './views/Community.vue'
 import Home from './views/Home.vue'
 import WebSocketDemo from './views/WebSocketDemo.vue'
 import SecuritySettings from './views/SecuritySettings.vue'
+import Evaluation from './views/Evaluation.vue'
 // 你可以后续添加Profile等页面
 
 const routes = [
@@ -71,7 +72,13 @@ const routes = [
     name: 'SecuritySettings',
     component: SecuritySettings,
     meta: { requiresAuth: true }
-  }
+  },
+  {
+    path: '/evaluation',
+    name: 'Evaluation',
+    component: Evaluation,
+    meta: { requiresAuth: false }
+  },
   // { path: '/profile', component: () => import('./views/Profile.vue') },
 ]
 

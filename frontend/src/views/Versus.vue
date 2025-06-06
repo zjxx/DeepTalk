@@ -229,6 +229,87 @@
         </v-card>
       </v-col>
 
+      <!-- 全程录音播放面板 -->
+      <v-col cols="12" v-if="state.fullRecordingAvailable" class="py-1">
+        <v-card>
+          <v-card-title class="d-flex justify-space-between">
+            <span>
+              <v-icon start>mdi-microphone</v-icon>
+              全程录音回放
+            </span>
+            <v-chip color="success" size="small">
+              总时长: {{ controller.formatPlaybackTime(state.fullRecordingDuration) }}
+            </v-chip>
+          </v-card-title>
+          <v-card-text>
+            <!-- 播放进度条 -->
+            <div class="mb-4">
+              <v-progress-linear
+                :model-value="state.playbackProgress"
+                height="12"
+                color="primary"
+                striped
+                rounded
+                class="mb-2"
+              ></v-progress-linear>
+              
+              <!-- 时间显示 -->
+              <div class="d-flex justify-space-between align-center">
+                <div class="d-flex align-center">
+                  <v-chip color="info" size="small" class="mr-2">
+                    当前: {{ controller.formatPlaybackTime(state.currentPlaybackTime || 0) }}
+                  </v-chip>
+                  <v-chip color="secondary" size="small">
+                    进度: {{ Math.round(state.playbackProgress || 0) }}%
+                  </v-chip>
+                </div>
+                <v-chip color="success" size="small">
+                  剩余: {{ controller.formatPlaybackTime((state.fullRecordingDuration || 0) - (state.currentPlaybackTime || 0)) }}
+                </v-chip>
+              </div>
+            </div>
+            
+            <!-- 播放控制按钮 -->
+            <div class="d-flex justify-center align-center">
+              <v-btn
+                :color="state.isPlayingAudio ? 'error' : 'primary'"
+                :icon="state.isPlayingAudio ? 'mdi-stop' : 'mdi-play'"
+                @click="handleToggleFullRecording"
+                class="mr-3"
+                size="large"
+                :loading="isLoadingPlayback"
+              >
+                <v-tooltip activator="parent" location="top">
+                  {{ state.isPlayingAudio ? '停止播放' : '播放全程录音' }}
+                </v-tooltip>
+              </v-btn>
+              
+              <v-btn
+                color="secondary"
+                icon="mdi-download"
+                @click="handleDownloadRecording"
+                size="large"
+                class="mr-3"
+              >
+                <v-tooltip activator="parent" location="top">
+                  下载录音文件
+                </v-tooltip>
+              </v-btn>
+              
+              <!-- 播放状态指示 -->
+              <div v-if="state.isPlayingAudio" class="d-flex align-center">
+                <v-icon color="primary" class="mr-1">mdi-volume-high</v-icon>
+                <span class="text-caption text-primary">正在播放...</span>
+              </div>
+              <div v-else-if="state.fullRecordingDuration > 0" class="d-flex align-center">
+                <v-icon color="grey" class="mr-1">mdi-pause</v-icon>
+                <span class="text-caption text-grey">已暂停</span>
+              </div>
+            </div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+
       <!-- 实时转写面板 -->
       <v-col cols="12" v-if="state.matchStarted" class="py-1">
         <v-card>
@@ -281,6 +362,7 @@ const controller = new VersusController()
 
 // 响应式状态
 const state = reactive(controller.getState())
+const isLoadingPlayback = ref(false)
 
 // 用户模型数据
 const userModel = computed(() => ({ email: 'test@example.com' }))
@@ -294,14 +376,42 @@ const handleStartMatch = async () => {
     console.error('开始对战失败:', error)
   }
 }
-const handleEndMatch = () => {
+const handleEndMatch = async () => {
   if (state.matchStarted) {
     if (confirm('确定要结束当前对战吗？')) {
-      controller.endMatch()
-      router.push('/profile')
+      try {
+        // 先停止所有可能的DOM操作
+        if (userModelRef.value) {
+          userModelRef.value.destroy?.()
+        }
+        if (partnerModelRef.value) {
+          partnerModelRef.value.destroy?.()
+        }
+        
+        // 然后结束对战并清理状态
+        controller.endMatch()
+        
+        // 清理PIXI应用
+        if (pixiAppInstance.value) {
+          pixiAppInstance.value.stop()
+        }
+        
+        // 仿照登录界面的逻辑，添加延迟确保清理完成
+        await new Promise(resolve => setTimeout(resolve, 500))
+        
+        // 延迟后跳转到评分界面
+        console.log('状态清理完成，准备跳转到评分界面')
+        await router.push('/evaluation')
+      } catch (error) {
+        console.error('结束对战时出错:', error)
+        // 即使出错也延迟跳转
+        await new Promise(resolve => setTimeout(resolve, 300))
+        await router.push('/evaluation')
+      }
     }
   } else {
-    router.push('/profile')
+    // 如果没有进行对战，则跳转到首页
+    await router.push('/home')
   }
 }
 
@@ -354,6 +464,38 @@ const handleChangeDifficultyLevel = (difficultyLevel: '初级' | '中级' | '高
   controller.changeDifficultyLevel(difficultyLevel)
 }
 
+const handleToggleFullRecording = async () => {
+  try {
+    if (state.isPlayingAudio) {
+      controller.stopFullRecording()
+    } else {
+      isLoadingPlayback.value = true
+      await controller.playFullRecording()
+    }
+  } catch (error) {
+    console.error('全程录音播放操作失败:', error)
+    alert((error as Error)?.message || String(error))
+  } finally {
+    isLoadingPlayback.value = false
+  }
+}
+
+const handleDownloadRecording = () => {
+  const allRecordedAudios = controller.getAllRecordedAudios?.() || []
+  if (allRecordedAudios.length > 0) {
+    // 下载第一个录音文件作为示例
+    const audioBlob = allRecordedAudios[0]
+    const url = URL.createObjectURL(audioBlob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `录音_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.webm`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+}
+
 // 设置状态变化回调
 controller.setStateChangeCallback(() => {
   // 更新响应式状态
@@ -396,16 +538,61 @@ onMounted(async () => {
 
 // 清理资源
 onBeforeUnmount(() => {
-  controller.destroy()
+  console.log('versus组件即将卸载，开始清理资源')
   
-  if (resizeObserver && pixiContainerRef.value) {
-    resizeObserver.unobserve(pixiContainerRef.value)
-    resizeObserver = null
+  // 先清理控制器
+  try {
+    controller.destroy()
+  } catch (error) {
+    console.error('清理控制器时出错:', error)
   }
-  if (pixiAppInstance.value) {
-    pixiAppInstance.value.destroy(true, { children: true, texture: true })
-    pixiAppInstance.value = null
+  
+  // 清理Live2D模型
+  try {
+    if (userModelRef.value) {
+      userModelRef.value.destroy?.()
+      userModelRef.value = null
+    }
+    if (partnerModelRef.value) {
+      partnerModelRef.value.destroy?.()
+      partnerModelRef.value = null
+    }
+  } catch (error) {
+    console.error('清理Live2D模型时出错:', error)
   }
+  
+  // 清理ResizeObserver
+  try {
+    if (resizeObserver && pixiContainerRef.value) {
+      resizeObserver.unobserve(pixiContainerRef.value)
+      resizeObserver.disconnect()
+      resizeObserver = null
+    }
+  } catch (error) {
+    console.error('清理ResizeObserver时出错:', error)
+  }
+  
+  // 清理PIXI应用
+  try {
+    if (pixiAppInstance.value) {
+      pixiAppInstance.value.destroy(true, { children: true, texture: true, baseTexture: true })
+      pixiAppInstance.value = null
+    }
+  } catch (error) {
+    console.error('清理PIXI应用时出错:', error)
+  }
+  
+  // 清理DOM引用
+  try {
+    if (pixiContainerRef.value) {
+      pixiContainerRef.value.innerHTML = ''
+      pixiContainerRef.value = null
+    }
+  } catch (error) {
+    console.error('清理DOM引用时出错:', error)
+  }
+  
+  console.log('versus组件资源清理完成')
 })
 </script>
 
