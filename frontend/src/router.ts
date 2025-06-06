@@ -8,6 +8,11 @@ import Community from './views/Community.vue'
 import Home from './views/Home.vue'
 import WebSocketDemo from './views/WebSocketDemo.vue'
 import SecuritySettings from './views/SecuritySettings.vue'
+import Evaluation from './views/Evaluation.vue'
+import Matching from './views/Matching.vue'
+import PostDetail from './views/PostDetail.vue'
+import Shop from './views/Shop.vue'
+import ShopLive2dView from './views/ShopLive2dView.vue'
 // 你可以后续添加Profile等页面
 
 const routes = [
@@ -55,10 +60,28 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/shop',
+    name: 'Shop',
+    component: Shop,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/shop/live2d/:id',
+    name: 'ShopLive2dView',
+    component: ShopLive2dView,
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/versus',
     name: 'Versus',
     component: Versus,
     meta: { requiresAuth: false }
+  },
+  {
+    path: '/post/:id',
+    name: 'PostDetail',
+    component: PostDetail,
+    meta: { requiresAuth: true }
   },
   {
     path: '/testws',
@@ -71,7 +94,19 @@ const routes = [
     name: 'SecuritySettings',
     component: SecuritySettings,
     meta: { requiresAuth: true }
-  }
+  },
+  {
+    path: '/matching',
+    name: 'Matching',
+    component: Matching,
+    meta: { requiresAuth: false }
+  },
+  {
+    path: '/evaluation',
+    name: 'Evaluation',
+    component: Evaluation,
+    meta: { requiresAuth: false }
+  },
   // { path: '/profile', component: () => import('./views/Profile.vue') },
 ]
 

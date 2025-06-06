@@ -26,6 +26,16 @@ export const API_ENDPOINTS = {
       CHECK_AUTHOR: '/api/community/posts/check-author'
     },
   },
+  //商店相关
+  SHOP: {
+    SEARCH: '/api/shop/search',
+    CHECK_STOCK: '/api/shop/check-stock',
+    PRODUCT: {
+      PURCHASE: '/api/shop/product/purchase',
+      ORDER: '/api/shop/product/order',
+      CHECK: '/api/shop/product/check',
+    },
+  },
   // 其他模块的 API 端点可以在这里添加
   // 例如：
   // CHAT: {

@@ -5,7 +5,7 @@ export class QuestionManager {
   private currentQuestion: QuestionData | null = null
   private usedQuestionIds: string[] = []
 
-  // ��ȡ�µ������Ŀ
+  // 获取新的随机题目
   async loadNewQuestion(difficulty?: 'beginner' | 'intermediate' | 'advanced'): Promise<QuestionData | null> {
     try {
       const request: QuestionRequest = {
@@ -22,7 +22,7 @@ export class QuestionManager {
         this.currentQuestion = response.data
         this.usedQuestionIds.push(response.data.id)
         
-        // ������ʷ��¼������������������
+        // 限制历史记录数量，避免无限增长
         if (this.usedQuestionIds.length > 50) {
           this.usedQuestionIds = this.usedQuestionIds.slice(-25)
         }
@@ -37,7 +37,7 @@ export class QuestionManager {
     }
   }
 
-  // �����Ѷȼ���ӳ���ȡ��Ŀ
+  // 根据难度级别映射获取题目
   async loadQuestionByLevel(difficultyLevel: '初级' | '中级' | '高级'): Promise<QuestionData | null> {
     const difficultyMap = {
       '初级': 'beginner' as const,
@@ -49,25 +49,27 @@ export class QuestionManager {
     return this.loadNewQuestion(difficulty)
   }
 
-  // ��ȡ��ǰ��Ŀ
+  // 获取当前题目
   getCurrentQuestion(): QuestionData | null {
     return this.currentQuestion
   }
 
-  // ��ȡ��ǰ��Ŀ������
+  // 获取当前题目的主题
   getCurrentTopic(): string {
     return this.currentQuestion?.topic || ''
   }
 
-  // ��ȡ��ǰ��Ŀ������
+  // 获取当前题目的描述
   getCurrentDescription(): string {
     return this.currentQuestion?.description || ''
   }
 
+  // 获取当前题目的提示列表
   getCurrentPrompts(): string[] {
     return this.currentQuestion?.prompts || []
   }
 
+  // 获取指定索引的提示
   getPromptByIndex(index: number): string {
     const prompts = this.getCurrentPrompts()
     if (prompts.length === 0) return ''
@@ -76,6 +78,7 @@ export class QuestionManager {
     return prompts[validIndex]
   }
 
+  // 获取下一个提示（循环）
   getNextPrompt(currentIndex: number): { prompt: string; nextIndex: number } {
     const prompts = this.getCurrentPrompts()
     if (prompts.length === 0) {
@@ -89,17 +92,17 @@ export class QuestionManager {
     }
   }
 
-  // ���ʹ����ʷ
+  // 清除使用历史
   clearHistory(): void {
     this.usedQuestionIds = []
   }
 
-  // ���õ�ǰ��Ŀ
+  // 重置当前题目
   reset(): void {
     this.currentQuestion = null
   }
 
-  // ��ȡ��Ŀͳ����Ϣ
+  // 获取题目统计信息
   getQuestionInfo() {
     if (!this.currentQuestion) return null
 

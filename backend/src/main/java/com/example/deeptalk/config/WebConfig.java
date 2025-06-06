@@ -29,7 +29,8 @@ public class WebConfig implements WebMvcConfigurer {
                     "/api/**",
                     "/api/auth/register/**",
                     "/api/auth/forgot-password/**",
-                    "/api/verification/**"
+                    "/api/verification/**",
+                    "/api/speech/**"
                 );
     }
 } 
