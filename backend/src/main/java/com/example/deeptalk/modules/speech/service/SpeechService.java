@@ -1,15 +1,20 @@
 package com.example.deeptalk.modules.speech.service;
 
 import com.example.deeptalk.modules.speech.entity.SpeechSessionInfo;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.concurrent.*;
+
+import static com.example.deeptalk.modules.speech.config.SpeechWebSocketConfig.speechWebSocketHandler;
 
 /**
  * The type Speech service.
  */
 @Service
+@Slf4j
 public class SpeechService {
+    private final static ForwardingService forwardingService = speechWebSocketHandler.getForwardingService();
 
     private final static ConcurrentLinkedQueue<String> pendingUsers = new ConcurrentLinkedQueue<>();
     private final static ConcurrentLinkedQueue<String> connectedUsers = new ConcurrentLinkedQueue<>();
@@ -25,6 +30,8 @@ public class SpeechService {
      * @return 返回匹配的对手ID，如果没有找到匹配的对手，则返回null
      */
     public static synchronized String findMatching(String userId) {
+        log.debug("[SpeechService] findMatching userId: {}", userId);
+
         String opponentId = null;
         if (!pendingUsers.isEmpty()) {
             // 选择队首的用户作为对手
@@ -37,6 +44,8 @@ public class SpeechService {
     }
 
     public static String pendMatching(String userId) {
+        log.debug("[SpeechService] pending userId: {}", userId);
+
         pendingUsers.add(userId);
         String has_matching = null;
         try {
@@ -89,7 +98,7 @@ public class SpeechService {
         connectedUsers.add(userId);
         connectedUsers.add(opponentId);
         // 生成一个连接token
-        SpeechSessionInfo session = null; // TODO: create websocket session
+        SpeechSessionInfo session = forwardingService.makeConnection(userId, opponentId); // TODO: create websocket session
 
         if (session == null) {
             System.err.println("Unable to create session");
@@ -124,7 +133,7 @@ public class SpeechService {
         }
 
         // 直接移除会话，后面的对手将会在session==null处返回
-        // TODO: manage websocket disconnect
+        forwardingService.terminateConnection(sessionId);
         sessions.remove(session.getSessionId());
     }
 }

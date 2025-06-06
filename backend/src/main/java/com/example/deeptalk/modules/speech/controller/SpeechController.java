@@ -26,14 +26,7 @@ import java.util.concurrent.TimeUnit;
 @RestController
 @RequestMapping("/api/speech")
 @CrossOrigin(origins = "*")
-@EnableWebSocket
-public class SpeechController implements WebSocketConfigurer {
-
-    @Override
-    public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        // TODO: register the WebSocket handler for speech sessions
-    }
-
+public class SpeechController {
     private final static int MAX_PENDING_TIME = 10; // maximum waiting time, in seconds
     private final static Map<String, CompletableFuture<String>> tokenNotifier = new ConcurrentHashMap<>();
 

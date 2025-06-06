@@ -4,22 +4,41 @@ import lombok.Getter;
 
 @Getter
 public class SpeechSessionInfo {
-    private String sessionId;
-    private String user1Id;
-    private String user2Id;
+    private final String sessionId;
+    private final SpeechUserInfo user1Info;
+    private final SpeechUserInfo user2Info;
 
     public SpeechSessionInfo(String sessionId, String user1Id, String user2Id) {
         this.sessionId = sessionId;
-        this.user1Id = user1Id;
-        this.user2Id = user2Id;
+        this.user1Info = new SpeechUserInfo(user1Id, sessionId);
+        this.user2Info = new SpeechUserInfo(user2Id, sessionId);
     }
 
-    public String getOpponentId(String userId) {
-        if (userId.equals(user1Id)) {
-            return user2Id;
-        } else if (userId.equals(user2Id)) {
-            return user1Id;
+    public String getUser1Id() {
+        return user1Info.getUserId();
+    }
+
+    public String getUser2Id() {
+        return user2Info.getUserId();
+    }
+
+    public SpeechUserInfo getUserInfo(String userId) {
+        if (userId.equals(this.user1Info.getUserId())) {
+            return user1Info;
+        } else if (userId.equals(this.user2Info.getUserId())) {
+            return user2Info;
+        } else {
+            throw new IllegalArgumentException("Invalid user ID: " + userId);
         }
-        return null; // 如果用户ID不匹配，则返回null
+    }
+
+    public SpeechUserInfo getOpponentInfo(String userId) {
+        if (userId.equals(this.user1Info.getUserId())) {
+            return user2Info;
+        } else if (userId.equals(this.user2Info.getUserId())) {
+            return user1Info;
+        } else {
+            throw new IllegalArgumentException("Invalid user ID: " + userId);
+        }
     }
 }
