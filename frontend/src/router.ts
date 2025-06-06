@@ -7,6 +7,7 @@ import Versus from './views/Versus.vue'
 import Community from './views/Community.vue'
 import Home from './views/Home.vue'
 import PostDetail from './views/PostDetail.vue'
+import Shop from './views/Shop.vue'
 // 你可以后续添加Profile等页面
 
 const routes = [
@@ -51,6 +52,12 @@ const routes = [
     path: '/community',
     name: 'Community',
     component: Community,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/shop',
+    name: 'Shop',
+    component: Shop,
     meta: { requiresAuth: true }
   },
   {

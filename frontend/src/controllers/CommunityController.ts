@@ -5,7 +5,7 @@ import type { Post, SearchRequest, SearchResult, LikeRequest, LikeResponse, Chec
 export const useCommunityController = () => {
     const posts = ref<Post[]>([]) 
     //const authors = ref<Author[]>([])
-    const loading = ref(false)
+    const loading = ref(false) 
     const error = ref<string | null>(null)
 
     // 样品数据
