@@ -43,11 +43,10 @@ public class SpeechService {
         String opponentId = null;
         if (!pendingUsers.isEmpty()) {
             // 选择队首的用户作为对手
-            opponentId = pendingUsers.iterator().next();
+            opponentId = pendingUsers.poll();
             // 通知对手已经匹配成功
             CompletableFuture<String> opponentFuture = pendingNotifier.get(opponentId);
             opponentFuture.complete(userId);
-            pendingUsers.remove(userId);
         }
         return opponentId;
     }
