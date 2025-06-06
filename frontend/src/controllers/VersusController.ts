@@ -1,5 +1,5 @@
 // src/controllers/VersusController.ts
-import { VersusModel } from '../models/VersusModel'
+import { VersusModel, type TranscriptMessage } from '../models/VersusModel'
 import { AudioService } from '../services/AudioService'
 import { TimerService } from '../services/TimerService'
 import { AIService } from '../services/AIService'
@@ -143,37 +143,91 @@ export class VersusController {
   }
   // 业务逻辑方法
   async startMatch(): Promise<void> {
-    // 开始对战时加载一个随机题目
-    const state = this.model.getState()
-    
-    // 首先启动对战状态
-    this.model.updateMatchState({ 
-      matchStarted: true,
-      speakingTurn: 'user'
-    })
-    
-    // 然后加载题目
-    await this.questionManager.loadQuestionByLevel(state.difficultyLevel)
-    
-    this.timerService.startMainTimer(this.model.getState().remainingTime)
-    
-    this.notifyStateChange()
-    console.log('对战开始，已加载新题目:', this.questionManager.getCurrentTopic())
+    try {
+      const state = this.model.getState()
+      
+      // 先请求麦克风权限
+      await this.audioService.requestMicrophonePermission()
+      
+      // 权限获取成功后，启动对战状态
+      this.model.updateMatchState({ 
+        matchStarted: true,
+        speakingTurn: 'user'
+      })
+      
+      // 加载题目
+      await this.questionManager.loadQuestionByLevel(state.difficultyLevel)
+      
+      // 开始连续录音模式
+      await this.audioService.startContinuousRecording()
+      
+      // 只有在录音开始后才启动计时器
+      this.timerService.startMainTimer(this.model.getState().remainingTime)
+      
+      this.notifyStateChange()
+      console.log('对战开始，已加载新题目:', this.questionManager.getCurrentTopic())
+    } catch (error) {
+      console.error('开始对战失败:', error)
+      // 如果权限被拒绝，重置状态
+      this.model.updateMatchState({ 
+        matchStarted: false
+      })
+      this.notifyStateChange()
+      throw error
+    }
   }
-  endMatch(): void {
+  endMatch(): { allRecordedAudios: Blob[], transcriptMessages: TranscriptMessage[] } {
+    console.log('VersusController: 开始结束对战')
     const state = this.model.getState()
     if (state.matchStarted) {
+      console.log('VersusController: 对战正在进行中，开始清理')
+      
+      // 立即停止所有计时器和服务
       this.timerService.stopAllTimers()
       this.audioService.stopRecording()
+      this.audioService.stopContinuousRecording()
       this.audioService.stopPlayback()
       this.aiService.stopSpeaking()
+      
+      // 获取所有录音和对话记录
+      const allRecordedAudios = this.audioService.getAllRecordedAudios()
+      const transcriptMessages = state.transcriptMessages
+      
+      console.log('VersusController: 获取录音数据', allRecordedAudios.length, '个片段')
       
       // 重置题库状态
       this.questionManager.reset()
       
-      this.model.resetMatch()
+      // 更新状态为对战结束，彻底清理所有状态
+      this.model.updateMatchState({
+        matchStarted: false,
+        isRecording: false,
+        isUserSpeaking: false,
+        isPartnerSpeaking: false,
+        isPlayingAudio: false,
+        speakingTurn: 'user',
+        remainingTime: 300,
+        // 清理录音相关状态
+        lastRecordedAudio: null,
+        audioLevel: 0,
+        userMuted: false,
+        fullRecordingAvailable: false,
+        playbackProgress: 0,
+        currentPlaybackTime: 0,
+        fullRecordingDuration: 0
+      })
+      
+      // 立即通知状态变化
       this.notifyStateChange()
+      
+      console.log('VersusController: 对战结束完成')
+      
+      // 返回对战数据
+      return { allRecordedAudios, transcriptMessages }
     }
+    
+    console.log('VersusController: 对战未进行，返回空数据')
+    return { allRecordedAudios: [], transcriptMessages: [] }
   }
 
   private endUserSpeaking(): void {
@@ -307,6 +361,82 @@ export class VersusController {
   formatTime(seconds: number): string {
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
+    return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
+
+  // 获取所有录音记录
+  getAllRecordedAudios(): Blob[] {
+    return this.audioService.getAllRecordedAudios()
+  }
+
+  // 播放全程录音
+  async playFullRecording(): Promise<void> {
+    const allRecordedAudios = this.audioService.getAllRecordedAudios()
+    if (allRecordedAudios.length > 0) {
+      try {
+        // 如果有多个录音片段，合并它们
+        const fullRecording = allRecordedAudios.length === 1 ? 
+          allRecordedAudios[0] : 
+          await this.mergeAudioBlobs(allRecordedAudios)
+        
+        // 获取总时长
+        const duration = await this.audioService.getAudioDuration(fullRecording)
+        this.model.updateMatchState({ 
+          fullRecordingAvailable: true,
+          fullRecordingDuration: duration 
+        })
+        
+        // 播放并更新进度，使用新的回调签名
+        this.audioService.playFullRecordingWithProgress(fullRecording, (progress, currentTime, totalDuration) => {
+          this.model.updateMatchState({ 
+            playbackProgress: Math.max(0, Math.min(100, progress)), // 确保进度在0-100之间
+            currentPlaybackTime: Math.max(0, currentTime), // 确保时间不为负数
+            fullRecordingDuration: totalDuration || duration // 更新实际时长
+          })
+          this.notifyStateChange()
+        })
+        
+        this.notifyStateChange()
+      } catch (error) {
+        console.error('播放全程录音失败:', error)
+        // 重置状态
+        this.model.updateMatchState({
+          playbackProgress: 0,
+          currentPlaybackTime: 0,
+          isPlayingAudio: false
+        })
+        this.notifyStateChange()
+        throw error
+      }
+    }
+  }
+
+  // 停止全程录音播放
+  stopFullRecording(): void {
+    this.audioService.stopPlayback()
+    this.model.updateMatchState({ 
+      playbackProgress: 0,
+      currentPlaybackTime: 0 
+    })
+    this.notifyStateChange()
+  }
+
+  // 合并多个音频片段（简单的实现）
+  private async mergeAudioBlobs(audioBlobs: Blob[]): Promise<Blob> {
+    // 这里只是简单地合并，实际项目中可能需要更复杂的音频处理
+    const mergedChunks: Blob[] = []
+    
+    for (const blob of audioBlobs) {
+      mergedChunks.push(blob)
+    }
+    
+    return new Blob(mergedChunks, { type: audioBlobs[0].type })
+  }
+
+  // 格式化播放时间
+  formatPlaybackTime(seconds: number): string {
+    const mins = Math.floor(seconds / 60)
+    const secs = Math.floor(seconds % 60)
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 }

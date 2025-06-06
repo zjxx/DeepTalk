@@ -99,9 +99,30 @@ const setExpression = (expressionId?: string | number) => {
   }
 };
 
+// 销毁方法
+const destroy = () => {
+  try {
+    if (live2dModelInstance.value) {
+      // 确保在销毁前检查父容器是否存在
+      if (props.app && props.app.stage && live2dModelInstance.value.parent) {
+        props.app.stage.removeChild(live2dModelInstance.value as unknown as DisplayObject);
+      }
+      
+      // 销毁模型资源
+      live2dModelInstance.value.destroy();
+      live2dModelInstance.value = null;
+      
+      console.log(`Live2D模型 ${props.type} 已安全销毁`);
+    }
+  } catch (error) {
+    console.error(`Live2D模型 ${props.type} 销毁时出错:`, error);
+  }
+};
+
 defineExpose({
   playMotion,
   setExpression,
+  destroy,
   getModel: () => live2dModelInstance.value // 可以暴露模型实例本身以进行更细致的控制
 });
 
@@ -116,10 +137,10 @@ defineExpose({
 
 /* 可以为不同类型的模型添加一些特定的占位符样式（如果需要） */
 .live2d-user-model {
-  /* background-color: rgba(0, 0, 255, 0.1); */ /* 调试用 */
+  z-index: 1; /* 用户模型层级 */
 }
 
 .live2d-partner-model {
-  /* background-color: rgba(255, 0, 0, 0.1); */ /* 调试用 */
+  z-index: 2; /* 对方模型层级 */
 }
 </style>

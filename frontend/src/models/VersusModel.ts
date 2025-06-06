@@ -25,7 +25,14 @@ export interface VersusState {
   audioLevel: number
   lastRecordedAudio: Blob | null
   isPlayingAudio: boolean
-    // 发言权管理
+  
+  // 全程录音状态
+  fullRecordingAvailable: boolean
+  fullRecordingDuration: number
+  playbackProgress: number
+  currentPlaybackTime: number
+  
+  // 发言权管理
   speakingTurn: 'user' | 'partner'
   
   // 对话内容
@@ -54,7 +61,12 @@ export class VersusModel {
       isPartnerSpeaking: false,
       isRecording: false,
       audioLevel: 0,
-      lastRecordedAudio: null,      isPlayingAudio: false,
+      lastRecordedAudio: null,
+      isPlayingAudio: false,
+      fullRecordingAvailable: false,
+      fullRecordingDuration: 0,
+      playbackProgress: 0,
+      currentPlaybackTime: 0,
       speakingTurn: 'user',
       currentTopicIndex: 0,
       currentPromptIndex: 0,
