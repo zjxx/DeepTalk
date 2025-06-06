@@ -121,6 +121,13 @@ public class SpeechService {
      */
     public static synchronized void disconnect(String userId, String sessionId) {
         // 断开连接，移除用户
+        if (!connectedUsers.contains(userId)) {
+            System.err.println("User is not connected: " + userId);
+            return; // 如果用户未连接，则直接返回
+        }
+
+        connectedUsers.remove(userId);
+
         if (sessionId == null) {
             System.err.println("Session ID is null for userId: " + userId);
             return; // 如果会话ID为null，则直接返回
@@ -131,14 +138,8 @@ public class SpeechService {
             return; // 如果会话不存在，则直接返回
         }
 
-        String opponentId = session.getOpponentId(userId);
-
-        connectedUsers.remove(userId);
-
-        if (!connectedUsers.contains(opponentId)) {
-            // 如果对手也断开了连接，则结束Kurento会话
-            kurentoHandler.terminateSession(sessionId);
-            sessions.remove(session.getSessionId());
-        }
+        // 直接移除会话，后面的对手将会在session==null处返回
+        kurentoHandler.terminateSession(sessionId);
+        sessions.remove(session.getSessionId());
     }
 }
