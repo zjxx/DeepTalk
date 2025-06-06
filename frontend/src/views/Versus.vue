@@ -4,7 +4,18 @@
       <!-- 顶部信息栏，展示匹配参数 -->
       <v-col cols="12" class="py-1">
         <v-card class="mb-2">
-          <v-card-text class="text-center">
+          <v-card-text class="text-center position-relative">
+            <!-- 返回匹配按钮 - 左上角 -->
+            <v-btn 
+              prepend-icon="mdi-arrow-left" 
+              color="secondary" 
+              @click="handleBackToMatching"
+              :disabled="state.matchStarted"
+              class="back-to-matching-btn"
+            >
+              返回匹配
+            </v-btn>
+            
             <div class="text-h5 mb-2">口语对战 - {{ displayBattleType }}</div>
             <div class="text-body-1 mb-1">
               难度：<span class="font-weight-bold">{{ displayDifficulty }}</span>
@@ -538,6 +549,32 @@ const handleNextTopic = () => {
   controller.nextTopic()
 }
 
+const handleBackToMatching = async () => {
+  if (state.matchStarted) {
+    if (confirm('当前对战正在进行中，确定要返回匹配界面吗？这将结束当前对战。')) {
+      try {
+        // 清理当前对战状态
+        controller.endMatch()
+        
+        // 清理PIXI应用
+        if (pixiAppInstance.value) {
+          pixiAppInstance.value.stop()
+        }
+        
+        // 延迟后跳转
+        await new Promise(resolve => setTimeout(resolve, 300))
+        await router.push('/matching')
+      } catch (error) {
+        console.error('返回匹配界面时出错:', error)
+        await router.push('/matching')
+      }
+    }
+  } else {
+    // 如果没有开始对战，直接返回匹配界面
+    await router.push('/matching')
+  }
+}
+
 const handleToggleFullRecording = async () => {
   try {
     if (state.isPlayingAudio) {
@@ -894,5 +931,16 @@ onBeforeUnmount(() => {
     transform: scale(1.05);
     opacity: 0.8;
   }
+}
+
+/* 返回匹配按钮样式 */
+.back-to-matching-btn {
+  position: absolute !important;
+  top: 8px;
+  left: 8px;
+  z-index: 10;
+  min-width: 120px;
+  height: 40px;
+  font-size: 14px;
 }
 </style>
