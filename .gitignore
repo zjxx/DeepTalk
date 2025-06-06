@@ -35,3 +35,5 @@ logs/
 Thumbs.db 
 
 frontend/package-lock.json
+
+kurento/
