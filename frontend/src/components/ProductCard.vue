@@ -1,36 +1,20 @@
 <template>
-  <v-card
-    class="product-card"
-    elevation="2"
-    hover
-    @click="$emit('click')"
-  >
+  <v-card class="product-card" elevation="2" hover @click="$emit('click')">
     <!-- 商品图片 -->
     <div class="product-image-container">
-      <v-img
-        :src="product.imageUrl || '/default-product.png'"
-        :alt="product.name"
-        class="product-image"
-        cover
-        height="200"
-      >
+      <v-img :src="product.imageUrl || '/default-product.png'" :alt="product.name" class="product-image" cover
+        height="200">
         <template v-slot:placeholder>
           <div class="image-placeholder">
             <v-icon size="48" color="grey-lighten-3">mdi-image</v-icon>
           </div>
         </template>
       </v-img>
-      
+
       <!-- 悬停时显示的操作按钮 -->
       <div class="product-overlay">
-        <v-btn
-          icon
-          size="small"
-          text="购买"
-          color="white"
-          class="overlay-btn"
-          @click.stop="$emit('add-to-cart', product.id)"
-        >
+        <v-btn icon size="small" text="购买" color="white" class="overlay-btn"
+          @click.stop="$emit('add-to-cart', product.id)">
           <v-icon>mdi-cart</v-icon>
         </v-btn>
       </div>
@@ -39,10 +23,10 @@
     <v-card-text class="product-info">
       <!-- 商品名称 -->
       <h3 class="product-name">{{ product.name }}</h3>
-      
+
       <!-- 商品描述 -->
       <p class="product-description">{{ formatDescription(product.description) }}</p>
-      
+
       <!-- 底部信息 -->
       <div class="product-footer">
         <div class="product-price">
