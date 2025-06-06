@@ -1,8 +1,6 @@
 package com.example.deeptalk.modules.speech.service;
 
 import com.example.deeptalk.modules.speech.entity.SpeechSessionInfo;
-import org.kurento.client.KurentoClient;
-import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Service;
 
 import java.util.concurrent.*;
@@ -12,14 +10,6 @@ import java.util.concurrent.*;
  */
 @Service
 public class SpeechService {
-
-    public static final KurentoHandler kurentoHandler = new KurentoHandler();
-
-    @Bean
-    public KurentoClient kurentoClient()
-    {
-        return KurentoClient.create();
-    }
 
     private final static ConcurrentLinkedQueue<String> pendingUsers = new ConcurrentLinkedQueue<>();
     private final static ConcurrentLinkedQueue<String> connectedUsers = new ConcurrentLinkedQueue<>();
@@ -99,7 +89,7 @@ public class SpeechService {
         connectedUsers.add(userId);
         connectedUsers.add(opponentId);
         // 生成一个连接token
-        SpeechSessionInfo session = kurentoHandler.createSession(userId, opponentId);
+        SpeechSessionInfo session = null; // TODO: create websocket session
 
         if (session == null) {
             System.err.println("Unable to create session");
@@ -134,7 +124,7 @@ public class SpeechService {
         }
 
         // 直接移除会话，后面的对手将会在session==null处返回
-        kurentoHandler.terminateSession(sessionId);
+        // TODO: manage websocket disconnect
         sessions.remove(session.getSessionId());
     }
 }

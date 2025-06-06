@@ -14,8 +14,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
-import static com.example.deeptalk.modules.speech.service.SpeechService.kurentoHandler;
-
 /**
  * The type Speech controller.
  * 处理语音对战相关的请求
@@ -33,8 +31,7 @@ public class SpeechController implements WebSocketConfigurer {
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(kurentoHandler, "/api/speech/kurento")
-                .setAllowedOrigins("*");
+        // TODO: register the WebSocket handler for speech sessions
     }
 
     private final static int MAX_PENDING_TIME = 10; // maximum waiting time, in seconds
