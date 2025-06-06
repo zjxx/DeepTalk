@@ -5,11 +5,47 @@ export class AudioService {
   private audioStream: MediaStream | null = null
   private audioChunks: Blob[] = []
   private currentAudioElement: HTMLAudioElement | null = null
+  private allRecordedAudios: Blob[] = [] // 存储所有录音
   
   // 回调函数
   onRecordingStateChange?: (isRecording: boolean, audioLevel: number) => void
   onRecordingComplete?: (audioBlob: Blob) => void
   onPlaybackStateChange?: (isPlaying: boolean) => void
+
+  // 获取所有录音记录
+  getAllRecordedAudios(): Blob[] {
+    return [...this.allRecordedAudios]
+  }
+
+  // 清除所有录音记录
+  clearAllRecordedAudios(): void {
+    this.allRecordedAudios = []
+  }
+
+  // 请求麦克风权限
+  async requestMicrophonePermission(): Promise<void> {
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('您的浏览器不支持麦克风录音功能')
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          sampleRate: 44100
+        }
+      })
+      
+      // 测试成功后立即停止，只是为了获取权限
+      stream.getTracks().forEach(track => track.stop())
+      console.log('麦克风权限获取成功')
+    } catch (error) {
+      console.error('麦克风权限获取失败:', error)
+      throw new Error('需要麦克风权限才能开始录音')
+    }
+  }
  async startRecording(): Promise<void> {
   try {
     // 检查是否支持getUserMedia
@@ -74,6 +110,86 @@ export class AudioService {
   }
 }
   stopRecording(): void {
+    if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
+      this.mediaRecorder.stop()
+      
+      if (this.audioStream) {
+        this.audioStream.getTracks().forEach(track => {
+          track.stop()
+        })
+        this.audioStream = null
+      }
+      
+      if (this.onRecordingStateChange) {
+        this.onRecordingStateChange(false, 0)
+      }
+    }
+  }
+
+  // 开始连续录音模式（整个对战期间录音）
+  async startContinuousRecording(): Promise<void> {
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('您的浏览器不支持麦克风录音功能')
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          sampleRate: 44100
+        }
+      })
+      
+      this.audioStream = stream
+      this.audioChunks = []
+      
+      if (!window.MediaRecorder) {
+        throw new Error('您的浏览器不支持录音功能')
+      }
+
+      const options: MediaRecorderOptions = {}
+      
+      if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+        options.mimeType = 'audio/webm;codecs=opus'
+      } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+        options.mimeType = 'audio/webm'
+      } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+        options.mimeType = 'audio/mp4'
+      } else if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) {
+        options.mimeType = 'audio/ogg;codecs=opus'
+      }
+      
+      this.mediaRecorder = new MediaRecorder(stream, options)
+      
+      this.mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          this.audioChunks.push(event.data)
+        }
+      }
+      
+      this.mediaRecorder.onstop = () => {
+        this.processRecordedAudio()
+      }
+
+      this.mediaRecorder.onerror = (event) => {
+        console.error('AudioService: 连续录音错误', event)
+        throw new Error('录音过程中发生错误')
+      }
+      
+      // 开始连续录音
+      this.mediaRecorder.start(1000) // 每秒收集一次数据
+      this.startAudioLevelMonitoring(stream)
+      
+    } catch (error) {
+      console.error('AudioService: 连续录音启动失败', error)
+      throw error
+    }
+  }
+
+  // 停止连续录音
+  stopContinuousRecording(): void {
     if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
       this.mediaRecorder.stop()
       
@@ -157,6 +273,9 @@ private processRecordedAudio(): void {
   if (audioBlob.size < 100) { // 至少应该有100字节的数据
     console.warn('AudioService: 警告 - 录音数据可能太小:', audioBlob.size, 'bytes')
   }
+  
+  // 将录音添加到历史记录
+  this.allRecordedAudios.push(audioBlob)
   
   if (this.onRecordingComplete) {
     this.onRecordingComplete(audioBlob)
@@ -287,6 +406,128 @@ playAudio(audioBlob: Blob): void {
     if (this.onPlaybackStateChange) {
       this.onPlaybackStateChange(false)
     }
+  }
+
+  // 播放全程录音（带进度条）
+  playFullRecordingWithProgress(audioBlob: Blob, onProgress?: (progress: number, currentTime: number, duration: number) => void): void {
+    try {
+      if (audioBlob.size === 0) {
+        throw new Error('音频文件为空')
+      }
+      
+      if (this.currentAudioElement) {
+        this.currentAudioElement.pause()
+        this.currentAudioElement.currentTime = 0
+        this.currentAudioElement = null
+      }
+      
+      const audioUrl = URL.createObjectURL(audioBlob)
+      const audio = new Audio()
+      
+      audio.volume = 1.0
+      audio.preload = 'auto'
+      audio.crossOrigin = 'anonymous'
+      
+      // 进度更新 - 提供更详细的时间信息
+      audio.addEventListener('timeupdate', () => {
+        if (audio.duration > 0 && onProgress) {
+          const currentTime = audio.currentTime
+          const duration = audio.duration
+          const progress = (currentTime / duration) * 100
+          onProgress(progress, currentTime, duration)
+        }
+      })
+      
+      // 确保在元数据加载后也触发一次进度更新
+      audio.addEventListener('loadedmetadata', () => {
+        if (onProgress) {
+          const currentTime = audio.currentTime
+          const duration = audio.duration
+          const progress = (currentTime / duration) * 100
+          onProgress(progress, currentTime, duration)
+        }
+      })
+      
+      audio.addEventListener('play', () => {
+        if (this.onPlaybackStateChange) {
+          this.onPlaybackStateChange(true)
+        }
+      })
+      
+      audio.addEventListener('ended', () => {
+        if (this.onPlaybackStateChange) {
+          this.onPlaybackStateChange(false)
+        }
+        if (onProgress) {
+          onProgress(0, 0, audio.duration || 0)
+        }
+        this.currentAudioElement = null
+        URL.revokeObjectURL(audioUrl)
+      })
+      
+      audio.addEventListener('error', (event) => {
+        console.error('AudioService: 全程录音播放错误:', event)
+        if (this.onPlaybackStateChange) {
+          this.onPlaybackStateChange(false)
+        }
+        if (onProgress) {
+          onProgress(0, 0, 0)
+        }
+        this.currentAudioElement = null
+        URL.revokeObjectURL(audioUrl)
+        throw new Error('播放失败')
+      })
+      
+      // 暂停时也重置进度回调
+      audio.addEventListener('pause', () => {
+        if (this.onPlaybackStateChange) {
+          this.onPlaybackStateChange(false)
+        }
+      })
+      
+      this.currentAudioElement = audio
+      audio.src = audioUrl
+      
+      const playPromise = audio.play()
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          console.error('播放失败:', error)
+          if (this.onPlaybackStateChange) {
+            this.onPlaybackStateChange(false)
+          }
+          if (onProgress) {
+            onProgress(0, 0, 0)
+          }
+          this.currentAudioElement = null
+          URL.revokeObjectURL(audioUrl)
+          throw error
+        })
+      }
+      
+    } catch (error) {
+      console.error('AudioService: 创建全程录音播放失败:', error)
+      throw error
+    }
+  }
+
+  // 获取音频时长
+  getAudioDuration(audioBlob: Blob): Promise<number> {
+    return new Promise((resolve, reject) => {
+      const audioUrl = URL.createObjectURL(audioBlob)
+      const audio = new Audio()
+      
+      audio.addEventListener('loadedmetadata', () => {
+        URL.revokeObjectURL(audioUrl)
+        resolve(audio.duration)
+      })
+      
+      audio.addEventListener('error', () => {
+        URL.revokeObjectURL(audioUrl)
+        reject(new Error('无法获取音频时长'))
+      })
+      
+      audio.src = audioUrl
+    })
   }
 
   cleanup(): void {
