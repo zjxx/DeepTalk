@@ -122,6 +122,10 @@ public class SpeechService {
      */
     public static synchronized void disconnect(String userId, String sessionId) {
         // 断开连接，移除用户
+        if (sessionId == null) {
+            System.err.println("Session ID is null for userId: " + userId);
+            return; // 如果会话ID为null，则直接返回
+        }
         SpeechSessionInfo session = sessions.get(sessionId);
         if (session == null) {
             System.err.println("Session not found for sessionId: " + sessionId);

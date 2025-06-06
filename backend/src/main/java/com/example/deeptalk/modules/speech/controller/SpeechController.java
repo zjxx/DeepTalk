@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
+import org.springframework.web.socket.config.annotation.EnableWebSocket;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -14,7 +15,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 import static com.example.deeptalk.modules.speech.service.SpeechService.kurentoHandler;
-
 
 /**
  * The type Speech controller.
@@ -28,12 +28,13 @@ import static com.example.deeptalk.modules.speech.service.SpeechService.kurentoH
 @RestController
 @RequestMapping("/api/speech")
 @CrossOrigin(origins = "*")
+@EnableWebSocket
 public class SpeechController implements WebSocketConfigurer {
 
     @Override
-    public void registerWebSocketHandlers(WebSocketHandlerRegistry registry)
-    {
-        registry.addHandler(kurentoHandler, "/kurento");
+    public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
+        registry.addHandler(kurentoHandler, "/api/speech/kurento")
+                .setAllowedOrigins("*");
     }
 
     private final static int MAX_PENDING_TIME = 10; // maximum waiting time, in seconds
