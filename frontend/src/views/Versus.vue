@@ -36,6 +36,7 @@
       <!-- 共享的 PIXI Canvas 容器 -->
       <v-col cols="12" class="pixi-canvas-wrapper-col">
         <div class="pixi-canvas-container" ref="pixiContainerRef">
+          <!-- 用户模型（始终显示） -->
           <Live2DModel 
             v-if="pixiAppInstance"
             ref="userModelRef" 
@@ -46,8 +47,10 @@
             :initialY="state.canvasHeight * 0.15"
             :scale="0.2" 
           />
+          
+          <!-- 对方：真人对战时显示Live2D模型 -->
           <Live2DModel 
-            v-if="pixiAppInstance"
+            v-if="pixiAppInstance && displayBattleType === '真人对战'"
             ref="partnerModelRef"
             :app="pixiAppInstance as PIXI.Application"
             type="partner"
@@ -56,6 +59,29 @@
             :initialY="state.canvasHeight * 0.15"
             :scale="0.1"
           />
+          
+          <!-- 对方：AI对战时显示AI头像 -->
+          <div 
+            v-if="displayBattleType === 'AI辅助'" 
+            class="ai-avatar"
+            :style="{
+              left: `${state.canvasWidth * 0.75}px`,
+              top: `${state.canvasHeight * 0.65}px`
+            }"
+          >
+            <v-avatar size="200" color="primary">
+              <v-icon size="90" color="white">mdi-robot</v-icon>
+            </v-avatar>
+            <div class="ai-status-indicator" :class="{ 'speaking': state.isPartnerSpeaking }">
+              <v-chip 
+                :color="state.isPartnerSpeaking ? 'success' : 'grey'" 
+                size="small"
+                class="mt-2"
+              >
+                {{ state.isPartnerSpeaking ? 'AI思考中...' : 'AI待命' }}
+              </v-chip>
+            </div>
+          </div>
         </div>
       </v-col>
 
@@ -133,7 +159,14 @@
       <v-col cols="12" md="6" class="model-column model-column-overlay">
         <v-card class="model-card transparent-card">
           <v-card-title class="text-center white-text py-2">
-            {{ state.matchType === '真人对战' ? '对方' : 'AI助手' }}
+            <v-icon 
+              v-if="displayBattleType === 'AI辅助'" 
+              start 
+              color="primary"
+            >
+              mdi-robot
+            </v-icon>
+            {{ displayBattleType === '真人对战' ? '对方用户' : 'AI智能助手' }}
           </v-card-title>
           <v-card-actions class="d-flex justify-center py-2">
             <v-chip 
@@ -141,8 +174,11 @@
               class="mr-2"
             >
               {{ 
-                state.isPartnerSpeaking ? '正在发言' : 
-                (state.speakingTurn === 'partner' ? '对方正在思考' : '等待轮换')
+                state.isPartnerSpeaking ? 
+                  (displayBattleType === 'AI辅助' ? 'AI正在回应' : '对方正在发言') : 
+                  (state.speakingTurn === 'partner' ? 
+                    (displayBattleType === 'AI辅助' ? 'AI正在思考' : '对方正在思考') : 
+                    '等待轮换')
               }}
             </v-chip>
             
@@ -159,13 +195,32 @@
               跳过
             </v-btn>
             
+            <!-- AI对战模式下显示AI状态指示器 -->
             <v-btn 
-              v-if="state.matchType === '真人对战'" 
+              v-if="displayBattleType === 'AI辅助'" 
+              disabled 
+              color="primary" 
+              variant="outlined" 
+              icon="mdi-brain"
+              class="mr-2"
+            >
+              <v-tooltip activator="parent" location="top">
+                AI智能模式
+              </v-tooltip>
+            </v-btn>
+            
+            <!-- 真人对战模式下显示音量控制 -->
+            <v-btn 
+              v-if="displayBattleType === '真人对战'" 
               disabled 
               color="grey" 
               variant="outlined" 
               icon="mdi-volume-high"
-            ></v-btn>
+            >
+              <v-tooltip activator="parent" location="top">
+                对方音频
+              </v-tooltip>
+            </v-btn>
           </v-card-actions>
         </v-card>
       </v-col>
@@ -327,7 +382,10 @@
             <div class="transcript-container">
               <div v-for="(message, index) in state.transcriptMessages" :key="index" 
                    class="transcript-message" :class="{'user-message': message.isUser}">
-                <strong>{{ message.isUser ? '您' : (state.matchType === '真人对战' ? '对方' : 'AI助手') }}:</strong>
+                <strong>{{ 
+                  message.isUser ? '您' : 
+                  (displayBattleType === '真人对战' ? '对方用户' : 'AI助手') 
+                }}:</strong>
                 {{ message.text }}
               </div>
               <div v-if="state.transcriptMessages.length === 0" class="text-center text-grey">
@@ -567,6 +625,8 @@ onMounted(async () => {
     })
     resizeObserver.observe(pixiContainerRef.value)
   }
+  
+  console.log('PIXI应用初始化完成，对战模式:', displayBattleType.value)
 })
 
 // 清理资源
@@ -787,5 +847,52 @@ onBeforeUnmount(() => {
   background: linear-gradient(90deg, #4CAF50 0%, #FFC107 50%, #F44336 100%);
   transition: width 0.1s ease;
   border-radius: 4px;
+}
+
+/* AI头像样式 */
+.ai-avatar {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 10;
+  transform: translate(-50%, -50%);
+  transition: all 0.3s ease;
+}
+
+.ai-avatar .v-avatar {
+  border: 3px solid #1976d2;
+  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3);
+  animation: ai-idle 3s ease-in-out infinite;
+}
+
+.ai-status-indicator {
+  margin-top: 8px;
+  transition: all 0.3s ease;
+}
+
+.ai-status-indicator.speaking {
+  animation: ai-speaking 1s ease-in-out infinite alternate;
+}
+
+/* AI动画效果 */
+@keyframes ai-idle {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes ai-speaking {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.05);
+    opacity: 0.8;
+  }
 }
 </style>
