@@ -61,6 +61,12 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/shop/live2d/:id',
+    name: 'ShopLive2dView',
+    component: () => import('./views/ShopLive2dView.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/versus',
     name: 'Versus',
     component: Versus,

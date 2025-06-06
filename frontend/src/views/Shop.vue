@@ -107,19 +107,19 @@ const handleSearch = async () => {
 
 // 查看商品详情
 const viewProduct = (productId: string) => {
-  router.push(`/product/${productId}`)
+  router.push(`/Shop/live2d/${productId}`)
 }
 
-// 添加到购物车 - 这里简化为直接购买
+// 添加到购物车 - 本商品不需要购物车这里简化为直接购买
 const handleAddToCart = async (productId: string) => {
   const product = productList.value.find(p => p.id === productId)
   if (product) {
     try {
       await purchaseProduct(product)
       // 可以添加成功提示
-      console.log('商品已添加到购物车:', product.name)
+      console.log('购买成功:', product.name)
     } catch (error) {
-      console.error('添加到购物车失败:', error)
+      console.error('购买失败:', error)
     }
   }
 }
