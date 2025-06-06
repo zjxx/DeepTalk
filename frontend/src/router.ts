@@ -81,7 +81,6 @@ const routes = [
     name: 'PostDetail',
     component: PostDetail,
     meta: { requiresAuth: true }
-  }
   },
   {
     path: '/testws',
