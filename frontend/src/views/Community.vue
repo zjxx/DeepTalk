@@ -56,6 +56,7 @@
 </script>
 
 <style scoped>
+
 .community-container {
   width: 100%;
   min-height: 100vh;
@@ -126,14 +127,26 @@
   padding: 16px;
 }
 
-/* 响应式设计 */
+/* 修改响应式设计部分 */
 @media (max-width: 960px) {
   .main-content {
-    width: 90%;
+    width: 95%;
   }
 
   .content-layout {
     grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .left-sidebar,
+  .right-sidebar {
+    position: static; /* 在移动端取消固定定位 */
+    max-height: none;
   }
 }
 </style>
+
+<script setup lang="ts">
+
+
+</script>

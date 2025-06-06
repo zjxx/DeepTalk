@@ -6,6 +6,8 @@ import ForgotPassword from './views/ForgotPassword.vue'
 import Versus from './views/Versus.vue'
 import Community from './views/Community.vue'
 import Home from './views/Home.vue'
+import WebSocketDemo from './views/WebSocketDemo.vue'
+import SecuritySettings from './views/SecuritySettings.vue'
 // 你可以后续添加Profile等页面
 
 const routes = [
@@ -57,6 +59,18 @@ const routes = [
     name: 'Versus',
     component: Versus,
     meta: { requiresAuth: false }
+  },
+  {
+    path: '/testws',
+    name: 'ws',
+    component: WebSocketDemo,
+    meta: { requiresAuth: false }
+  },
+  {
+    path: '/security',
+    name: 'SecuritySettings',
+    component: SecuritySettings,
+    meta: { requiresAuth: true }
   }
   // { path: '/profile', component: () => import('./views/Profile.vue') },
 ]
