@@ -26,7 +26,7 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addInterceptor(jwtAuthenticationInterceptor)
                 .addPathPatterns("/**")
                 .excludePathPatterns(
-                    "/api/auth/login",
+                    "/api/**",
                     "/api/auth/register/**",
                     "/api/auth/forgot-password/**",
                     "/api/verification/**",

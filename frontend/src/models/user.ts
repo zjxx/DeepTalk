@@ -4,6 +4,7 @@ interface UserModel {
   avatar: string;
   isLoggedIn: boolean;
   token: string;
+  expiration: string;
 }
 
 const userModel: UserModel = {
@@ -11,7 +12,8 @@ const userModel: UserModel = {
   email: '',
   avatar: '',
   isLoggedIn: false,
-  token: ''
+  token: '',
+  expiration: ''
 }
 
-export default userModel 
+export default userModel

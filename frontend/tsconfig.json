@@ -14,8 +14,7 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "jsx": "preserve",
-    "types": ["ant-design-vue/typings/global"]
+    "jsx": "react-jsx"
   },
   "include": ["src"]
 }

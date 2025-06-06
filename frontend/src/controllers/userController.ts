@@ -1,6 +1,8 @@
 import userModel from '../models/user'
-import { loginApi, registerApi, sendVerificationCodeApi, verifyApi } from '../api/user'
-import type { LoginRequest, LoginResponse, RegisterRequest, VerifyRequest } from '../interface/auth'
+import { loginApi, sendVerificationCodeApi, verifyApi, sendForgotPasswordCodeApi, resetPasswordApi, logoutApi, verifyForgotPasswordCodeApi } from '../api/user'
+import type { LoginRequest, LoginResponse, VerifyRequest } from '../interface/auth'
+import { AxiosError } from 'axios'
+import axios from 'axios'
 
 // 添加自动登录函数
 export async function autoLogin(): Promise<boolean> {
@@ -8,18 +10,36 @@ export async function autoLogin(): Promise<boolean> {
     const token = localStorage.getItem('token')
     const savedEmail = localStorage.getItem('savedEmail')
     const savedPassword = localStorage.getItem('savedPassword')
+    const expiration = localStorage.getItem('expiration')
     
-    if (token && savedEmail && savedPassword) {
+    // 只有在有保存的邮箱和密码时才进行自动登录
+    if (token && savedEmail && savedPassword && expiration) {
+      // 检查 token 是否过期
+      const expirationDate = new Date(expiration)
+      if (expirationDate < new Date()) {
+        throw new Error('Token expired')
+      }
+
       const loginRequest: LoginRequest = {
         email: savedEmail,
-        password: savedPassword
+        password: savedPassword,
+        rememberMe: true
       }
       const res: LoginResponse = await loginApi(loginRequest)
-      userModel.email = savedEmail
+      
+      // 更新用户模型
+      userModel.username = res.username
+      userModel.email = res.email
       userModel.token = res.token
+      userModel.expiration = res.expiration
       userModel.isLoggedIn = true
+      
       return true
     }
+    
+    // 如果没有保存的邮箱和密码，清除所有登录信息
+    localStorage.removeItem('token')
+    localStorage.removeItem('expiration')
     return false
   } catch (e) {
     console.error('自动登录失败:', e)
@@ -27,57 +47,73 @@ export async function autoLogin(): Promise<boolean> {
     localStorage.removeItem('token')
     localStorage.removeItem('savedEmail')
     localStorage.removeItem('savedPassword')
+    localStorage.removeItem('expiration')
     return false
   }
 }
 
-export async function login(
-  request: LoginRequest,
-  rememberMe: boolean
-): Promise<void> {
+export const login = async (request: LoginRequest, rememberMe: boolean): Promise<boolean> => {
   try {
     console.log('登录请求数据:', request)
-    const res: LoginResponse = await loginApi(request)
+    const loginRequest: LoginRequest = {
+      ...request,
+      rememberMe
+    }
+    const res: LoginResponse = await loginApi(loginRequest)
     console.log('登录响应数据:', res)
-    userModel.email = request.email
+    
+    userModel.username = res.username
+    userModel.email = res.email
     userModel.token = res.token
+    userModel.expiration = res.expiration
     userModel.isLoggedIn = true
     
-    // 记住我逻辑
     if (rememberMe) {
+      // 记住我时，保存所有信息
       localStorage.setItem('token', res.token)
-      localStorage.setItem('sravedEmail', request.email)
+      localStorage.setItem('savedEmail', request.email)
       localStorage.setItem('savedPassword', request.password)
+      localStorage.setItem('expiration', res.expiration)
     } else {
-      // 如果取消记住我，清除保存的信息
-      localStorage.setItem('token', res.token)
+      // 不记住我时，只保存当前会话的 token
+      sessionStorage.setItem('token', res.token)
+      sessionStorage.setItem('expiration', res.expiration)
+      // 清除所有本地存储的登录信息
+      localStorage.removeItem('token')
       localStorage.removeItem('savedEmail')
       localStorage.removeItem('savedPassword')
+      localStorage.removeItem('expiration')
     }
-    // 跳转到个人资料页
-    window.location.href = '/profile'
+    
+    return true
   } catch (e) {
     alert('登录失败，请检查邮箱和密码')
     console.error('登录失败:', e)
+    return false
   }
 }
 
-export async function register(request: RegisterRequest): Promise<void> {
+export async function sendVerificationCode(email: string, username: string, password: string): Promise<{ message: string }> {
   try {
-    console.log('注册请求数据:', request)
-    await registerApi(request)
+    console.log('发送注册检查请求:', { email, username })
+    const response = await sendVerificationCodeApi(email, username, password)
+    console.log('注册检查响应:', response)
+    
+    if (typeof response === 'string') {
+      return { message: response }
+    }
+    return response
   } catch (e) {
-    alert('注册失败，请稍后重试')
-    throw e
-  }
-}
-
-export async function sendVerificationCode(email: string): Promise<void> {
-  try {
-    console.log('发送验证码到:', email)
-    await sendVerificationCodeApi(email)
-  } catch (e) {
-    alert('发送验证码失败，请稍后重试')
+    if (e instanceof AxiosError) {
+      if (e.response) {
+        console.log('错误响应:', e.response)
+        throw new Error(e.response.data)
+      } else if (e.request) {
+        throw new Error('网络请求失败，请检查网络连接')
+      } else {
+        throw new Error(e.message)
+      }
+    }
     throw e
   }
 }
@@ -86,26 +122,145 @@ export async function verify(request: VerifyRequest): Promise<void> {
   try {
     console.log('验证码验证请求:', request)
     const response = await verifyApi(request)
-    if (!response.success) {
-      alert(response.message || '验证码验证失败')
+    console.log('验证码验证响应:', response)
+    
+    if (typeof response === 'string') {
+      if (response !== '注册成功') {
+        throw new Error(response)
+      }
+    } else if (response.message !== '注册成功') {
       throw new Error(response.message)
     }
   } catch (e) {
-    alert('验证码验证失败，请重试')
+    console.error('验证码验证错误:', e)
+    if (e instanceof AxiosError) {
+      if (e.response) {
+        console.log('错误响应:', e.response)
+        throw new Error(e.response.data)
+      } else if (e.request) {
+        throw new Error('网络请求失败，请检查网络连接')
+      } else {
+        throw new Error(e.message)
+      }
+    }
     throw e
   }
 }
 
-// 暂时注释掉退出登录函数
-// export async function logout(email: string): Promise<void> {
-//   try {
-//     console.log('退出登录:', email)
-//     await logoutApi(email)
-//     userModel.email = ''
-//     userModel.token = ''
-//     userModel.isLoggedIn = false
-//   } catch (e) {
-//     console.error('退出登录失败:', e)
-//     throw e
-//   }
-// } 
+export async function sendForgotPasswordCode(email: string): Promise<void> {
+  try {
+    console.log('准备发送重置密码验证码到:', email)
+    const res = await sendForgotPasswordCodeApi({ email })
+    console.log('重置密码验证码发送响应:', res)
+    
+    // 如果响应是字符串，直接使用
+    if (typeof res === 'string') {
+      if (res !== '验证码已发送') {
+        throw new Error(res)
+      }
+    } else if (res.message !== '验证码已发送') {
+      throw new Error(res.message)
+    }
+  } catch (e) {
+    console.error('发送重置密码验证码失败:', e)
+    if (e instanceof AxiosError) {
+      if (e.response) {
+        console.log('错误响应:', e.response)
+        throw new Error(e.response.data || '发送验证码失败，请稍后重试')
+      } else if (e.request) {
+        throw new Error('网络请求失败，请检查网络连接')
+      } else {
+        throw new Error('发生错误：' + e.message)
+      }
+    }
+    throw e
+  }
+}
+
+export async function verifyForgotPasswordCode(email: string, verificationCode: string): Promise<string> {
+  try {
+    console.log('开始验证重置密码验证码:', { email, verificationCode })
+    const response = await verifyForgotPasswordCodeApi({ email, verificationCode })
+    console.log('验证码验证响应:', response)
+    
+    if (response && response.resetToken) {
+      return response.resetToken
+    }
+    throw new Error('验证码验证失败')
+  } catch (error) {
+    console.error('验证重置密码验证码失败:', error)
+    if (axios.isAxiosError(error)) {
+      if (error.response?.status === 404) {
+        throw new Error('验证码验证接口不存在，请联系管理员')
+      }
+      if (error.response?.status === 400) {
+        throw new Error('验证码错误或已过期')
+      }
+      throw new Error(error.response?.data?.message || '验证码验证失败，请稍后重试')
+    }
+    throw new Error('验证码验证失败，请稍后重试')
+  }
+}
+
+export async function resetPassword(resetToken: string, newPassword: string): Promise<void> {
+  try {
+    console.log('准备重置密码，请求数据:', { resetToken, newPassword })
+    const res = await resetPasswordApi({ resetToken, newPassword })
+    console.log('重置密码响应:', res)
+  } catch (e) {
+    console.error('重置密码失败:', e)
+    if (e instanceof AxiosError) {
+      const errorMessage = e.response?.data?.message || '重置密码失败，请重试'
+      throw new Error(errorMessage)
+    }
+    throw e
+  }
+}
+
+export async function logout(): Promise<void> {
+  try {
+    console.log('开始执行登出操作')
+    const token = localStorage.getItem('token')
+    console.log('当前token:', token)
+    
+    const response = await logoutApi()
+    console.log('登出响应:', response)
+    
+    // 只有在收到"登出成功"的响应后才执行退出操作
+    if (response && response.message === '登出成功') {
+      alert('退出成功')
+      console.log('收到登出成功响应，开始清理数据')
+      
+      // 清除本地存储
+      localStorage.removeItem('token')
+      localStorage.removeItem('savedEmail')
+      localStorage.removeItem('savedPassword')
+      localStorage.removeItem('expiration')
+      
+      // 重置用户模型
+      userModel.username = ''
+      userModel.email = ''
+      userModel.token = ''
+      userModel.expiration = ''
+      userModel.isLoggedIn = false
+      
+      console.log('数据清理完成，准备跳转到登录页')
+      window.location.href = '/login'
+    } else {
+      alert('登出失败：服务器未返回成功响应')
+      throw new Error('登出失败：服务器未返回成功响应')
+    }
+  } catch (error) {
+    console.error('登出失败:', error)
+    if (axios.isAxiosError(error)) {
+      console.log('错误响应:', error.response)
+      if (error.response?.status === 400) {
+        alert('登出失败：' + (error.response.data?.message || '未知错误'))
+        throw new Error('登出失败：' + (error.response.data?.message || '未知错误'))
+      }
+      alert('登出失败：' + (error.response?.data?.message || '网络错误'))
+      throw new Error('登出失败：' + (error.response?.data?.message || '网络错误'))
+    }
+    throw error
+  }
+} 

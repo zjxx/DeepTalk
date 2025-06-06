@@ -8,6 +8,8 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import lombok.Data;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +25,7 @@ import java.util.Map;
 @RequestMapping("/api/auth")
 @CrossOrigin(origins = "*")
 public class AuthController {
+    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
     @Autowired
     private UserRepository userRepository;
@@ -47,6 +50,7 @@ public class AuthController {
 
     @PostMapping("/register/check")
     public ResponseEntity<?> checkAndSendCode(@RequestBody RegisterRequest request) {
+        logger.info("收到注册检查请求 - 用户名: {}, 邮箱: {}", request.getUsername(), request.getEmail());
         if (userRepository.existsByUsername(request.getUsername())) {
             return ResponseEntity.badRequest().body("用户名已存在");
         }
@@ -64,6 +68,7 @@ public class AuthController {
 
     @PostMapping("/register/verify")
     public ResponseEntity<?> registerWithVerification(@RequestBody RegisterWithVerificationRequest request) {
+        logger.info("收到注册验证请求 - 用户名: {}, 邮箱: {}", request.getUsername(), request.getEmail());
         if (userRepository.existsByUsername(request.getUsername())) {
             return ResponseEntity.badRequest().body("用户名已存在");
         }
@@ -87,6 +92,7 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+        logger.info("收到登录请求 - 邮箱: {}, 记住我: {}", request.getEmail(), request.isRememberMe());
         User user = userRepository.findByEmail(request.getEmail())
                 .orElse(null);
 
@@ -109,6 +115,7 @@ public class AuthController {
 
     @PostMapping("/logout")
     public ResponseEntity<?> logout(@RequestHeader("Authorization") String authHeader) {
+        logger.info("收到登出请求");
         try {
             // 从Authorization头中提取token
             String token = authHeader.replace("Bearer ", "");
@@ -132,6 +139,7 @@ public class AuthController {
 
     @PostMapping("/forgot-password/send-code")
     public ResponseEntity<?> sendResetCode(@RequestBody ForgotPasswordRequest request) {
+        logger.info("收到发送重置密码验证码请求 - 邮箱: {}", request.getEmail());
         User user = userRepository.findByEmail(request.getEmail())
                 .orElse(null);
         
@@ -147,8 +155,9 @@ public class AuthController {
         }
     }
 
-    @PostMapping("/forgot-password/reset")
-    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
+    @PostMapping("/forgot-password/verify-code")
+    public ResponseEntity<?> verifyResetCode(@RequestBody VerifyResetCodeRequest request) {
+        logger.info("收到验证重置密码验证码请求 - 邮箱: {}", request.getEmail());
         User user = userRepository.findByEmail(request.getEmail())
                 .orElse(null);
         
@@ -161,11 +170,41 @@ public class AuthController {
             return ResponseEntity.badRequest().body("验证码错误或已过期");
         }
 
-        // 更新密码
-        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
-        userRepository.save(user);
+        // 生成一个临时token用于后续密码重置
+        String resetToken = generateToken(user, 900000); // 15分钟有效期
         
-        return ResponseEntity.ok("密码重置成功");
+        Map<String, Object> response = new HashMap<>();
+        response.put("resetToken", resetToken);
+        
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/forgot-password/reset")
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordWithTokenRequest request) {
+        logger.info("收到重置密码请求");
+        try {
+            // 验证token
+            Claims claims = Jwts.parser()
+                    .setSigningKey(jwtSecretKey)
+                    .parseClaimsJws(request.getResetToken())
+                    .getBody();
+            
+            String email = claims.getSubject();
+            User user = userRepository.findByEmail(email)
+                    .orElse(null);
+            
+            if (user == null) {
+                return ResponseEntity.badRequest().body("用户不存在");
+            }
+
+            // 更新密码
+            user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+            userRepository.save(user);
+            
+            return ResponseEntity.ok("密码重置成功");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("重置密码失败：" + e.getMessage());
+        }
     }
 
     private String generateToken(User user, long expiration) {
@@ -208,8 +247,13 @@ class ForgotPasswordRequest {
 }
 
 @Data
-class ResetPasswordRequest {
+class VerifyResetCodeRequest {
     private String email;
     private String verificationCode;
+}
+
+@Data
+class ResetPasswordWithTokenRequest {
+    private String resetToken;
     private String newPassword;
 } 

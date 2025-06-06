@@ -4,97 +4,7 @@
       <Navbar />
     </v-app-bar>
 
-    <v-navigation-drawer
-      v-if="showSideDrawer"
-      v-model="drawer"
-      :rail="rail"
-      permanent
-      @click.stop="rail = false"
-      app
-    >
-      <v-list>
-        <v-list-item
-          prepend-avatar="https://randomuser.me/api/portraits/men/85.jpg"
-          title="您的用户名或邮箱"
-        >
-          <template v-slot:append>
-            <v-btn
-              variant="text"
-              icon="mdi-chevron-left"
-              @click.stop="rail = !rail"
-            ></v-btn>
-          </template>
-        </v-list-item>
-      </v-list>
-
-      <v-divider></v-divider>
-
-      <v-list density="compact" nav>
-        <v-list-item
-          prepend-icon="mdi-account"
-          title="个人信息"
-          value="profile"
-          to="/profile"
-        ></v-list-item>
-        <v-list-item
-          prepend-icon="mdi-shield-account"
-          title="账号安全"
-          value="security"
-          to="/security"
-        ></v-list-item>
-        <v-list-item
-          prepend-icon="mdi-eye"
-          title="隐私设置"
-          value="privacy"
-          to="/privacy"
-        ></v-list-item>
-        <v-divider></v-divider>
-        <v-list-item
-          prepend-icon="mdi-post"
-          title="我的帖子"
-          value="posts"
-          to="/posts"
-        ></v-list-item>
-        <v-list-item
-          prepend-icon="mdi-bookmark"
-          title="我的收藏"
-          value="favorites"
-          to="/favorites"
-        ></v-list-item>
-        <v-list-item
-          prepend-icon="mdi-history"
-          title="浏览历史"
-          value="history"
-          to="/history"
-        ></v-list-item>
-        <v-divider></v-divider>
-        <v-list-item
-          prepend-icon="mdi-bell"
-          title="系统通知"
-          value="notifications"
-          to="/notifications"
-        ></v-list-item>
-        <v-list-item
-          prepend-icon="mdi-message"
-          title="互动消息"
-          value="messages"
-          to="/messages"
-        ></v-list-item>
-        <v-list-item
-          prepend-icon="mdi-email"
-          title="私信"
-          value="private-messages"
-          to="/private-messages"
-        ></v-list-item>
-        <v-divider></v-divider>
-        <v-list-item
-          prepend-icon="mdi-logout"
-          title="退出登录"
-          value="logout"
-          @click="handleLogout"
-        ></v-list-item>
-      </v-list>
-    </v-navigation-drawer>
+    <Sidebar v-if="showSideDrawer" />
 
     <v-main>
       <router-view></router-view>
@@ -104,29 +14,29 @@
 
 <script lang="ts">
 import { defineComponent, ref, onMounted, watch } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRoute } from 'vue-router'
 import Navbar from './components/Navbar.vue'
+import Sidebar from './components/Sidebar.vue'
 
 export default defineComponent({
   name: 'App',
   components: {
     Navbar,
+    Sidebar
   },
   setup() {
-    const router = useRouter()
     const route = useRoute()
     
     const showNavbar = ref(false)
-    const drawer = ref(true)
-    const rail = ref(false)
     const showSideDrawer = ref(false)
 
-    const navRoutes = ['/profile', '/explore', '/community', '/shop', '/settings']
-    
-    const sideDrawerRoutes = ['/profile', '/']
+    const navRoutes = ['/home', '/explore', '/community', '/shop', '/settings', '/security', '/privacy', '/profile', '/messages', '/private-messages']
+    const sideDrawerRoutes = ['/home', '/profile', '/', '/security', '/privacy',  '/messages', '/private-messages']
 
     const checkRoute = () => {
       const currentPath = route.path
+      console.log('当前路由路径:', currentPath);
+      console.log('navRoutes 包含当前路径:', navRoutes.includes(currentPath));
       showNavbar.value = navRoutes.includes(currentPath)
       showSideDrawer.value = sideDrawerRoutes.includes(currentPath)
     }
@@ -135,31 +45,22 @@ export default defineComponent({
 
     onMounted(checkRoute)
 
-    const handleLogout = () => {
-      localStorage.removeItem('token')
-      localStorage.removeItem('savedEmail')
-      localStorage.removeItem('savedPassword')
-      router.push('/login')
-    }
-
     return {
       showNavbar,
-      drawer,
-      rail,
-      showSideDrawer,
-      handleLogout,
+      showSideDrawer
     }
   }
 })
 </script>
 
 <style>
-/* 移除原有的 .content 样式，Vuetify 的 v-main 会有自己的默认样式 */
-/* .content {
-  padding: 0 24px 24px;
-  min-height: calc(100vh - 64px);
-  background: #fff;
-} */
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+}
 
-/* 可以根据需要添加全局样式 */
+#app {
+  width: 100%;
+  min-height: 100vh;
+}
 </style> 
