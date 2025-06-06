@@ -78,134 +78,148 @@
               </v-col>
             </v-row>
           </v-card-text>
-        </v-card>
-
-        <!-- 难度等级选择 -->
+        </v-card>        <!-- 难度等级选择 -->
         <v-card class="selection-card mb-4" elevation="8">
           <v-card-title class="d-flex align-center">
             <v-icon start color="primary">mdi-chart-line</v-icon>
             难度等级
           </v-card-title>
           <v-card-text>
-            <v-row>
-              <v-col cols="12" sm="3">
-                <v-card 
-                  :class="['difficulty-card', { 'selected': selectedDifficulty === '初级' }]"
-                  @click="selectDifficulty('初级')"
-                  elevation="4"
-                  hover
-                >
-                  <v-card-text class="text-center pa-4">
-                    <v-icon size="40" color="success" class="mb-2">mdi-leaf</v-icon>
-                    <div class="text-h6">初级</div>
-                    <div class="text-caption text-grey-6">日常对话</div>
-                    <v-chip 
-                      v-if="selectedDifficulty === '初级'" 
-                      color="success" 
-                      size="small"
-                      class="mt-2"
-                    >
-                      ✓
-                    </v-chip>
-                  </v-card-text>
-                </v-card>
-              </v-col>
-              
-              <v-col cols="12" sm="3">
-                <v-card 
-                  :class="['difficulty-card', { 'selected': selectedDifficulty === '中级' }]"
-                  @click="selectDifficulty('中级')"
-                  elevation="4"
-                  hover
-                >
-                  <v-card-text class="text-center pa-4">
-                    <v-icon size="40" color="warning" class="mb-2">mdi-fire</v-icon>
-                    <div class="text-h6">中级</div>
-                    <div class="text-caption text-grey-6">话题讨论</div>
-                    <v-chip 
-                      v-if="selectedDifficulty === '中级'" 
-                      color="success" 
-                      size="small"
-                      class="mt-2"
-                    >
-                      ✓
-                    </v-chip>
-                  </v-card-text>
-                </v-card>
-              </v-col>
-              
-              <v-col cols="12" sm="3">
-                <v-card 
-                  :class="['difficulty-card', { 'selected': selectedDifficulty === '高级' }]"
-                  @click="selectDifficulty('高级')"
-                  elevation="4"
-                  hover
-                >
-                  <v-card-text class="text-center pa-4">
-                    <v-icon size="40" color="error" class="mb-2">mdi-lightning-bolt</v-icon>
-                    <div class="text-h6">高级</div>
-                    <div class="text-caption text-grey-6">深度辩论</div>
-                    <v-chip 
-                      v-if="selectedDifficulty === '高级'" 
-                      color="success" 
-                      size="small"
-                      class="mt-2"
-                    >
-                      ✓
-                    </v-chip>
-                  </v-card-text>
-                </v-card>
-              </v-col>
-              
-              <v-col cols="12" sm="3">
-                <v-card 
-                  :class="['difficulty-card', { 'selected': selectedDifficulty === '四级' }]"
-                  @click="selectDifficulty('四级')"
-                  elevation="4"
-                  hover
-                >
-                  <v-card-text class="text-center pa-4">
-                    <v-icon size="40" color="info" class="mb-2">mdi-school</v-icon>
-                    <div class="text-h6">四级</div>
-                    <div class="text-caption text-grey-6">CET-4</div>
-                    <v-chip 
-                      v-if="selectedDifficulty === '四级'" 
-                      color="success" 
-                      size="small"
-                      class="mt-2"
-                    >
-                      ✓
-                    </v-chip>
-                  </v-card-text>
-                </v-card>
-              </v-col>
-            </v-row>
-            
-            <!-- 第二行：六级 -->
-            <v-row class="mt-2">
-              <v-col cols="12" sm="3" offset-sm="9">
-                <v-card 
-                  :class="['difficulty-card', { 'selected': selectedDifficulty === '六级' }]"
-                  @click="selectDifficulty('六级')"
-                  elevation="4"
-                  hover
-                >
-                  <v-card-text class="text-center pa-4">
-                    <v-icon size="40" color="purple" class="mb-2">mdi-trophy</v-icon>
-                    <div class="text-h6">六级</div>
-                    <div class="text-caption text-grey-6">CET-6</div>
-                    <v-chip 
-                      v-if="selectedDifficulty === '六级'" 
-                      color="success" 
-                      size="small"
-                      class="mt-2"
-                    >
-                      ✓
-                    </v-chip>
-                  </v-card-text>
-                </v-card>
-              </v-col>
-            </v-row>
+            <!-- 基础难度 -->
+            <div class="mb-4">
+              <div class="text-h6 mb-3 d-flex align-center">
+                <v-icon color="primary" class="mr-2">mdi-stairs</v-icon>
+                基础难度
+              </div>
+              <v-row>
+                <v-col cols="12" sm="4">
+                  <v-card 
+                    :class="['difficulty-card', { 'selected': selectedDifficulty === '初级' }]"
+                    @click="selectDifficulty('初级')"
+                    elevation="4"
+                    hover
+                  >
+                    <v-card-text class="text-center pa-4">
+                      <v-icon size="40" color="success" class="mb-2">mdi-leaf</v-icon>
+                      <div class="text-h6">初级</div>
+                      <div class="text-caption text-grey-6">日常对话</div>
+                      <v-chip 
+                        v-if="selectedDifficulty === '初级'" 
+                        color="success" 
+                        size="small"
+                        class="mt-2"
+                      >
+                        ✓
+                      </v-chip>
+                    </v-card-text>
+                  </v-card>
+                </v-col>
+                
+                <v-col cols="12" sm="4">
+                  <v-card 
+                    :class="['difficulty-card', { 'selected': selectedDifficulty === '中级' }]"
+                    @click="selectDifficulty('中级')"
+                    elevation="4"
+                    hover
+                  >
+                    <v-card-text class="text-center pa-4">
+                      <v-icon size="40" color="warning" class="mb-2">mdi-fire</v-icon>
+                      <div class="text-h6">中级</div>
+                      <div class="text-caption text-grey-6">话题讨论</div>
+                      <v-chip 
+                        v-if="selectedDifficulty === '中级'" 
+                        color="success" 
+                        size="small"
+                        class="mt-2"
+                      >
+                        ✓
+                      </v-chip>
+                    </v-card-text>
+                  </v-card>
+                </v-col>
+                
+                <v-col cols="12" sm="4">
+                  <v-card 
+                    :class="['difficulty-card', { 'selected': selectedDifficulty === '高级' }]"
+                    @click="selectDifficulty('高级')"
+                    elevation="4"
+                    hover
+                  >
+                    <v-card-text class="text-center pa-4">
+                      <v-icon size="40" color="error" class="mb-2">mdi-lightning-bolt</v-icon>
+                      <div class="text-h6">高级</div>
+                      <div class="text-caption text-grey-6">深度辩论</div>
+                      <v-chip 
+                        v-if="selectedDifficulty === '高级'" 
+                        color="success" 
+                        size="small"
+                        class="mt-2"
+                      >
+                        ✓
+                      </v-chip>
+                    </v-card-text>
+                  </v-card>
+                </v-col>
+              </v-row>
+            </div>
+
+            <!-- CET等级 -->
+            <v-divider class="my-4"></v-divider>
+            <div>
+              <div class="text-h6 mb-3 d-flex align-center">
+                <v-icon color="secondary" class="mr-2">mdi-school</v-icon>
+                CET等级
+              </div>
+              <v-row>
+                <v-col cols="12" sm="6">
+                  <v-card 
+                    :class="['difficulty-card cet-card', { 'selected': selectedDifficulty === '四级' }]"
+                    @click="selectDifficulty('四级')"
+                    elevation="4"
+                    hover
+                  >
+                    <v-card-text class="text-center pa-4">
+                      <v-icon size="50" color="info" class="mb-2">mdi-school</v-icon>
+                      <div class="text-h5">CET-4</div>
+                      <div class="text-subtitle-2 mb-1">大学英语四级</div>
+                      <div class="text-caption text-grey-6">基础应用能力</div>
+                      <v-chip 
+                        v-if="selectedDifficulty === '四级'" 
+                        color="success" 
+                        size="small"
+                        class="mt-2"
+                      >
+                        ✓ 已选择
+                      </v-chip>
+                    </v-card-text>
+                  </v-card>
+                </v-col>
+                
+                <v-col cols="12" sm="6">
+                  <v-card 
+                    :class="['difficulty-card cet-card', { 'selected': selectedDifficulty === '六级' }]"
+                    @click="selectDifficulty('六级')"
+                    elevation="4"
+                    hover
+                  >
+                    <v-card-text class="text-center pa-4">
+                      <v-icon size="50" color="purple" class="mb-2">mdi-trophy</v-icon>
+                      <div class="text-h5">CET-6</div>
+                      <div class="text-subtitle-2 mb-1">大学英语六级</div>
+                      <div class="text-caption text-grey-6">高级应用能力</div>
+                      <v-chip 
+                        v-if="selectedDifficulty === '六级'" 
+                        color="success" 
+                        size="small"
+                        class="mt-2"
+                      >
+                        ✓ 已选择
+                      </v-chip>
+                    </v-card-text>
+                  </v-card>
+                </v-col>
+              </v-row>
+            </div>
           </v-card-text>
         </v-card>
 
@@ -500,6 +514,17 @@ onBeforeUnmount(() => {
 .difficulty-card.selected {
   border-color: #1976d2;
   background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+}
+
+.cet-card {
+  background: linear-gradient(135deg, #fff8e1 0%, #f3e5f5 100%);
+  border: 2px solid #ffc107;
+}
+
+.cet-card.selected {
+  border-color: #1976d2;
+  background: linear-gradient(135deg, #e8f5e8 0%, #e3f2fd 100%);
+  box-shadow: 0 8px 25px rgba(25, 118, 210, 0.3) !important;
 }
 
 .preview-card {

@@ -1,11 +1,18 @@
 <template>
   <v-container fluid class="versus-container">
     <v-row class="versus-row">
-      <!-- 顶部信息栏 -->
+      <!-- 顶部信息栏，展示匹配参数 -->
       <v-col cols="12" class="py-1">
         <v-card class="mb-2">
           <v-card-text class="text-center">
-            <div class="text-h5 mb-2">口语对战 - {{ state.matchType }}</div>
+            <div class="text-h5 mb-2">口语对战 - {{ displayBattleType }}</div>
+            <div class="text-body-1 mb-1">
+              难度：<span class="font-weight-bold">{{ displayDifficulty }}</span>
+              <v-divider vertical class="mx-2" />
+              时长：<span class="font-weight-bold">{{ displayDuration }}分钟</span>
+              <v-divider vertical class="mx-2" />
+              语音分析：<span class="font-weight-bold">{{ displayVoiceAnalysis }}</span>
+            </div>
             <div class="text-body-1" v-if="state.matchStarted && controller.currentTopic">
               当前主题: <span class="font-weight-bold">{{ controller.currentTopic }}</span>
             </div>
@@ -17,11 +24,7 @@
                 <v-icon start>mdi-clock-outline</v-icon>
                 总时间: {{ controller.formatTime(state.remainingTime) }}
               </v-chip>
-              
-              <v-chip 
-                v-if="!state.matchStarted"
-                color="grey"
-              >
+              <v-chip v-if="!state.matchStarted" color="grey">
                 <v-icon start>mdi-pause</v-icon>
                 等待开始
               </v-chip>
@@ -202,24 +205,27 @@
               </v-btn>
             </v-btn-group>
 
-            <div class="d-flex my-2">
-              <v-select
-                :model-value="state.matchType"
-                :items="['真人对战', 'AI辅助']"
-                density="compact"
-                hide-details
-                class="match-type-select mr-2"
-                @update:model-value="handleChangeMatchType"
-              ></v-select>
+            <!-- 匹配信息显示 -->
+            <div class="d-flex my-2 align-center">
+              <v-chip color="primary" class="mr-2" size="large">
+                <v-icon start>{{ state.matchType === '真人对战' ? 'mdi-account-group' : 'mdi-robot' }}</v-icon>
+                {{ state.matchType }}
+              </v-chip>
               
-              <v-select
-                :model-value="state.difficultyLevel"
-                :items="['初级', '中级', '高级']"
-                density="compact"
-                hide-details
-                class="difficulty-select mr-2"
-                @update:model-value="handleChangeDifficultyLevel"
-              ></v-select>
+              <v-chip color="secondary" class="mr-2" size="large">
+                <v-icon start>mdi-chart-line</v-icon>
+                {{ displayDifficulty }}
+              </v-chip>
+              
+              <v-chip color="info" class="mr-2" size="large">
+                <v-icon start>mdi-clock-outline</v-icon>
+                {{ Math.floor(state.remainingTime / 60) }}分钟
+              </v-chip>
+              
+              <v-chip v-if="voiceAnalysisEnabled" color="success" size="large">
+                <v-icon start>mdi-microphone</v-icon>
+                语音分析
+              </v-chip>
             </div>
 
             <v-btn color="error" prepend-icon="mdi-exit-to-app" @click="handleEndMatch" class="my-2">
@@ -337,7 +343,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, reactive } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import Live2DModel from '../components/Live2DModel.vue'
 import * as PIXI from 'pixi.js'
 import { VersusController } from '../controllers/VersusController'
@@ -348,6 +354,7 @@ import { VersusController } from '../controllers/VersusController'
 type Live2DModelComponent = InstanceType<typeof Live2DModel>
 
 const router = useRouter()
+const route = useRoute()
 const isDev = true // 或者根据您的需要设置
 
 // PIXI App refs and state
@@ -359,10 +366,27 @@ let resizeObserver: ResizeObserver | null = null
 
 // 创建控制器实例
 const controller = new VersusController()
-
-// 响应式状态
 const state = reactive(controller.getState())
 const isLoadingPlayback = ref(false)
+
+// 匹配参数状态
+const matchingParams = ref({
+  battleType: '',
+  difficulty: '',
+  duration: 5,
+  voiceAnalysis: false
+})
+
+// 匹配参数展示
+const displayBattleType = computed(() => route.query.battleType || state.matchType || 'AI辅助')
+const displayDifficulty = computed(() => route.query.difficulty || state.difficultyLevel || '中级')
+const displayDuration = computed(() => route.query.duration || Math.floor((state.remainingTime || 300) / 60))
+const displayVoiceAnalysis = computed(() => route.query.voiceAnalysis === 'true' ? '已启用' : '未启用')
+
+// 计算属性
+const voiceAnalysisEnabled = computed(() => {
+  return matchingParams.value.voiceAnalysis
+})
 
 // 用户模型数据
 const userModel = computed(() => ({ email: 'test@example.com' }))
@@ -456,14 +480,6 @@ const handleNextTopic = () => {
   controller.nextTopic()
 }
 
-const handleChangeMatchType = (matchType: '真人对战' | 'AI辅助') => {
-  controller.changeMatchType(matchType)
-}
-
-const handleChangeDifficultyLevel = (difficultyLevel: '初级' | '中级' | '高级') => {
-  controller.changeDifficultyLevel(difficultyLevel)
-}
-
 const handleToggleFullRecording = async () => {
   try {
     if (state.isPlayingAudio) {
@@ -504,6 +520,23 @@ controller.setStateChangeCallback(() => {
 
 // PIXI App 初始化
 onMounted(async () => {
+  console.log('Versus页面已挂载')
+  
+  // 应用匹配参数
+  if (route.query.battleType) {
+    controller.changeMatchType(route.query.battleType as '真人对战' | 'AI辅助')
+  }
+  if (route.query.difficulty) {
+    // 四级/六级映射
+    let mapped = route.query.difficulty
+    if (mapped === '四级') mapped = '中级'
+    if (mapped === '六级') mapped = '高级'
+    controller.changeDifficultyLevel(mapped as '初级' | '中级' | '高级')
+  }
+  if (route.query.duration) {
+    state.remainingTime = parseInt(route.query.duration as string) * 60
+  }
+  
   await nextTick()
   if (pixiContainerRef.value) {
     const width = pixiContainerRef.value.clientWidth
