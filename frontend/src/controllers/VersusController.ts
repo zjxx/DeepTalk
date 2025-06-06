@@ -4,6 +4,7 @@ import { AudioService } from '../services/AudioService'
 import { TimerService } from '../services/TimerService'
 import { AIService } from '../services/AIService'
 import { QuestionManager } from '../utils/QuestionManager'
+import { WebSocketService } from '../services/WebSocketService'
 
 export class VersusController {
   private model: VersusModel
@@ -11,6 +12,7 @@ export class VersusController {
   private timerService: TimerService
   private aiService: AIService
   private questionManager: QuestionManager
+  private webSocketService: WebSocketService
   
   // 回调函数，用于通知 View 层状态变化
   private onStateChange?: () => void
@@ -21,6 +23,7 @@ export class VersusController {
     this.timerService = new TimerService()
     this.aiService = new AIService()
     this.questionManager = new QuestionManager()
+    this.webSocketService = new WebSocketService('ws://115.175.45.173:8765')
     
     this.setupEventListeners()
   }
@@ -39,6 +42,12 @@ export class VersusController {
     this.audioService.onRecordingComplete = (audioBlob) => {
       this.model.updateMatchState({ lastRecordedAudio: audioBlob })
       this.sendAudioForTranscription(audioBlob)
+
+      // 如果是真人对战模式，则通过 WebSocket 广播音频
+      if (this.webSocketService.getIsConnected() && this.model.getState().matchType === '真人对战') {
+        console.log('真人对战模式，发送音频广播')
+        this.webSocketService.sendAudio(audioBlob)
+      }
       this.notifyStateChange()
     }
 
@@ -64,6 +73,22 @@ export class VersusController {
       this.model.addTranscriptMessage({ isUser: false, text: response })
       this.notifyStateChange()
     }
+
+    // WebSocket 服务事件监听
+    this.webSocketService.on('voice', (data) => {
+      // 避免播放自己发送的音频
+      if (data.userId === this.webSocketService.userId) {
+        return
+      }
+      
+      console.log('接收到来自其他用户的语音数据，准备播放...', data)
+      
+      // Base64 转 Blob
+      const audioBlob = this.base64ToBlob(data.audioData, data.format || 'audio/webm')
+      
+      // 调用音频服务播放
+      this.audioService.playAudio(audioBlob)
+    })
   }
 
   // 设置状态变化回调
@@ -144,6 +169,12 @@ export class VersusController {
   // 业务逻辑方法
   async startMatch(): Promise<void> {
     try {
+      // 对战开始时连接 WebSocket
+      if (!this.webSocketService.getIsConnected()) {
+        await this.webSocketService.connect()
+        console.log('WebSocket 连接已成功建立')
+      }
+
       const state = this.model.getState()
       
       // 先请求麦克风权限
@@ -182,6 +213,10 @@ export class VersusController {
     if (state.matchStarted) {
       console.log('VersusController: 对战正在进行中，开始清理')
       
+      // 结束对战时断开 WebSocket 连接
+      this.webSocketService.disconnect()
+      console.log('WebSocket 连接已断开')
+
       // 立即停止所有计时器和服务
       this.timerService.stopAllTimers()
       this.audioService.stopRecording()
@@ -438,5 +473,22 @@ export class VersusController {
     const mins = Math.floor(seconds / 60)
     const secs = Math.floor(seconds % 60)
     return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
+
+  // Base64 字符串转为 Blob 对象
+  private base64ToBlob(base64: string, contentType: string = ''): Blob {
+    try {
+      const byteCharacters = atob(base64)
+      const byteNumbers = new Array(byteCharacters.length)
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i)
+      }
+      const byteArray = new Uint8Array(byteNumbers)
+      return new Blob([byteArray], { type: contentType })
+    } catch (error) {
+      console.error('Base64 to Blob 转换失败:', error)
+      // 返回一个空的 Blob 对象以避免后续代码出错
+      return new Blob([], { type: contentType })
+    }
   }
 }
