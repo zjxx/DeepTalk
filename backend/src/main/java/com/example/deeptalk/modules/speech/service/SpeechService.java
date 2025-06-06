@@ -4,12 +4,7 @@ import com.example.deeptalk.modules.speech.entity.SpeechSessionInfo;
 import org.kurento.client.KurentoClient;
 import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Service;
-import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
-import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
 
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Queue;
 import java.util.concurrent.*;
 
 /**
