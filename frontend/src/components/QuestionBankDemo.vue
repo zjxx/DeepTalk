@@ -1,35 +1,35 @@
 <!-- src/components/QuestionBankDemo.vue -->
 <template>
   <v-card>
-    <v-card-title>Ìâ¿â½Ó¿ÚÑİÊ¾</v-card-title>
+    <v-card-title>é¢˜åº“æ¥å£æ¼”ç¤º</v-card-title>
     <v-card-text>
       <v-row>
         <v-col cols="12" md="4">
           <v-select
             v-model="selectedDifficulty"
             :items="difficultyOptions"
-            label="ÄÑ¶ÈµÈ¼¶"
+            label="éš¾åº¦ç­‰çº§"
             clearable
           ></v-select>
         </v-col>
         <v-col cols="12" md="4">
           <v-btn color="primary" @click="loadQuestion" :loading="loading">
-            »ñÈ¡Ëæ»úÌâÄ¿
+            è·å–éšæœºé¢˜ç›®
           </v-btn>
         </v-col>
         <v-col cols="12" md="4">
           <v-btn color="secondary" @click="showStats" variant="outlined">
-            Ìâ¿âÍ³¼Æ
+            é¢˜åº“ç»Ÿè®¡
           </v-btn>
         </v-col>
       </v-row>
 
       <v-divider class="my-4"></v-divider>
 
-      <!-- µ±Ç°ÌâÄ¿ÏÔÊ¾ -->
+      <!-- å½“å‰é¢˜ç›®æ˜¾ç¤º -->
       <div v-if="currentQuestion">
         <v-alert type="success" class="mb-4">
-          ³É¹¦»ñÈ¡ÌâÄ¿£¡ID: {{ currentQuestion.id }}
+          æˆåŠŸè·å–é¢˜ç›®ï¼ID: {{ currentQuestion.id }}
         </v-alert>
         
         <v-card variant="outlined" class="mb-4">
@@ -42,13 +42,13 @@
               {{ currentQuestion.category }}
             </v-chip>
             <v-chip size="small" color="grey">
-              {{ currentQuestion.estimatedTime }}·ÖÖÓ
+              {{ currentQuestion.estimatedTime }}åˆ†é’Ÿ
             </v-chip>
           </v-card-subtitle>
           <v-card-text>
             <p class="mb-3">{{ currentQuestion.description }}</p>
             <v-divider class="mb-3"></v-divider>
-            <h4 class="mb-2">¶Ô»°ÌáÊ¾:</h4>
+            <h4 class="mb-2">å¯¹è¯æç¤º:</h4>
             <v-list density="compact">
               <v-list-item
                 v-for="(prompt, index) in currentQuestion.prompts"
@@ -72,44 +72,44 @@
         </v-card>
       </div>
 
-      <!-- ´íÎóĞÅÏ¢ -->
+      <!-- é”™è¯¯ä¿¡æ¯ -->
       <v-alert v-if="errorMessage" type="error" class="mb-4">
         {{ errorMessage }}
       </v-alert>
 
-      <!-- Ìâ¿âÍ³¼Æ -->
+      <!-- é¢˜åº“ç»Ÿè®¡ -->
       <v-card v-if="showStatsPanel" variant="outlined" class="mb-4">
-        <v-card-title>Ìâ¿âÍ³¼ÆĞÅÏ¢</v-card-title>
+        <v-card-title>é¢˜åº“ç»Ÿè®¡ä¿¡æ¯</v-card-title>
         <v-card-text>
           <v-row>
             <v-col cols="6" md="3">
               <div class="text-center">
                 <div class="text-h4 text-primary">{{ stats.total }}</div>
-                <div class="text-caption">×ÜÌâÄ¿Êı</div>
+                <div class="text-caption">æ€»é¢˜ç›®æ•°</div>
               </div>
             </v-col>
             <v-col cols="6" md="3">
               <div class="text-center">
                 <div class="text-h4 text-success">{{ stats.byDifficulty.beginner }}</div>
-                <div class="text-caption">³õ¼¶</div>
+                <div class="text-caption">åˆçº§</div>
               </div>
             </v-col>
             <v-col cols="6" md="3">
               <div class="text-center">
                 <div class="text-h4 text-warning">{{ stats.byDifficulty.intermediate }}</div>
-                <div class="text-caption">ÖĞ¼¶</div>
+                <div class="text-caption">ä¸­çº§</div>
               </div>
             </v-col>
             <v-col cols="6" md="3">
               <div class="text-center">
                 <div class="text-h4 text-error">{{ stats.byDifficulty.advanced }}</div>
-                <div class="text-caption">¸ß¼¶</div>
+                <div class="text-caption">é«˜çº§</div>
               </div>
             </v-col>
           </v-row>
           <v-divider class="my-3"></v-divider>
           <div>
-            <h4 class="mb-2">·ÖÀà:</h4>
+            <h4 class="mb-2">åˆ†ç±»:</h4>
             <v-chip-group>
               <v-chip v-for="category in stats.categories" :key="category" size="small">
                 {{ category }}
@@ -119,9 +119,9 @@
         </v-card-text>
       </v-card>
 
-      <!-- API µ÷ÓÃ¼ÇÂ¼ -->
+      <!-- API è°ƒç”¨è®°å½• -->
       <v-expansion-panels v-if="apiCalls.length > 0">
-        <v-expansion-panel title="API µ÷ÓÃ¼ÇÂ¼">
+        <v-expansion-panel title="API è°ƒç”¨è®°å½•">
           <v-expansion-panel-text>
             <v-list>
               <v-list-item v-for="(call, index) in apiCalls" :key="index">
@@ -132,7 +132,7 @@
                   {{ call.timestamp.toLocaleTimeString() }} - {{ call.type }}
                 </v-list-item-title>
                 <v-list-item-subtitle>
-                  {{ call.success ? '³É¹¦' : call.error }}
+                  {{ call.success ? 'æˆåŠŸ' : call.error }}
                 </v-list-item-subtitle>
               </v-list-item>
             </v-list>
@@ -161,15 +161,15 @@ const apiCalls = ref<Array<{
 }>>([])
 
 const difficultyOptions = [
-  { title: '³õ¼¶', value: 'beginner' },
-  { title: 'ÖĞ¼¶', value: 'intermediate' },
-  { title: '¸ß¼¶', value: 'advanced' }
+  { title: 'åˆçº§', value: 'beginner' },
+  { title: 'ä¸­çº§', value: 'intermediate' },
+  { title: 'é«˜çº§', value: 'advanced' }
 ]
 
 const difficultyLabels = {
-  beginner: '³õ¼¶',
-  intermediate: 'ÖĞ¼¶',
-  advanced: '¸ß¼¶'
+  beginner: 'åˆçº§',
+  intermediate: 'ä¸­çº§',
+  advanced: 'é«˜çº§'
 }
 
 const difficultyColors = {
@@ -189,21 +189,21 @@ const loadQuestion = async () => {
     
     apiCalls.value.unshift({
       timestamp: new Date(),
-      type: `»ñÈ¡${selectedDifficulty.value ? difficultyLabels[selectedDifficulty.value] : 'Ëæ»ú'}ÌâÄ¿`,
+      type: `è·å–${selectedDifficulty.value ? difficultyLabels[selectedDifficulty.value] : 'éšæœº'}é¢˜ç›®`,
       success: response.success
     })
     
     if (response.success && response.data) {
       currentQuestion.value = response.data
     } else {
-      errorMessage.value = response.message || '»ñÈ¡ÌâÄ¿Ê§°Ü'
+      errorMessage.value = response.message || 'è·å–é¢˜ç›®å¤±è´¥'
       apiCalls.value[0].error = errorMessage.value
     }  } catch (error) {
-    console.error('»ñÈ¡ÌâÄ¿Ê±·¢Éú´íÎó:', error)
-    errorMessage.value = 'ÍøÂçÇëÇóÊ§°Ü'
+    console.error('è·å–é¢˜ç›®æ—¶å‘ç”Ÿé”™è¯¯:', error)
+    errorMessage.value = 'ç½‘ç»œè¯·æ±‚å¤±è´¥'
     apiCalls.value.unshift({
       timestamp: new Date(),
-      type: '»ñÈ¡ÌâÄ¿',
+      type: 'è·å–é¢˜ç›®',
       success: false,
       error: errorMessage.value
     })
@@ -218,7 +218,7 @@ const showStats = () => {
   
   apiCalls.value.unshift({
     timestamp: new Date(),
-    type: '»ñÈ¡Ìâ¿âÍ³¼Æ',
+    type: 'è·å–é¢˜åº“ç»Ÿè®¡',
     success: true
   })
 }

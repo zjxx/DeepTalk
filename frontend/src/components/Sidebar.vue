@@ -38,6 +38,18 @@
         value="private-messages"
         to="/private-messages"
       ></v-list-item>
+      <v-list-item
+        prepend-icon="mdi-sword-cross"
+        title="口语对战"
+        value="versus"
+        to="/versus"
+      ></v-list-item>
+      <v-list-item
+        prepend-icon="mdi-calculator-variant"
+        title="评分结果"
+        value="evaluation"
+        to="/evaluation"
+      ></v-list-item>
       <v-divider></v-divider>
     </v-list>
   </v-navigation-drawer>

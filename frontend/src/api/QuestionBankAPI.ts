@@ -45,14 +45,14 @@ class QuestionBankAPI {
     return QuestionBankAPI.instance
   }
 
-  // ³õÊ¼»¯Ìâ¿âÊı¾İ£¨Ä£Äâºó¶ËÊı¾İ£©
+  // åˆå§‹åŒ–é¢˜åº“æ•°æ®ï¼ˆæ¨¡æ‹Ÿåç«¯æ•°æ®ï¼‰
   private initializeQuestionBank(): void {
     this.questionBank = [
-      // ³õ¼¶ÌâÄ¿
+      // åˆçº§é¢˜ç›®
       {
         id: 'q001',
         topic: 'My Daily Routine',
-        description: 'ÃèÊöÄúµÄÈÕ³£Éú»î°²ÅÅ',
+        description: 'æè¿°æ‚¨çš„æ—¥å¸¸ç”Ÿæ´»å®‰æ’',
         prompts: [
           'What time do you usually wake up and why?',
           'What is your favorite part of the day?',
@@ -67,7 +67,7 @@ class QuestionBankAPI {
       {
         id: 'q002',
         topic: 'Food and Cooking',
-        description: 'Ì¸ÂÛÃÀÊ³ºÍÅëâ¿',
+        description: 'è°ˆè®ºç¾é£Ÿå’Œçƒ¹é¥ª',
         prompts: [
           'What is your favorite dish and why?',
           'Do you prefer cooking at home or eating out?',
@@ -82,7 +82,7 @@ class QuestionBankAPI {
       {
         id: 'q003',
         topic: 'Hobbies and Interests',
-        description: '·ÖÏíÄúµÄĞËÈ¤°®ºÃ',
+        description: 'åˆ†äº«æ‚¨çš„å…´è¶£çˆ±å¥½',
         prompts: [
           'What hobbies do you enjoy in your free time?',
           'How did you become interested in these activities?',
@@ -95,11 +95,11 @@ class QuestionBankAPI {
         estimatedTime: 3
       },
 
-      // ÖĞ¼¶ÌâÄ¿
+      // ä¸­çº§é¢˜ç›®
       {
         id: 'q004',
         topic: 'Technology and Society',
-        description: '¿Æ¼¼¶ÔÉç»áµÄÓ°Ïì',
+        description: 'ç§‘æŠ€å¯¹ç¤¾ä¼šçš„å½±å“',
         prompts: [
           'How has technology changed the way we communicate?',
           'What are the advantages and disadvantages of social media?',
@@ -114,7 +114,7 @@ class QuestionBankAPI {
       {
         id: 'q005',
         topic: 'Education and Learning',
-        description: '½ÌÓıºÍÑ§Ï°·½Ê½µÄÌ½ÌÖ',
+        description: 'æ•™è‚²å’Œå­¦ä¹ æ–¹å¼çš„æ¢è®¨',
         prompts: [
           'What do you think about online vs traditional education?',
           'How do you prefer to learn new skills?',
@@ -129,7 +129,7 @@ class QuestionBankAPI {
       {
         id: 'q006',
         topic: 'Work-Life Balance',
-        description: '¹¤×÷ÓëÉú»îµÄÆ½ºâ',
+        description: 'å·¥ä½œä¸ç”Ÿæ´»çš„å¹³è¡¡',
         prompts: [
           'How do you maintain work-life balance?',
           'What does a perfect work environment look like to you?',
@@ -142,11 +142,11 @@ class QuestionBankAPI {
         estimatedTime: 6
       },
 
-      // ¸ß¼¶ÌâÄ¿
+      // é«˜çº§é¢˜ç›®
       {
         id: 'q007',
         topic: 'Climate Change and Environment',
-        description: 'Æøºò±ä»¯Óë»·¾³±£»¤',
+        description: 'æ°”å€™å˜åŒ–ä¸ç¯å¢ƒä¿æŠ¤',
         prompts: [
           'What actions can individuals take to combat climate change?',
           'How should governments prioritize environmental policies?',
@@ -161,7 +161,7 @@ class QuestionBankAPI {
       {
         id: 'q008',
         topic: 'Globalization and Cultural Identity',
-        description: 'È«Çò»¯ÓëÎÄ»¯ÈÏÍ¬',
+        description: 'å…¨çƒåŒ–ä¸æ–‡åŒ–è®¤åŒ',
         prompts: [
           'How does globalization affect local cultures?',
           'Can cultural diversity coexist with global unity?',
@@ -176,7 +176,7 @@ class QuestionBankAPI {
       {
         id: 'q009',
         topic: 'Artificial Intelligence and Ethics',
-        description: 'ÈË¹¤ÖÇÄÜÓëÂ×ÀíµÀµÂ',
+        description: 'äººå·¥æ™ºèƒ½ä¸ä¼¦ç†é“å¾·',
         prompts: [
           'What ethical concerns do you have about AI development?',
           'How should society regulate AI technology?',
@@ -191,7 +191,7 @@ class QuestionBankAPI {
       {
         id: 'q010',
         topic: 'Mental Health and Wellbeing',
-        description: 'ĞÄÀí½¡¿µÓëĞÒ¸£¸Ğ',
+        description: 'å¿ƒç†å¥åº·ä¸å¹¸ç¦æ„Ÿ',
         prompts: [
           'How do you maintain good mental health?',
           'What role does community support play in wellbeing?',
@@ -206,10 +206,10 @@ class QuestionBankAPI {
     ]
   }
 
-  // »ñÈ¡Ëæ»úÌâÄ¿ - Ö÷Òª½Ó¿Ú
+  // è·å–éšæœºé¢˜ç›® - ä¸»è¦æ¥å£
   async getRandomQuestion(request: QuestionRequest = {}): Promise<QuestionResponse> {
     try {
-      // Ä£ÄâÍøÂçÑÓ³Ù
+      // æ¨¡æ‹Ÿç½‘ç»œå»¶è¿Ÿ
       await new Promise(resolve => setTimeout(resolve, 300 + Math.random() * 300))
 
       const {
@@ -218,7 +218,7 @@ class QuestionBankAPI {
         excludeIds = []
       } = request
 
-      // É¸Ñ¡ÌâÄ¿
+      // ç­›é€‰é¢˜ç›®
       let filteredQuestions = this.questionBank.filter(q => {
         if (excludeIds.includes(q.id)) return false
         if (difficulty && q.difficulty !== difficulty) return false
@@ -226,7 +226,7 @@ class QuestionBankAPI {
         return true
       })
 
-      // Èç¹ûÃ»ÓĞ·ûºÏÌõ¼şµÄÌâÄ¿£¬·µ»ØËùÓĞÌâÄ¿
+      // å¦‚æœæ²¡æœ‰ç¬¦åˆæ¡ä»¶çš„é¢˜ç›®ï¼Œè¿”å›æ‰€æœ‰é¢˜ç›®
       if (filteredQuestions.length === 0) {
         filteredQuestions = this.questionBank.filter(q => !excludeIds.includes(q.id))
       }
@@ -239,7 +239,7 @@ class QuestionBankAPI {
         }
       }
 
-      // Ëæ»úÑ¡ÔñÒ»¸öÌâÄ¿
+      // éšæœºé€‰æ‹©ä¸€ä¸ªé¢˜ç›®
       const randomIndex = Math.floor(Math.random() * filteredQuestions.length)
       const selectedQuestion = filteredQuestions[randomIndex]
 
@@ -249,7 +249,7 @@ class QuestionBankAPI {
         message: 'Question retrieved successfully'
       }
     } catch (error) {
-      console.error('QuestionBankAPI: »ñÈ¡ÌâÄ¿Ê§°Ü', error)
+      console.error('QuestionBankAPI: è·å–é¢˜ç›®å¤±è´¥', error)
       return {
         success: false,
         data: null,
@@ -258,12 +258,12 @@ class QuestionBankAPI {
     }
   }
 
-  // ¸ù¾İÄÑ¶È»ñÈ¡ÌâÄ¿
+  // æ ¹æ®éš¾åº¦è·å–é¢˜ç›®
   async getQuestionByDifficulty(difficulty: 'beginner' | 'intermediate' | 'advanced'): Promise<QuestionResponse> {
     return this.getRandomQuestion({ difficulty })
   }
 
-  // »ñÈ¡¶à¸öÌâÄ¿
+  // è·å–å¤šä¸ªé¢˜ç›®
   async getMultipleQuestions(count: number, request: QuestionRequest = {}): Promise<QuestionsResponse> {
     try {
       const questions: QuestionData[] = []
@@ -287,7 +287,7 @@ class QuestionBankAPI {
         total: questions.length,
         message: `Retrieved ${questions.length} questions`
       }    } catch (error) {
-      console.error('»ñÈ¡¶à¸öÌâÄ¿Ê§°Ü:', error)
+      console.error('è·å–å¤šä¸ªé¢˜ç›®å¤±è´¥:', error)
       return {
         success: false,
         data: [],
@@ -296,7 +296,7 @@ class QuestionBankAPI {
       }
     }
   }
-  // »ñÈ¡Ìâ¿âÍ³¼ÆĞÅÏ¢
+  // è·å–é¢˜åº“ç»Ÿè®¡ä¿¡æ¯
   getQuestionBankStats() {
     const categories = new Set(this.questionBank.map(q => q.category))
     const tags = new Set(this.questionBank.flatMap(q => q.tags))
@@ -315,16 +315,16 @@ class QuestionBankAPI {
     return stats
   }
 
-  // ¸ù¾İID»ñÈ¡ÌØ¶¨ÌâÄ¿
+  // æ ¹æ®IDè·å–ç‰¹å®šé¢˜ç›®
   getQuestionById(id: string): QuestionData | null {
     return this.questionBank.find(q => q.id === id) || null
   }
 }
 
-// µ¼³öµ¥ÀıÊµÀı
+// å¯¼å‡ºå•ä¾‹å®ä¾‹
 export const questionBankAPI = QuestionBankAPI.getInstance()
 
-// µ¼³ö±ã½İ·½·¨
+// å¯¼å‡ºä¾¿æ·æ–¹æ³•
 export const getRandomQuestion = (request?: QuestionRequest) => questionBankAPI.getRandomQuestion(request)
 export const getQuestionByDifficulty = (difficulty: 'beginner' | 'intermediate' | 'advanced') => questionBankAPI.getQuestionByDifficulty(difficulty)
 export const getMultipleQuestions = (count: number, request?: QuestionRequest) => questionBankAPI.getMultipleQuestions(count, request)
