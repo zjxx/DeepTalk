@@ -4,7 +4,7 @@ import { API_BASE_URL } from '../config/api'
 // 创建 axios 实例
 const httpClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json'
   },
