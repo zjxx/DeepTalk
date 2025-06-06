@@ -9,6 +9,7 @@ import Home from './views/Home.vue'
 import WebSocketDemo from './views/WebSocketDemo.vue'
 import SecuritySettings from './views/SecuritySettings.vue'
 import Evaluation from './views/Evaluation.vue'
+import Matching from './views/Matching.vue'
 // 你可以后续添加Profile等页面
 
 const routes = [
@@ -72,6 +73,12 @@ const routes = [
     name: 'SecuritySettings',
     component: SecuritySettings,
     meta: { requiresAuth: true }
+  },
+  {
+    path: '/matching',
+    name: 'Matching',
+    component: Matching,
+    meta: { requiresAuth: false }
   },
   {
     path: '/evaluation',
