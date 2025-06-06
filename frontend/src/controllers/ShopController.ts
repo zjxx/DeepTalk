@@ -9,19 +9,41 @@ export const useShopController = () => {
     const loading = ref(false) 
     const error = ref<string | null>(null)
 
-    //const samplePosts: Post[] = []
+    const sampleProducts: Product[] = [
+        {
+            id: '1',
+            name: '真寻',
+            description: '绪山真寻Live2d',
+            price: 648,
+            imageUrl: '../public/live2d/Mahiro_GG/真寻.png'
+        },
+        {
+            id: '2',
+            name: 'miku',
+            description: '初音未来Live2d',
+            price: 328,
+            imageUrl: 'https://via.placeholder.com/150'
+        },
+        {
+            id: '3',
+            name: '纳西妲',
+            description: '草神Live2d',
+            price: 128,
+            imageUrl: '../public/live2d/Nahida_1080/icon.jpg'
+        }
+    ]
     // 加载商店启动数据：发送空搜索拉取商品列表
     const loadShopData = async () => {
         loading.value = true
         error.value = null
         try {
             // 空搜索拉取商品
-            const searchReq: SearchRequest = { query: '' }
-            const searchRes: SearchResponse = await ShopSearchAPI(searchReq)
-            productList.value = searchRes.products ?? []
+            // const searchReq: SearchRequest = { query: '' }
+            // const searchRes: SearchResponse = await ShopSearchAPI(searchReq)
+            // productList.value = searchRes.products ?? []
             // 模拟API调用延迟
-            // await new Promise(resolve => setTimeout(resolve, 1000))
-            // productList.value = sampleProducts
+            await new Promise(resolve => setTimeout(resolve, 1000))
+            productList.value = sampleProducts
 
         } catch (e) {
             error.value = '加载失败，请稍后重试'

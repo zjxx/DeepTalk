@@ -30,17 +30,19 @@
             <!-- 左侧：帖子主要内容 -->
             <v-card class="post-content-card" elevation="1">
               <!-- 标题和点赞按钮 -->
-              <v-card-text class="post-header">
-                <h1 class="post-title">{{ currentPost.title }}</h1>
-                <v-btn
-                  :icon="isLiked ? 'mdi-heart' : 'mdi-heart-outline'"
-                  :color="isLiked ? 'red' : 'grey'"
-                  variant="text"
-                  size="large"
-                  @click="handleLike"
-                >
-                </v-btn>
-              </v-card-text>
+<v-card-text class="post-header">
+  <h1 class="post-title">{{ currentPost.title }}</h1>
+  <v-btn
+    :icon="isLiked ? 'mdi-heart' : 'mdi-heart-outline'"
+    :color="isLiked ? 'red' : 'grey'"
+    variant="text"
+    size="large"
+    :loading="isProcessingLike"
+    :disabled="isProcessingLike"
+    @click="handleLike"
+  >
+  </v-btn>
+</v-card-text>
 
               <!-- 时间行 -->
               <v-card-text class="post-time-section">
@@ -121,6 +123,7 @@ const {
 
 const currentPost = ref<Post | null>(null)
 const isLiked = ref(false)
+const isProcessingLike = ref(false)
 
 const postId = computed(() => route.params.id as string)
 
@@ -157,14 +160,26 @@ const loadPostDetail = async () => {
 const handleLike = async () => {
   if (!currentPost.value) return
   
+  // 添加加载状态防止重复点击
+  const isProcessing = ref(false)
+  if (isProcessing.value) return
+  
+  isProcessing.value = true
+  
   try {
     const userId = 'current_user_id'
     const result = await likePost(currentPost.value.id, userId)
     
+    // 只有成功时才更新UI
     isLiked.value = !isLiked.value
     currentPost.value.likes = result.likes
   } catch (error) {
     console.error('点赞失败:', error)
+    
+    // 点赞失败时按钮保持原样，不做任何UI更新
+    // 可选：显示错误提示
+  } finally {
+    isProcessing.value = false
   }
 }
 

@@ -21,12 +21,25 @@
               color="primary"
               variant="elevated"
               class="search-button"
+              :loading="loading"
               @click="handleSearch"
             >
               搜索
             </v-btn>
           </div>
         </v-card>
+
+        <!-- 错误提示 -->
+        <v-alert
+          v-if="error"
+          type="error"
+          variant="tonal"
+          closable
+          class="mb-4"
+          @click:close="error = null"
+        >
+          {{ error }}
+        </v-alert>
 
         <!-- 商品展示区域 -->
         <div class="products-area">
@@ -37,9 +50,9 @@
           </div>
 
           <!-- 商品网格 -->
-          <div v-else-if="products.length > 0" class="products-grid">
+          <div v-else-if="productList.length > 0" class="products-grid">
             <ProductCard
-              v-for="product in products"
+              v-for="product in productList"
               :key="product.id"
               :product="product"
               @click="viewProduct(product.id)"
@@ -61,85 +74,35 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import ProductCard from '../components/ProductCard.vue'
+import { useShopController } from '../controllers/ShopController'
+//import type { Product } from '../interface/ShopInterface'
 
 const router = useRouter()
 
-// 商品数据类型定义
-interface Product {
-  id: string
-  name: string
-  description: string
-  price: number
-  image: string
-  category: string
-  stock: number
-  rating: number
-}
+// 使用 ShopController
+const {
+  productList,
+  loading,
+  error,
+  loadShopData,
+  searchProducts,
+  purchaseProduct
+} = useShopController()
 
-// 状态管理
-const products = ref<Product[]>([])
-const loading = ref(false)
+// 搜索状态
 const searchQuery = ref('')
-
-// 样品商品数据
-const sampleProducts: Product[] = [
-  {
-    id: '1',
-    name: '智能手机',
-    description: '最新款智能手机，性能强劲，拍照清晰，电池持久。',
-    price: 3999,
-    image: '/images/phone.jpg',
-    category: '电子产品',
-    stock: 50,
-    rating: 4.8
-  },
-  {
-    id: '2',
-    name: '无线耳机',
-    description: '高品质无线耳机，降噪效果出色，音质清晰。',
-    price: 299,
-    image: '/images/earphones.jpg',
-    category: '电子产品',
-    stock: 100,
-    rating: 4.6
-  },
-  
-]
-
-// 加载商品数据
-const loadProducts = async () => {
-  loading.value = true
-  try {
-    // 模拟API调用延迟
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    products.value = sampleProducts
-  } catch (error) {
-    console.error('加载商品失败:', error)
-  } finally {
-    loading.value = false
-  }
-}
 
 // 搜索商品
 const handleSearch = async () => {
   if (!searchQuery.value.trim()) {
-    products.value = sampleProducts
+    // 如果搜索为空，重新加载所有商品
+    await loadShopData()
     return
   }
   
-  loading.value = true
-  try {
-    await new Promise(resolve => setTimeout(resolve, 500))
-    products.value = sampleProducts.filter(product => 
-      product.name.includes(searchQuery.value) || 
-      product.description.includes(searchQuery.value) ||
-      product.category.includes(searchQuery.value)
-    )
-  } catch (error) {
-    console.error('搜索失败:', error)
-  } finally {
-    loading.value = false
-  }
+  // 调用控制器的搜索方法
+  await searchProducts(searchQuery.value)
 }
 
 // 查看商品详情
@@ -147,15 +110,23 @@ const viewProduct = (productId: string) => {
   router.push(`/product/${productId}`)
 }
 
-// 添加到购物车
-const handleAddToCart = (productId: string) => {
-  console.log('添加到购物车:', productId)
-  // 这里后续实现购物车逻辑
+// 添加到购物车 - 这里简化为直接购买
+const handleAddToCart = async (productId: string) => {
+  const product = productList.value.find(p => p.id === productId)
+  if (product) {
+    try {
+      await purchaseProduct(product)
+      // 可以添加成功提示
+      console.log('商品已添加到购物车:', product.name)
+    } catch (error) {
+      console.error('添加到购物车失败:', error)
+    }
+  }
 }
 
 // 页面加载
 onMounted(() => {
-  loadProducts()
+  loadShopData()
 })
 </script>
 

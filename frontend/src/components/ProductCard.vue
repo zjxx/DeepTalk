@@ -8,7 +8,7 @@
     <!-- 商品图片 -->
     <div class="product-image-container">
       <v-img
-        :src="product.image"
+        :src="product.imageUrl || '/default-product.png'"
         :alt="product.name"
         class="product-image"
         cover
@@ -26,11 +26,12 @@
         <v-btn
           icon
           size="small"
+          text="购买"
           color="white"
           class="overlay-btn"
           @click.stop="$emit('add-to-cart', product.id)"
         >
-          <v-icon>mdi-cart-plus</v-icon>
+          <v-icon>mdi-cart</v-icon>
         </v-btn>
       </div>
     </div>
@@ -48,36 +49,15 @@
           <span class="price-symbol">¥</span>
           <span class="price-amount">{{ product.price }}</span>
         </div>
-        
-        <div class="product-rating">
-          <v-icon size="16" color="orange">mdi-star</v-icon>
-          <span>{{ product.rating }}</span>
-        </div>
-      </div>
-      
-      <!-- 库存信息 -->
-      <div class="product-stock">
-        <span :class="stockClass">库存: {{ product.stock }}</span>
       </div>
     </v-card-text>
   </v-card>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import type { Product } from '../interface/ShopInterface'
 
-interface Product {
-  id: string
-  name: string
-  description: string
-  price: number
-  image: string
-  category: string
-  stock: number
-  rating: number
-}
-
-const props = defineProps<{
+defineProps<{
   product: Product
 }>()
 
@@ -93,13 +73,6 @@ const formatDescription = (description: string) => {
   }
   return description
 }
-
-// 库存状态样式
-const stockClass = computed(() => {
-  if (props.product.stock <= 0) return 'stock-out'
-  if (props.product.stock <= 10) return 'stock-low'
-  return 'stock-normal'
-})
 </script>
 
 <style scoped>
@@ -156,7 +129,7 @@ const stockClass = computed(() => {
 
 .product-info {
   padding: 16px;
-  height: 160px;
+  height: 120px;
   display: flex;
   flex-direction: column;
 }
@@ -187,7 +160,7 @@ const stockClass = computed(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-top: auto;
 }
 
 .product-price {
@@ -206,29 +179,5 @@ const stockClass = computed(() => {
   font-weight: 700;
   color: #e53e3e;
   margin-left: 2px;
-}
-
-.product-rating {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 14px;
-  color: #666;
-}
-
-.product-stock {
-  font-size: 12px;
-}
-
-.stock-normal {
-  color: #38a169;
-}
-
-.stock-low {
-  color: #d69e2e;
-}
-
-.stock-out {
-  color: #e53e3e;
 }
 </style>
