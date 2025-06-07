@@ -1,9 +1,10 @@
 package com.example.deeptalk.modules.speech.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.gson.JsonObject;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.NonNull;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.BinaryMessage;
@@ -13,6 +14,8 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.AbstractWebSocketHandler;
 
 import java.io.IOException;
+import java.util.Map;
+import java.util.Base64;
 
 @Slf4j
 @Component
@@ -20,7 +23,7 @@ public class SpeechWebSocketHandler extends AbstractWebSocketHandler {
 
     @Getter
     private final ForwardingService forwardingService;
-    private final ObjectMapper objectMapper = new ObjectMapper(); // 推荐使用Jackson来解析JSON
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public SpeechWebSocketHandler(ForwardingService forwardingService) {
         this.forwardingService = forwardingService;
@@ -32,25 +35,23 @@ public class SpeechWebSocketHandler extends AbstractWebSocketHandler {
         log.info("[SpeechWebSocketHandler] 处理器: 新连接 {} 已建立，等待客户端注册...", wsSession.getId());
     }
 
-    /**
-     * 处理文本消息，主要用于客户端注册身份。
-     */
     @Override
     protected void handleTextMessage(@NonNull WebSocketSession wsSession, TextMessage message) throws Exception {
-        // 约定客户端发送 {"type": "register", "userId": "someUserId"} 格式的JSON
         try {
-            JsonObject jsonObject = objectMapper.readValue(message.getPayload(), JsonObject.class);
-            String type = jsonObject.get("type").getAsString();
-            String userId = jsonObject.has("userId") ? jsonObject.get("userId").getAsString() : null;
-            String sessionId = jsonObject.has("sessionId") ? jsonObject.get("sessionId").getAsString() : null;
+            // 使用Map来接收JSON数据
+            Map<String, Object> jsonMap = objectMapper.readValue(message.getPayload(), Map.class);
+            String type = (String) jsonMap.get("type");
 
-            if ("register".equals(type) && userId != null) {
-                // 将注册任务委托给服务层
-                forwardingService.registerUserSession(userId, sessionId, wsSession);
+            if ("register".equals(type)) {
+                String userId = (String) jsonMap.get("userId");
+                String sessionId = (String) jsonMap.get("sessionId");
+                if (userId != null) {
+                    forwardingService.registerUserSession(userId, sessionId, wsSession);
+                    log.info("[SpeechWebSocketHandler] 用户注册成功: userId={}, sessionId={}", userId, sessionId);
+                }
             }
         } catch (IOException e) {
-//            System.err.println("处理器: 无法解析注册消息: " + message.getPayload());
-            log.error("[SpeechWebSocketHandler] 无法解析注册信息: {}", wsSession.getId(), e);
+            log.error("[SpeechWebSocketHandler] 无法解析消息: {}, payload={}", wsSession.getId(), message.getPayload(), e);
         }
     }
 

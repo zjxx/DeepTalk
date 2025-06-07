@@ -17,7 +17,7 @@ public class SpeechWebSocketConfig implements WebSocketConfigurer {
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         // 注册WebSocket处理器，并允许所有源
-        registry.addHandler(speechWebSocketHandler, "/speech")
+        registry.addHandler(speechWebSocketHandler, "/api/speech/ws")
                 .setAllowedOrigins("*");
     }
 }
