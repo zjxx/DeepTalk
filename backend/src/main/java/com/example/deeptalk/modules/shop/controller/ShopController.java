@@ -1,35 +1,59 @@
 package com.example.deeptalk.modules.shop.controller;
 
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import com.example.deeptalk.modules.shop.dto.*;
+import com.example.deeptalk.modules.shop.entity.Order;
+import com.example.deeptalk.modules.shop.entity.Product;
+import com.example.deeptalk.modules.shop.repository.OrderRepository;
+import com.example.deeptalk.modules.shop.repository.ProductRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/shop")
 @CrossOrigin(origins = "*")
 public class ShopController {
+    
+    @Autowired
+    private ProductRepository productRepository;
+    
+    @Autowired
+    private OrderRepository orderRepository;
+
     @PostMapping("/search")
-    public static String searchShop(String query) {
-        // 这里可以添加搜索逻辑
-        return null;
+    public ResponseEntity<SearchResponse> searchShop(@RequestBody SearchRequest request) {
+        List<Product> products;
+        if (request.getQuery() == null || request.getQuery().trim().isEmpty()) {
+            products = productRepository.findAll();
+        } else {
+            products = productRepository.searchProducts(request.getQuery());
+        }
+        
+        SearchResponse response = new SearchResponse();
+        response.setProducts(products);
+        return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/shop/check-stock")
-    public synchronized static String checkStock(Long productId) {
-        // 这里可以添加检查库存逻辑
-        return null;
+    @PostMapping("/check-stock")
+    public ResponseEntity<CheckStockResponse> checkStock(@RequestBody CheckStockRequest request) {
+        List<Order> orders = orderRepository.findByUserId(request.getUserId());
+        List<Product> products = orders.stream()
+                .map(Order::getProduct)
+                .toList();
+        
+        CheckStockResponse response = new CheckStockResponse();
+        response.setProductList(products);
+        return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/shop/product/purchase")
-    public synchronized static String purchaseProduct(Long productId, Integer quantity) {
-        // 这里可以添加购买逻辑
-        return null;
-    }
-
-    @PostMapping("/shop/product/order")
-    public synchronized static String orderProduct(Long productId, Integer quantity) {
-        // 这里可以添加下单逻辑
-        return null;
+    @PostMapping("/purchase")
+    public ResponseEntity<PurchaseResponse> purchaseProduct(@RequestBody PurchaseRequest request) {
+        Order order = orderRepository.save(request.getOrder());
+        
+        PurchaseResponse response = new PurchaseResponse();
+        response.setOrder(order);
+        return ResponseEntity.ok(response);
     }
 }
