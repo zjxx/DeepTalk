@@ -135,6 +135,8 @@ class ConnectRequest {
     private String sessionId; // 连接的sessionId， 如果是匹配请求，则未定义
 }
 
+@Getter
+@Data
 class ConnectResponse {
     private String sessionId;
     private String opponentId;
