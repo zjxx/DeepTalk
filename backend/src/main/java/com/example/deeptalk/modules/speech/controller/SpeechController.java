@@ -1,5 +1,6 @@
 package com.example.deeptalk.modules.speech.controller;
 
+import com.example.deeptalk.modules.speech.entity.SpeechSessionInfo;
 import com.example.deeptalk.modules.speech.service.SpeechService;
 import lombok.Data;
 import lombok.Getter;
@@ -28,7 +29,7 @@ import java.util.concurrent.TimeUnit;
 @CrossOrigin(origins = "*")
 public class SpeechController {
     private final static int MAX_PENDING_TIME = 10; // maximum waiting time, in seconds
-    private final static Map<String, CompletableFuture<String>> tokenNotifier = new ConcurrentHashMap<>();
+    private final static Map<String, CompletableFuture<SpeechSessionInfo>> tokenNotifier = new ConcurrentHashMap<>();
 
     /**
      * connect response entity.
@@ -51,7 +52,7 @@ public class SpeechController {
         }
         // Find a matching opponent
         String opponentId = SpeechService.findMatching(request.getUserId());
-        String token = null;
+        SpeechSessionInfo sessionInfo;
         if (opponentId == null) {
             // no matching opponent found, pend the user into the waiting queue
             opponentId = SpeechService.pendMatching(request.getUserId());
@@ -60,26 +61,29 @@ public class SpeechController {
             }
             // 从动方等待主动方返回token
             try {
-                CompletableFuture<String> tokenFuture = new CompletableFuture<>();
+                CompletableFuture<SpeechSessionInfo> tokenFuture = new CompletableFuture<>();
                 tokenNotifier.put(request.getUserId(), tokenFuture);
-                token = tokenFuture.get(MAX_PENDING_TIME, TimeUnit.SECONDS);
+                sessionInfo = tokenFuture.get(MAX_PENDING_TIME, TimeUnit.SECONDS);
             } catch (Exception e) {
                 return ResponseEntity.status(503).body("匹配失败，请稍后再试");
             }
             tokenNotifier.remove(request.getUserId());
         } else {
             // 主动方需要主动调用创建连接方法，生成实际的session
-            token = SpeechService.makeConnection(request.getUserId(), opponentId);
-            CompletableFuture<String> opponentFuture = tokenNotifier.get(opponentId);
+            sessionInfo = SpeechService.makeConnection(request.getUserId(), opponentId);
+            CompletableFuture<SpeechSessionInfo> opponentFuture = tokenNotifier.get(opponentId);
             if (opponentFuture == null) {
                 return ResponseEntity.status(503).body("对手未准备好，请稍后再试");
             } else {
-                opponentFuture.complete(token); // 将token发送给对手
+                opponentFuture.complete(sessionInfo); // 将token发送给对手
             }
         }
 
-        if (token != null) {
-            return ResponseEntity.ok(token); // 这里应当返回一个可用的连接信息
+        if (sessionInfo != null) {
+            return ResponseEntity.ok(new ConnectResponse(
+                    sessionInfo.getSessionId(),
+                    sessionInfo.getOpponentInfo(request.getUserId()).getUserId()
+            )); // 这里应当返回一个可用的连接信息
         }
         return ResponseEntity.status(503).body("匹配失败，请稍后再试");
     }
@@ -129,6 +133,15 @@ public class SpeechController {
 class ConnectRequest {
     private String userId;
     private String sessionId; // 连接的sessionId， 如果是匹配请求，则未定义
+}
+
+class ConnectResponse {
+    private String sessionId;
+    private String opponentId;
+    public ConnectResponse(String sessionId, String opponentId) {
+        this.sessionId = sessionId;
+        this.opponentId = opponentId;
+    }
 }
 
 /**
