@@ -37,22 +37,24 @@ public class WebConfig implements WebMvcConfigurer {
                 );
     }
 
-    // Config for max WebSocket message buffer size
+    // 生产环境的 WebSocket 配置
     @Bean
-    @Profile("!test") // 仅在非测试环境中生效
+    @Profile("!test")
     public ServletServerContainerFactoryBean createWebSocketContainer() {
         ServletServerContainerFactoryBean container = new ServletServerContainerFactoryBean();
-
-        // 关键配置：在这里设置缓冲区大小
-        // 将二进制消息（如音频流）的缓冲区大小设置为 10MB
         container.setMaxBinaryMessageBufferSize(10 * 1024 * 1024);
-
-        // 将文本消息的缓冲区大小设置为 10MB
         container.setMaxTextMessageBufferSize(10 * 1024 * 1024);
+        return container;
+    }
 
-        // 如果需要，还可以设置其他参数，例如空闲超时时间（毫秒）
-        // container.setMaxSessionIdleTimeout(15 * 60000L);
-
+    // 测试环境的 WebSocket 配置
+    @Bean
+    @Profile("test")
+    public ServletServerContainerFactoryBean mockWebSocketContainer() {
+        ServletServerContainerFactoryBean container = new ServletServerContainerFactoryBean();
+        // 在测试环境中使用较小的缓冲区大小
+        container.setMaxBinaryMessageBufferSize(1024 * 1024); // 1MB
+        container.setMaxTextMessageBufferSize(1024 * 1024);   // 1MB
         return container;
     }
 } 
