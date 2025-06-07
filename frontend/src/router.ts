@@ -14,6 +14,7 @@ import PostDetail from './views/PostDetail.vue'
 import Shop from './views/Shop.vue'
 import ShopLive2dView from './views/ShopLive2dView.vue'
 import MyRepositories from './views/MyRepositories.vue'
+import RepositoriesLive2dView from './views/RepositoriesLive2dView.vue'
 // 你可以后续添加Profile等页面
 
 const routes = [
@@ -112,6 +113,12 @@ const routes = [
     path: '/repositories',
     name: 'MyRepositories',
     component: MyRepositories,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/repositories/live2d/:id',
+    name: 'RepositoriesLive2dView',
+    component: RepositoriesLive2dView,
     meta: { requiresAuth: true }
   },
   // { path: '/profile', component: () => import('./views/Profile.vue') },
