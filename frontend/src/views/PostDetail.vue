@@ -9,13 +9,8 @@
         <!-- 页面容器：左右各留空0.125 -->
         <div class="page-container">
           <!-- 返回按钮 -->
-          <v-btn
-            variant="text"
-            prepend-icon="mdi-arrow-left"
-            class="mb-4"
-            @click="goBack"
-            color="rgba(10, 100, 200, 0.8)"
-          >
+          <v-btn variant="text" prepend-icon="mdi-arrow-left" class="mb-4" @click="goBack"
+            color="rgba(10, 100, 200, 0.8)">
             返回
           </v-btn>
 
@@ -30,19 +25,13 @@
             <!-- 左侧：帖子主要内容 -->
             <v-card class="post-content-card" elevation="1">
               <!-- 标题和点赞按钮 -->
-<v-card-text class="post-header">
-  <h1 class="post-title">{{ currentPost.title }}</h1>
-  <v-btn
-    :icon="isLiked ? 'mdi-heart' : 'mdi-heart-outline'"
-    :color="isLiked ? 'red' : 'grey'"
-    variant="text"
-    size="large"
-    :loading="isProcessingLike"
-    :disabled="isProcessingLike"
-    @click="handleLike"
-  >
-  </v-btn>
-</v-card-text>
+              <v-card-text class="post-header">
+                <h1 class="post-title">{{ currentPost.title }}</h1>
+                <v-btn :icon="isLiked ? 'mdi-heart' : 'mdi-heart-outline'" :color="isLiked ? 'red' : 'grey'"
+                  variant="text" size="large" :loading="isProcessingLike" :disabled="isProcessingLike"
+                  @click="handleLike">
+                </v-btn>
+              </v-card-text>
 
               <!-- 时间行 -->
               <v-card-text class="post-time-section">
@@ -132,15 +121,15 @@ const formatTime = (time: string) => {
   const date = new Date(time)
   const now = new Date()
   const diff = now.getTime() - date.getTime()
-  
+
   const minutes = Math.floor(diff / (1000 * 60))
   const hours = Math.floor(diff / (1000 * 60 * 60))
   const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-  
+
   if (minutes < 60) return `${minutes}分钟前`
   if (hours < 24) return `${hours}小时前`
   if (days < 30) return `${days}天前`
-  
+
   return date.toLocaleDateString()
 }
 
@@ -149,7 +138,7 @@ const loadPostDetail = async () => {
   if (posts.value.length === 0) {
     await loadCommunityData()
   }
-  
+
   const post = posts.value.find(p => p.id === postId.value)
   if (post) {
     currentPost.value = post
@@ -159,23 +148,23 @@ const loadPostDetail = async () => {
 // 处理点赞
 const handleLike = async () => {
   if (!currentPost.value) return
-  
+
   // 添加加载状态防止重复点击
   const isProcessing = ref(false)
   if (isProcessing.value) return
-  
+
   isProcessing.value = true
-  
+
   try {
     const userId = 'current_user_id'
     const result = await likePost(currentPost.value.id, userId)
-    
+
     // 只有成功时才更新UI
     isLiked.value = !isLiked.value
     currentPost.value.likes = result.likes
   } catch (error) {
     console.error('点赞失败:', error)
-    
+
     // 点赞失败时按钮保持原样，不做任何UI更新
     // 可选：显示错误提示
   } finally {
@@ -207,7 +196,7 @@ onMounted(() => {
 .mb-4 {
   width: 10%;
   margin-bottom: 1rem;
-  box-shadow:  0 2px 4px rgba(65, 65, 217, 0.2);
+  box-shadow: 0 2px 4px rgba(65, 65, 217, 0.2);
 }
 
 /* 两栏布局：0.7 + 0.3 */

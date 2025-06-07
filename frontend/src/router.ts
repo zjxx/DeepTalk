@@ -60,6 +60,12 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+  path: '/post/create',
+  name: 'PostAdding',
+  component: () => import('./views/PostAdding.vue'),
+  meta: { requiresAuth: true }
+  },
+  {
     path: '/shop',
     name: 'Shop',
     component: Shop,
