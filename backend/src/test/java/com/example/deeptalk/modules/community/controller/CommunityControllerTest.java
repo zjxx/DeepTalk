@@ -5,6 +5,8 @@ import com.example.deeptalk.modules.community.dto.LikeResponse;
 import com.example.deeptalk.modules.community.entity.Post;
 import com.example.deeptalk.modules.community.service.PostService;
 import com.example.deeptalk.service.TokenBlacklistService;
+import com.example.deeptalk.config.WebConfig;
+import com.example.deeptalk.config.TestConfig;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,6 +15,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.context.annotation.Import;
 
 import java.util.Arrays;
 import java.util.List;
@@ -24,6 +27,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(CommunityController.class)
+@Import({WebConfig.class, TestConfig.class})
 public class CommunityControllerTest {
 
     @Autowired
