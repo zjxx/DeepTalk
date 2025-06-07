@@ -14,6 +14,7 @@ import PostDetail from './views/PostDetail.vue'
 import Shop from './views/Shop.vue'
 import ShopLive2dView from './views/ShopLive2dView.vue'
 import MyRepositories from './views/MyRepositories.vue'
+import PostAdding from './views/PostAdding.vue'
 // 你可以后续添加Profile等页面
 
 const routes = [
@@ -63,7 +64,7 @@ const routes = [
   {
   path: '/post/create',
   name: 'PostAdding',
-  component: () => import('./views/PostAdding.vue'),
+  component: PostAdding,
   meta: { requiresAuth: true }
   },
   {
