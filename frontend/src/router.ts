@@ -15,6 +15,8 @@ import Shop from './views/Shop.vue'
 import ShopLive2dView from './views/ShopLive2dView.vue'
 import MyRepositories from './views/MyRepositories.vue'
 import RepositoriesLive2dView from './views/RepositoriesLive2dView.vue'
+import PostAdding from './views/PostAdding.vue'
+
 // 你可以后续添加Profile等页面
 
 const routes = [
@@ -60,6 +62,12 @@ const routes = [
     name: 'Community',
     component: Community,
     meta: { requiresAuth: true }
+  },
+  {
+  path: '/post/create',
+  name: 'PostAdding',
+  component: PostAdding,
+  meta: { requiresAuth: true }
   },
   {
     path: '/shop',
