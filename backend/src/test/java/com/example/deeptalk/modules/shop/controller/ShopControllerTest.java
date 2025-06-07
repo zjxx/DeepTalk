@@ -15,9 +15,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.context.annotation.Import;
-import com.example.deeptalk.websocket.WebSocketConfig;
-import com.example.deeptalk.modules.speech.config.SpeechWebSocketConfig;
-import com.example.deeptalk.config.WebConfig;
+import org.springframework.test.context.ActiveProfiles;
 import com.example.deeptalk.config.TestConfig;
 
 import java.util.Arrays;
@@ -29,7 +27,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(ShopController.class)
-@Import({WebConfig.class, TestConfig.class})
+@Import(TestConfig.class)
+@ActiveProfiles("test")
 public class ShopControllerTest {
 
     @Autowired
