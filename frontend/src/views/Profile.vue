@@ -84,9 +84,10 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import userModel from '../models/user'
 
 const userAvatar = ref('https://sns-avatar-qc.xhscdn.com/avatar/1040g2jo31b593h86ng005p4rmeo7531ts9tr1og?imageView2/2/w/540/format/webp|imageMogr2/strip2') // 使用提供图片中的头像URL
-const username = ref('山有木兮')
+const username = ref(userModel.username)
 const xiaohongshuId = ref('9643589600')
 const followCount = ref(1)
 const fanCount = ref(2)
