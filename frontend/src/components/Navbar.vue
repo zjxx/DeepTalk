@@ -60,6 +60,7 @@ import {
   LogoutOutlined
 } from '@ant-design/icons-vue'
 import { logout } from '../controllers/userController'
+import userModel from '../models/user'
 
 export default defineComponent({
   name: 'Navbar',
@@ -74,7 +75,7 @@ export default defineComponent({
     const router = useRouter()
     const selectedKeys = ref<string[]>(['home'])
     const userAvatar = ref('https://sns-avatar-qc.xhscdn.com/avatar/1040g2jo31b593h86ng005p4rmeo7531ts9tr1og?imageView2/2/w/540/format/webp|imageMogr2/strip2')
-    const username = ref('山有木兮')
+    const username = ref(userModel.username)
 
     const handleLogout = async () => {
       try {

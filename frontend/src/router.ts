@@ -13,6 +13,7 @@ import Matching from './views/Matching.vue'
 import PostDetail from './views/PostDetail.vue'
 import Shop from './views/Shop.vue'
 import ShopLive2dView from './views/ShopLive2dView.vue'
+import MyRepositories from './views/MyRepositories.vue'
 // 你可以后续添加Profile等页面
 
 const routes = [
@@ -112,6 +113,12 @@ const routes = [
     name: 'Evaluation',
     component: Evaluation,
     meta: { requiresAuth: false }
+  },
+  {
+    path: '/repositories',
+    name: 'MyRepositories',
+    component: MyRepositories,
+    meta: { requiresAuth: true }
   },
   // { path: '/profile', component: () => import('./views/Profile.vue') },
 ]

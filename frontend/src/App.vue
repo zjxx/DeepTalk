@@ -5,6 +5,7 @@
     </v-app-bar>
 
     <Sidebar v-if="showSideDrawer" />
+    <ExploreSidebar v-if="showExploreSidebar" />
 
     <v-main>
       <router-view></router-view>
@@ -17,21 +18,25 @@ import { defineComponent, ref, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import Navbar from './components/Navbar.vue'
 import Sidebar from './components/Sidebar.vue'
+import ExploreSidebar from './components/ExploreSidebar.vue'
 
 export default defineComponent({
   name: 'App',
   components: {
     Navbar,
-    Sidebar
+    Sidebar,
+    ExploreSidebar
   },
   setup() {
     const route = useRoute()
     
     const showNavbar = ref(false)
     const showSideDrawer = ref(false)
+    const showExploreSidebar = ref(false)
 
-    const navRoutes = ['/home', '/explore', '/community', '/shop', '/settings', '/security', '/privacy', '/profile', '/messages', '/private-messages']
-    const sideDrawerRoutes = ['/home', '/profile', '/', '/security', '/privacy',  '/messages', '/private-messages']
+    const navRoutes = ['/home', '/explore', '/community', '/shop', '/settings', '/security', '/privacy', '/profile','/repositories']
+    const sideDrawerRoutes = ['/home', '/profile', '/', '/security', '/privacy',   '/repositories']
+    const exploreRoutes = ['/explore', '/versus', '/evaluation']
 
     const checkRoute = () => {
       const currentPath = route.path
@@ -39,6 +44,7 @@ export default defineComponent({
       console.log('navRoutes 包含当前路径:', navRoutes.includes(currentPath));
       showNavbar.value = navRoutes.includes(currentPath)
       showSideDrawer.value = sideDrawerRoutes.includes(currentPath)
+      showExploreSidebar.value = exploreRoutes.includes(currentPath)
     }
 
     watch(() => route.path, checkRoute)
@@ -47,7 +53,8 @@ export default defineComponent({
 
     return {
       showNavbar,
-      showSideDrawer
+      showSideDrawer,
+      showExploreSidebar
     }
   }
 })

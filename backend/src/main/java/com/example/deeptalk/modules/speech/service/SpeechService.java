@@ -1,6 +1,7 @@
 package com.example.deeptalk.modules.speech.service;
 
 import com.example.deeptalk.modules.speech.entity.SpeechSessionInfo;
+import com.example.deeptalk.modules.speech.entity.SpeechUserInfo;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -90,7 +91,7 @@ public class SpeechService {
      * @param opponentId the user 2 id
      * @return the string
      */
-    public static String makeConnection(String userId, String opponentId) {
+    public static SpeechSessionInfo makeConnection(String userId, String opponentId) {
         // 由于选定的对手可能已经连接了其他用户，因此需要检查是否可以连接
         if (connectedUsers.contains(userId) || connectedUsers.contains(opponentId)) {
             return null; // 无法连接，返回null
@@ -105,7 +106,7 @@ public class SpeechService {
             return null;
         }
         sessions.put(session.getSessionId(), session);
-        return session.getSessionId();
+        return session;
     }
 
     /**
