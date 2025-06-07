@@ -10,6 +10,7 @@
         prepend-icon="mdi-plus"
         @click="showAddDialog = true"
         class="add-btn"
+        :loading="loading"
       >
         添加任务
       </v-btn>
@@ -20,7 +21,7 @@
         <v-timeline-item
           v-for="todo in todos"
           :key="todo.id"
-          :dot-color="todo.completed ? 'success' : getCategoryColor(todo.category)"
+          :dot-color="todo.completed ? 'success' : 'primary'"
           size="small"
           class="timeline-item"
         >
@@ -35,6 +36,7 @@
                   hide-details
                   density="compact"
                   color="primary"
+                  @update:model-value="(val: boolean | null) => val !== null && updateTodoStatus(todo.id, val)"
                 ></v-checkbox>
                 <v-btn
                   icon="mdi-delete"
@@ -43,10 +45,8 @@
                   color="error"
                   @click="deleteTodo(todo.id)"
                   class="delete-btn"
+                  :loading="loading"
                 ></v-btn>
-              </div>
-              <div class="text-caption category-text">
-                {{ todo.category }}
               </div>
             </div>
           </div>
@@ -65,6 +65,7 @@
             required
             variant="outlined"
             class="mb-4"
+            :disabled="loading"
           ></v-text-field>
           <v-text-field
             v-model="newTodo.time"
@@ -72,22 +73,15 @@
             type="time"
             required
             variant="outlined"
-            class="mb-4"
+            :disabled="loading"
           ></v-text-field>
-          <v-select
-            v-model="newTodo.category"
-            :items="categories"
-            label="分类"
-            required
-            variant="outlined"
-          ></v-select>
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn color="grey" variant="text" @click="showAddDialog = false">
+          <v-btn color="grey" variant="text" @click="showAddDialog = false" :disabled="loading">
             取消
           </v-btn>
-          <v-btn color="primary" @click="addTodo" class="add-confirm-btn">
+          <v-btn color="primary" @click="addTodo" class="add-confirm-btn" :loading="loading">
             添加
           </v-btn>
         </v-card-actions>
@@ -97,106 +91,151 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 
 interface Todo {
   id: number
   title: string
   completed: boolean
   time: string
-  category: string
 }
 
-const categories = [
-  '开发任务',
-  '功能开发',
-  'UI设计',
-  '团队协作',
-  '会议',
-  '其他'
-]
+const loading = ref(false)
+const todos = ref<Todo[]>([])
+const showAddDialog = ref(false)
+const newTodo = ref<Omit<Todo, 'id' | 'completed'>>({
+  title: '',
+  time: ''
+})
 
-// 本地数据
-const todos = ref<Todo[]>([
+// 模拟后端数据
+const mockTodos: Todo[] = [
   {
     id: 1,
     title: '完成口语对战功能开发',
     completed: false,
-    time: '09:00',
-    category: '开发任务'
+    time: '09:00'
   },
   {
     id: 2,
     title: '实现评分系统',
     completed: true,
-    time: '11:30',
-    category: '功能开发'
+    time: '11:30'
   },
   {
     id: 3,
     title: '优化用户界面',
     completed: false,
-    time: '14:00',
-    category: 'UI设计'
+    time: '14:00'
   },
   {
     id: 4,
     title: '代码审查',
     completed: false,
-    time: '16:30',
-    category: '团队协作'
+    time: '16:30'
   }
-])
+]
 
-const showAddDialog = ref(false)
-const newTodo = ref<Omit<Todo, 'id' | 'completed'>>({
-  title: '',
-  time: '',
-  category: ''
+// 模拟获取待办事项列表
+const fetchTodos = async () => {
+  loading.value = true
+  try {
+    // 模拟API延迟
+    await new Promise(resolve => setTimeout(resolve, 500))
+    todos.value = [...mockTodos].sort((a, b) => a.time.localeCompare(b.time))
+  } catch (error) {
+    console.error('获取待办事项失败:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+// 模拟添加待办事项
+const addTodo = async () => {
+  if (newTodo.value.title && newTodo.value.time) {
+    loading.value = true
+    try {
+      // 模拟API延迟
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      const newItem: Todo = {
+        id: Date.now(),
+        title: newTodo.value.title,
+        completed: false,
+        time: newTodo.value.time
+      }
+      
+      // 模拟后端添加
+      mockTodos.push(newItem)
+      // 更新本地数据并排序
+      todos.value = [...mockTodos].sort((a, b) => a.time.localeCompare(b.time))
+      
+      newTodo.value.title = ''
+      newTodo.value.time = ''
+      showAddDialog.value = false
+    } catch (error) {
+      console.error('添加待办事项失败:', error)
+    } finally {
+      loading.value = false
+    }
+  }
+}
+
+// 模拟删除待办事项
+const deleteTodo = async (id: number) => {
+  loading.value = true
+  try {
+    // 模拟API延迟
+    await new Promise(resolve => setTimeout(resolve, 500))
+    
+    // 模拟后端删除
+    const index = mockTodos.findIndex(todo => todo.id === id)
+    if (index !== -1) {
+      mockTodos.splice(index, 1)
+      // 更新本地数据
+      todos.value = [...mockTodos].sort((a, b) => a.time.localeCompare(b.time))
+    }
+  } catch (error) {
+    console.error('删除待办事项失败:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+// 模拟更新待办事项状态
+const updateTodoStatus = async (id: number, completed: boolean) => {
+  loading.value = true
+  try {
+    // 模拟API延迟
+    await new Promise(resolve => setTimeout(resolve, 500))
+    
+    // 模拟后端更新
+    const todo = mockTodos.find(todo => todo.id === id)
+    if (todo) {
+      todo.completed = completed
+      // 更新本地数据
+      todos.value = [...mockTodos].sort((a, b) => a.time.localeCompare(b.time))
+    }
+  } catch (error) {
+    console.error('更新待办事项状态失败:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+// 初始化时获取数据
+onMounted(() => {
+  fetchTodos()
 })
-
-// 获取分类对应的颜色
-const getCategoryColor = (category: string): string => {
-  const colorMap: { [key: string]: string } = {
-    '开发任务': 'blue',
-    '功能开发': 'green',
-    'UI设计': 'purple',
-    '团队协作': 'orange',
-    '会议': 'red',
-    '其他': 'grey'
-  }
-  return colorMap[category] || 'primary'
-}
-
-// 添加新任务
-const addTodo = () => {
-  if (newTodo.value.title && newTodo.value.time && newTodo.value.category) {
-    todos.value.push({
-      id: Date.now(),
-      title: newTodo.value.title,
-      completed: false,
-      time: newTodo.value.time,
-      category: newTodo.value.category
-    })
-    newTodo.value.title = ''
-    newTodo.value.time = ''
-    newTodo.value.category = ''
-    showAddDialog.value = false
-  }
-}
-
-// 删除任务
-const deleteTodo = (id: number) => {
-  todos.value = todos.value.filter(todo => todo.id !== id)
-}
 </script>
 
 <style scoped>
 .todo-list {
-  max-width: 800px;
-  margin: 20px auto;
+  height: 100%;
   border-radius: 12px;
   background: linear-gradient(to bottom right, #ffffff, #f8f9fa);
+  display: flex;
+  flex-direction: column;
 }
 
 .title-section {
@@ -216,7 +255,9 @@ const deleteTodo = (id: number) => {
 }
 
 .timeline-section {
+  flex: 1;
   padding: 24px;
+  overflow-y: auto;
 }
 
 .timeline-item {
@@ -238,12 +279,6 @@ const deleteTodo = (id: number) => {
   margin-top: 0;
 }
 
-.category-text {
-  color: #666;
-  margin-top: 4px;
-  font-weight: 500;
-}
-
 .delete-btn {
   opacity: 0.7;
   transition: opacity 0.2s;
@@ -255,13 +290,13 @@ const deleteTodo = (id: number) => {
 
 .dialog-card {
   border-radius: 12px;
+  overflow: hidden;
 }
 
 .dialog-title {
-  background: linear-gradient(45deg, #1976d2, #2196f3);
-  color: white;
+  background: linear-gradient(45deg, #1976d2, #2196f3) !important;
+  color: white !important;
   padding: 16px 24px;
-  border-radius: 12px 12px 0 0;
 }
 
 .add-confirm-btn {
