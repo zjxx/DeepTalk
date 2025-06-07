@@ -20,38 +20,28 @@
         to="/profile"
       ></v-list-item>
       <v-list-item
+        prepend-icon="mdi-source-repository"
+        title="我的仓库"
+        value="repositories"
+        to="/repositories"
+      ></v-list-item>
+      <v-list-item
         prepend-icon="mdi-shield-account"
         title="隐私与安全"
         value="security"
         to="/security"
       ></v-list-item>
-      <v-divider></v-divider>
-      <v-list-item
-        prepend-icon="mdi-message"
-        title="互动消息"
-        value="messages"
-        to="/messages"
-      ></v-list-item>
-      <v-list-item
-        prepend-icon="mdi-email"
-        title="私信"
-        value="private-messages"
-        to="/private-messages"
-      ></v-list-item>
-      <v-list-item
-        prepend-icon="mdi-sword-cross"
-        title="口语对战"
-        value="versus"
-        to="/versus"
-      ></v-list-item>
-      <v-list-item
-        prepend-icon="mdi-calculator-variant"
-        title="评分结果"
-        value="evaluation"
-        to="/evaluation"
-      ></v-list-item>
-      <v-divider></v-divider>
     </v-list>
+    <template v-slot:append>
+      <div class="pa-2">
+        <v-btn
+          icon
+          @click.stop="rail = !rail"
+        >
+          <v-icon>{{ rail ? 'mdi-chevron-right' : 'mdi-chevron-left' }}</v-icon>
+        </v-btn>
+      </div>
+    </template>
   </v-navigation-drawer>
 </template>
 
@@ -70,4 +60,19 @@ export default defineComponent({
     }
   }
 })
-</script> 
+</script>
+
+<style scoped>
+.v-navigation-drawer {
+  background-color: #fff;
+  border-right: 1px solid #e0e0e0;
+}
+
+.v-list-item {
+  margin: 4px 0;
+}
+
+.v-list-item:hover {
+  background-color: #f5f5f5;
+}
+</style> 
