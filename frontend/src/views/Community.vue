@@ -68,8 +68,13 @@
             <v-card class="toolbox" elevation="1">
               <v-card-title class="text-h6 font-weight-bold">工具箱</v-card-title>
               <v-card-text>
-                <!-- 这里后续添加工具组件 -->
-
+                <div class="toolbox-content">
+                  <v-btn icon size="large" color="primary" variant="elevated" class="create-post-btn"
+                    @click="goToCreatePost" title="发布新帖">
+                    <v-icon size="24">mdi-pencil</v-icon>
+                  </v-btn>
+                  <p class="btn-label mt-2">发布新帖</p>
+                </div>
               </v-card-text>
             </v-card>
           </div>
@@ -101,6 +106,11 @@ const {
 const searchQuery = ref('')
 const searchType = ref('posts')
 
+// 跳转到发帖页面
+const goToCreatePost = () => {
+  router.push('/post/create')
+}
+
 // 搜索选项
 const searchOptions = [
   { text: '按内容搜索', value: 'posts' },
@@ -110,7 +120,7 @@ const searchOptions = [
 // 处理搜索
 const handleSearch = async () => {
   if (!searchQuery.value.trim()) return
-  
+
   if (searchType.value === 'posts') {
     await searchPosts(searchQuery.value)
   } else if (searchType.value === 'authors') {
@@ -150,6 +160,24 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+/* 工具箱内容 */
+.toolbox-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 0;
+}
+
+.create-post-btn {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.btn-label {
+  font-size: 14px;
+  color: #666;
+  text-align: center;
+  margin: 0;
+}
 
 .community-container {
   width: 100%;
@@ -172,7 +200,7 @@ onMounted(async () => {
   background-color: white;
   border-radius: 12px;
   padding: 16px;
-  box-shadow:  0 2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .search-container {
@@ -258,4 +286,3 @@ onMounted(async () => {
   }
 } */
 </style>
-
