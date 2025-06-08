@@ -580,6 +580,9 @@ const handleToggleRecording = async () => {
       console.log('准备停止录音并发送...')
       await controller.toggleRecording()
       
+      // 等待一小段时间确保录音数据已保存
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
       // 如果有录音数据且WebSocket连接正常，发送到WebSocket
       if (state.lastRecordedAudio && ws.value && ws.value.readyState === WebSocket.OPEN) {
         console.log('录音完成，准备发送:', {
@@ -591,23 +594,32 @@ const handleToggleRecording = async () => {
         // 显示发送状态
         const sendingToast = document.createElement('div')
         sendingToast.textContent = '正在发送音频...'
-        sendingToast.style.cssText = 'position:fixed;top:20px;right:20px;background:#2196F3;color:white;padding:12px;border-radius:8px;z-index:9999'
+        sendingToast.style.cssText = 'position:fixed;top:20px;right:20px;background:#2196F3;color:white;padding:12px;border-radius:8px;z-index:9999;font-family:monospace'
         document.body.appendChild(sendingToast)
         
         try {
           await sendAudioToWebSocket(state.lastRecordedAudio)
           sendingToast.textContent = '✅ 音频发送成功!'
           sendingToast.style.background = '#4CAF50'
-          setTimeout(() => document.body.removeChild(sendingToast), 2000)
+          setTimeout(() => {
+            if (document.body.contains(sendingToast)) {
+              document.body.removeChild(sendingToast)
+            }
+          }, 2000)
         } catch (error) {
           sendingToast.textContent = '❌ 发送失败'
           sendingToast.style.background = '#F44336'
-          setTimeout(() => document.body.removeChild(sendingToast), 3000)
+          setTimeout(() => {
+            if (document.body.contains(sendingToast)) {
+              document.body.removeChild(sendingToast)
+            }
+          }, 3000)
           throw error
         }
       } else {
         console.warn('录音数据为空或WebSocket连接异常:', {
           hasAudio: !!state.lastRecordedAudio,
+          audioSize: state.lastRecordedAudio?.size,
           wsExists: !!ws.value,
           wsState: ws.value?.readyState
         })
@@ -734,20 +746,37 @@ const connectWebSocket = async () => {
       }))
       isWebSocketConnected.value = true
       console.log('WebSocket连接成功，sessionId:', sessionId.value)
+      
+      // 发送连接测试消息
+      setTimeout(() => {
+        if (ws.value && ws.value.readyState === WebSocket.OPEN) {
+          ws.value.send(JSON.stringify({
+            type: 'test',
+            message: '连接测试',
+            userId: userId.value,
+            sessionId: sessionId.value,
+            timestamp: Date.now()
+          }))
+          console.log('已发送连接测试消息')
+        }
+      }, 1000)
     }
     
     ws.value.onmessage = async (event) => {
       console.log('收到WebSocket消息:', {
         dataType: typeof event.data,
         isBlob: event.data instanceof Blob,
-        size: event.data instanceof Blob ? event.data.size : event.data.length,
+        isArrayBuffer: event.data instanceof ArrayBuffer,
+        size: event.data instanceof Blob ? event.data.size : 
+              event.data instanceof ArrayBuffer ? event.data.byteLength :
+              event.data.length,
         timestamp: new Date().toISOString()
       })
       
       // 处理接收到的消息
       if (event.data instanceof Blob) {
         // 处理二进制音频数据
-        console.log('收到对方音频数据:', {
+        console.log('收到对方音频Blob数据:', {
           size: event.data.size,
           type: event.data.type
         })
@@ -762,13 +791,13 @@ const connectWebSocket = async () => {
             case 'system':
               console.log('系统消息:', data.message)
               break
+            case 'test':
+              console.log('收到测试消息:', data.message)
+              break
             case 'audio':
               console.log('音频元数据:', data)
               // 对方发送音频的元数据，准备接收音频数据
               state.isPartnerSpeaking = true
-              if (partnerModelRef.value && displayBattleType.value === '真人对战') {
-                partnerModelRef.value.playMotion('Talk', undefined)
-              }
               break
             case 'partner_speaking':
               // 对方开始说话
@@ -841,11 +870,26 @@ const playPartnerAudio = async (audioBlob: Blob) => {
     source.onended = () => {
       isPlayingPartnerAudio.value = false
       console.log('对方音频播放完成')
+      
+      // 播放完成后更新模型状态
+      if (partnerModelRef.value && displayBattleType.value === '真人对战') {
+        partnerModelRef.value.playMotion('Idle', undefined)
+      }
     }
     
     isPlayingPartnerAudio.value = true
+    
+    // 更新模型状态为说话
+    if (partnerModelRef.value && displayBattleType.value === '真人对战') {
+      partnerModelRef.value.playMotion('Talk', undefined)
+    }
+    
     source.start(0)
-    console.log('开始播放对方音频')
+    console.log('开始播放对方音频', {
+      duration: audioBuffer.duration,
+      sampleRate: audioBuffer.sampleRate,
+      size: audioBlob.size
+    })
   } catch (error) {
     console.error('播放对方音频失败:', error)
     isPlayingPartnerAudio.value = false
@@ -873,30 +917,13 @@ const sendAudioToWebSocket = async (audioBlob: Blob) => {
       userId: userId.value
     })
     
-    // 创建包含元数据的消息
-    const audioMessage = {
-      type: 'audio',
-      userId: userId.value,
-      sessionId: sessionId.value,
-      audioSize: audioBlob.size,
-      audioType: audioBlob.type,
-      timestamp: Date.now()
-    }
+    // 简化发送逻辑 - 直接发送音频Blob
+    ws.value.send(audioBlob)
     
-    // 先发送音频元数据
-    ws.value.send(JSON.stringify(audioMessage))
-    
-    // 延迟一小段时间后发送音频数据
-    setTimeout(async () => {
-      if (ws.value && ws.value.readyState === WebSocket.OPEN) {
-        // 直接发送音频Blob
-        ws.value.send(audioBlob)
-        console.log('音频数据发送完成:', {
-          size: audioBlob.size,
-          timestamp: new Date().toISOString()
-        })
-      }
-    }, 50)
+    console.log('音频数据发送完成:', {
+      size: audioBlob.size,
+      timestamp: new Date().toISOString()
+    })
     
   } catch (error) {
     console.error('发送音频数据失败:', error)
