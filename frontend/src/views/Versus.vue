@@ -197,7 +197,7 @@
             >
               {{ 
                 state.isPartnerSpeaking ? 
-                  (displayBattleType === 'AI辅助' ? 'AI正在回应' : '对方正在发言') : 
+                  (displayBattleType === 'AI辅助' ? 'AI正在回应' : '对方正在说话') : 
                   (state.speakingTurn === 'partner' ? 
                     (displayBattleType === 'AI辅助' ? 'AI正在思考' : '对方正在思考') : 
                     '等待轮换')
@@ -780,6 +780,8 @@ const connectWebSocket = async () => {
           size: event.data.size,
           type: event.data.type
         })
+        // 设置对方正在说话状态
+        state.isPartnerSpeaking = true
         await playPartnerAudio(event.data)
       } else {
         // 处理文本消息
@@ -869,6 +871,7 @@ const playPartnerAudio = async (audioBlob: Blob) => {
     
     source.onended = () => {
       isPlayingPartnerAudio.value = false
+      state.isPartnerSpeaking = false
       console.log('对方音频播放完成')
       
       // 播放完成后更新模型状态
