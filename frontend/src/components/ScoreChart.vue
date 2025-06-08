@@ -3,15 +3,6 @@
     <v-card-title class="d-flex align-center title-section">
       <v-icon icon="mdi-chart-line" class="mr-2 title-icon"></v-icon>
       评分趋势
-      <v-spacer></v-spacer>
-      <v-btn
-        icon="mdi-refresh"
-        variant="text"
-        size="small"
-        :loading="loading"
-        @click="refreshData"
-        class="refresh-btn"
-      ></v-btn>
     </v-card-title>
 
     <v-card-text class="chart-section">
@@ -33,13 +24,29 @@ interface TooltipParams {
   dataIndex: number
 }
 
-const loading = ref(false)
+// 获取最近7天的日期
+const getLastSevenDays = () => {
+  const dates = []
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date()
+    date.setDate(date.getDate() - i)
+    dates.push(date.toISOString().split('T')[0])
+  }
+  return dates
+}
+
+// 格式化日期显示
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString)
+  return `${date.getMonth() + 1}/${date.getDate()}`
+}
+
 const chartRef = ref<HTMLElement | null>(null)
 let chart: echarts.ECharts | null = null
 
 // 模拟数据
 const mockData = {
-  dates: ['2024-03-18', '2024-03-19', '2024-03-20', '2024-03-21', '2024-03-22', '2024-03-23', '2024-03-24'],
+  dates: getLastSevenDays(),
   scores: [85, 88, 92, 90, 95, 89, 93]
 }
 
@@ -70,15 +77,14 @@ const initChart = () => {
     },
     xAxis: {
       type: 'category',
-      data: mockData.dates,
+      data: mockData.dates.map(formatDate),
       axisLine: {
         lineStyle: {
           color: '#666'
         }
       },
       axisLabel: {
-        color: '#666',
-        formatter: (value: string) => value.substring(5) // 只显示月-日
+        color: '#666'
       }
     },
     yAxis: {
@@ -132,28 +138,6 @@ const initChart = () => {
   chart.setOption(option)
 }
 
-// 刷新数据
-const refreshData = async () => {
-  loading.value = true
-  try {
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    // 更新数据
-    mockData.scores = mockData.scores.map(() => Math.floor(Math.random() * 20) + 80)
-    if (chart) {
-      chart.setOption({
-        series: [{
-          data: mockData.scores
-        }]
-      })
-    }
-  } catch (error) {
-    console.error('刷新数据失败:', error)
-  } finally {
-    loading.value = false
-  }
-}
-
 // 监听窗口大小变化
 const handleResize = () => {
   chart?.resize()
@@ -188,16 +172,6 @@ onBeforeUnmount(() => {
 
 .title-icon {
   color: white;
-}
-
-.refresh-btn {
-  color: white;
-  opacity: 0.8;
-  transition: opacity 0.2s;
-}
-
-.refresh-btn:hover {
-  opacity: 1;
 }
 
 .chart-section {

@@ -5,6 +5,7 @@ interface UserModel {
   isLoggedIn: boolean;
   token: string;
   expiration: string;
+  userId: string;
 }
 
 const userModel: UserModel = {
@@ -13,7 +14,8 @@ const userModel: UserModel = {
   avatar: '',
   isLoggedIn: false,
   token: '',
-  expiration: ''
+  expiration: '',
+  userId: ''
 }
 
 export default userModel
