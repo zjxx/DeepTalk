@@ -35,11 +35,11 @@ export default defineComponent({
     const showExploreSidebar = ref(false)
 
     // 定义需要显示导航栏的路由
-    const navRoutes = ['/home', '/explore', '/community', '/shop', '/settings', '/security', '/privacy', '/profile','/repositories']
+    const navRoutes = ['/home', '/matching', '/community', '/shop', '/settings', '/security', '/privacy', '/profile','/repositories']
     // 定义需要显示侧边栏的路由
     const sidebarRoutes = ['/home', '/profile', '/', '/security', '/privacy',   '/repositories']
     // 定义需要显示探索侧边栏的路由
-    const exploreSidebarRoutes = ['/explore', '/versus', '/evaluation']
+    const exploreSidebarRoutes = ['/matching', '/versus', '/evaluation']
 
     // 从 localStorage 恢复用户信息
     const restoreUserInfo = () => {
