@@ -9,6 +9,6 @@ public class Author {
     private String id;
     private String username;
     private String avatar;
-    private int posts;
-    private int likes;
+    private int authorPosts;
+    private int authorLikes;
 } 

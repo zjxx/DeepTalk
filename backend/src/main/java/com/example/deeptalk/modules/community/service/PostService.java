@@ -87,13 +87,20 @@ public class PostService {
     }
 
     public CheckAuthorResponse getAuthorInfo(String authorId) {
-        // TODO: 实现从数据库获取作者信息的逻辑
+        // 获取作者的所有帖子
+        List<Post> authorPosts = postRepository.findByAuthorId(authorId);
+        
+        // 计算总获赞数
+        int totalLikes = authorPosts.stream()
+                .mapToInt(Post::getLikesCount)
+                .sum();
+        
         Author author = new Author();
         author.setId(authorId);
-        author.setUsername("测试用户"); // 这里应该从数据库获取
-        author.setAvatar("");
-        author.setPosts(0);
-        author.setLikes(0);
+        author.setUsername(authorPosts.isEmpty() ? "未知用户" : authorPosts.get(0).getAuthorName());
+        author.setAvatar(authorPosts.isEmpty() ? "" : authorPosts.get(0).getAuthorAvatar());
+        author.setAuthorPosts(authorPosts.size());
+        author.setAuthorLikes(totalLikes);
 
         CheckAuthorResponse response = new CheckAuthorResponse();
         response.setAuthor(author);
