@@ -35,10 +35,10 @@
 
               <!-- 时间行 -->
               <v-card-text class="post-time-section">
-                <span class="post-time">{{ formatTime(currentPost.time) }}</span>
+                <span class="post-time">{{ formatTime(currentPost.CreateAt) }}</span>
                 <span class="post-likes">
                   <v-icon size="16" color="red">mdi-heart</v-icon>
-                  {{ currentPost.likes }} 点赞
+                  {{ currentPost.likesCount }} 点赞
                 </span>
               </v-card-text>
 
@@ -64,11 +64,11 @@
                 <!-- 作者统计信息 -->
                 <div class="author-stats">
                   <div class="stat-item">
-                    <span class="stat-number">{{ currentPost.author.posts }}</span>
+                    <span class="stat-number">{{ currentPost.author.authorPosts }}</span>
                     <span class="stat-label">帖子</span>
                   </div>
                   <div class="stat-item">
-                    <span class="stat-number">{{ currentPost.author.likes }}</span>
+                    <span class="stat-number">{{ currentPost.author.authorLikes }}</span>
                     <span class="stat-label">获赞</span>
                   </div>
                 </div>
@@ -161,7 +161,7 @@ const handleLike = async () => {
 
     // 只有成功时才更新UI
     isLiked.value = !isLiked.value
-    currentPost.value.likes = result.likes
+    currentPost.value.likesCount = result.likes
   } catch (error) {
     console.error('点赞失败:', error)
 

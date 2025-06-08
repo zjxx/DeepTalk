@@ -22,7 +22,7 @@ export const useShopController = () => {
             name: 'miku',
             description: '初音未来Live2d',
             price: 328,
-            imageUrl: 'https://via.placeholder.com/150'
+            imageUrl: '../public/live2d/miku/image.png'
         },
         {
             id: '3',

@@ -4,16 +4,16 @@ export interface Post {
   title: string;
   content: string;
   author: Author;
-  likes: number;
-  time: string;
+  likesCount: number;
+  CreateAt: string;
 }
 //作者
 export interface Author {
   id: string;
   username: string;
   avatar: string;
-  likes: number;
-  posts: number;
+  authorLikes: number;
+  authorPosts: number;
 }
 
 //查看作者

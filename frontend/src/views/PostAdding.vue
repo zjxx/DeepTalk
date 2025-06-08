@@ -218,11 +218,11 @@ const handlePublish = async () => {
           id: 'current_user_id', // 应该从用户状态获取
           username: 'current_username', // 应该从用户状态获取
           avatar: '', // 应该从用户状态获取
-          likes: 0, // 新用户默认值
-          posts: 0  // 将会在后端更新
+          authorLikes: 0, // 新用户默认值
+          authorPosts: 0  // 将会在后端更新
         },
-        likes: 0, // 新帖子默认0个赞
-        time: new Date().toISOString() // 当前时间，后端可能会覆盖
+        likesCount: 0, // 新帖子默认0个赞
+        CreateAt: new Date().toISOString() // 当前时间，后端可能会覆盖
       }
     }
 

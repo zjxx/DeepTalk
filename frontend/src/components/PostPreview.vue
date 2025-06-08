@@ -16,11 +16,11 @@
       <div class="post-footer">
         <div class="post-meta">
           <span class="author-name">{{ post.author.username }}</span>
-          <span class="post-time">{{ formatTime(post.time) }}</span>
+          <span class="post-time">{{ formatTime(post.CreateAt) }}</span>
         </div>
         <div class="post-likes">
           <v-icon size="16" color="red">mdi-heart</v-icon>
-          <span>{{ post.likes }}</span>
+          <span>{{ post.likesCount }}</span>
         </div>
       </div>
     </v-card-text>

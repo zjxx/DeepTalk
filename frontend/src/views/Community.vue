@@ -11,10 +11,9 @@
 
             <!-- 搜索输入框 -->
             <v-text-field v-model="searchQuery" placeholder="搜索社区内容..." prepend-inner-icon="mdi-magnify"
-              variant="outlined" hide-details class="search-input" @update:model-value="handleSearch"
+              variant="outlined" hide-details class="search-input"
               @keyup.enter="handleSearch"></v-text-field>
 
-            <!-- 搜索按钮 -->
             <!-- 搜索按钮 -->
             <v-btn color="primary" variant="elevated" class="search-button" @click="handleSearch">
               搜索
@@ -119,7 +118,11 @@ const searchOptions = [
 
 // 处理搜索
 const handleSearch = async () => {
-  if (!searchQuery.value.trim()) return
+  if (!searchQuery.value.trim()) {
+    // 如果搜索框为空，重新加载所有数据
+    await loadCommunityData()
+    return
+  }
 
   if (searchType.value === 'posts') {
     await searchPosts(searchQuery.value)
