@@ -35,9 +35,9 @@ export default defineComponent({
     const showExploreSidebar = ref(false)
 
     // 定义需要显示导航栏的路由
-    const navRoutes = ['/home', '/matching', '/community', '/shop', '/settings', '/security', '/privacy', '/profile','/repositories']
+    const navRoutes = ['/home', '/explore', '/community', '/shop', '/settings', '/security', '/privacy', '/profile','/repositories','/historical-scores']
     // 定义需要显示侧边栏的路由
-    const sidebarRoutes = ['/home', '/profile', '/', '/security', '/privacy',   '/repositories']
+    const sidebarRoutes = ['/home', '/profile', '/', '/security', '/privacy',   '/repositories','/historical-scores']
     // 定义需要显示探索侧边栏的路由
     const exploreSidebarRoutes = ['/matching', '/versus', '/evaluation']
 
