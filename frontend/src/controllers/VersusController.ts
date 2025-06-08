@@ -346,16 +346,6 @@ export class VersusController {
     console.log(`发言权切换到: ${newState.speakingTurn}`)
   }
 
-  skipPartnerTurn(): void {
-    const state = this.model.getState()
-    if (state.speakingTurn === 'partner') {
-      console.log('跳过对方发言，切换回用户')
-      this.aiService.stopSpeaking()
-      this.model.updateMatchState({ isPartnerSpeaking: false })
-      this.switchSpeakingTurn()
-    }
-  }
-
   togglePlayback(): void {
     const state = this.model.getState()
     if (state.isPlayingAudio) {

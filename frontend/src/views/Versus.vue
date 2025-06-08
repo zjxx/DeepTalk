@@ -222,18 +222,7 @@
               }}
             </v-chip>
             
-            <!-- 对方发言时的跳过按钮（仅开发模式显示） -->
-            <v-btn 
-              v-if="state.speakingTurn === 'partner' && isDev"
-              color="orange"
-              variant="outlined"
-              size="small"
-              @click="handleSkipPartnerTurn"
-              class="mr-2"
-            >
-              <v-icon start size="small">mdi-skip-next</v-icon>
-              跳过
-            </v-btn>
+            <!-- 对方发言时的跳过按钮已删除 -->
             
             <!-- AI对战模式下显示AI状态指示器 -->
             <v-btn 
@@ -423,8 +412,8 @@
         </v-card>
       </v-col>
 
-      <!-- WebSocket调试面板 -->
-      <v-col cols="12" v-if="isDev" class="py-1">
+      <!-- WebSocket调试面板已隐藏 -->
+      <!-- <v-col cols="12" v-if="isDev" class="py-1">
         <v-card>
           <v-card-title class="d-flex justify-space-between">
             <span>WebSocket调试信息</span>
@@ -455,7 +444,7 @@
             </div>
           </v-card-text>
         </v-card>
-      </v-col>
+      </v-col> -->
 
       <!-- 实时转写面板 -->
       <v-col cols="12" v-if="state.matchStarted" class="py-1">
@@ -499,7 +488,6 @@ type Live2DModelComponent = InstanceType<typeof Live2DModel>
 
 const router = useRouter()
 const route = useRoute()
-const isDev = true // 或者根据您的需要设置
 
 // PIXI App refs and state
 const pixiContainerRef = ref<HTMLDivElement | null>(null)
@@ -751,10 +739,6 @@ const handleDeleteRecording = () => {
   controller.deleteRecording()
 }
 
-const handleSkipPartnerTurn = () => {
-  controller.skipPartnerTurn()
-}
-
 const handleNextTopic = () => {
   controller.nextTopic()
 }
@@ -762,11 +746,42 @@ const handleNextTopic = () => {
 const handleBackToMatching = async () => {
   if (confirm('当前对战正在进行中，确定要返回匹配界面吗？这将结束当前对战。')) {
     try {
-      // 清理当前对战状态并跳转到评分界面
-      await endBattleAndGoToEvaluation()
+      // 清理当前对战状态
+      if (userModelRef.value) {
+        userModelRef.value.destroy?.()
+      }
+      if (partnerModelRef.value) {
+        partnerModelRef.value.destroy?.()
+      }
+      
+      // 结束对战
+      controller.endMatch()
+      
+      // 清理PIXI应用
+      if (pixiAppInstance.value) {
+        pixiAppInstance.value.stop()
+      }
+      
+      // 清理WebSocket连接（如果存在）
+      if (ws.value) {
+        ws.value.close()
+        ws.value = null
+      }
+      isWebSocketConnected.value = false
+      
+      // 清理音频上下文
+      if (audioContext.value) {
+        audioContext.value.close()
+        audioContext.value = null
+      }
+      
+      // 延迟跳转到匹配界面
+      await new Promise(resolve => setTimeout(resolve, 500))
+      console.log('状态清理完成，跳转到匹配界面')
+      await router.push('/matching')  // 返回到匹配界面
     } catch (error) {
-      console.error('返回时结束对战出错:', error)
-      await router.push('/evaluation')
+      console.error('返回匹配界面时出错:', error)
+      await router.push('/matching')  // 即使出错也要跳转到匹配界面
     }
   }
 }
@@ -1342,23 +1357,6 @@ const handleBattleEnded = async () => {
     console.error('结束对战处理失败:', error)
     // 即使出错也要跳转
     await router.push('/evaluation')
-  }
-}
-
-// 测试WebSocket连接
-const testEndBattleMessage = () => {
-  if (ws.value && ws.value.readyState === WebSocket.OPEN) {
-    console.log('发送测试WebSocket消息')
-    // 发送一个测试消息
-    ws.value.send(JSON.stringify({
-      type: 'test',
-      message: '测试连接',
-      userId: userId.value,
-      sessionId: sessionId.value,
-      timestamp: Date.now()
-    }))
-  } else {
-    alert('WebSocket未连接，无法发送测试消息')
   }
 }
 
