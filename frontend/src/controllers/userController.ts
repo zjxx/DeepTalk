@@ -3,6 +3,38 @@ import { loginApi, sendVerificationCodeApi, verifyApi, sendForgotPasswordCodeApi
 import type { LoginRequest, LoginResponse, VerifyRequest } from '../interface/auth'
 import { AxiosError } from 'axios'
 import axios from 'axios'
+import { ref } from 'vue'
+
+// 创建全局头像状态
+const userAvatar = ref('https://sns-avatar-qc.xhscdn.com/avatar/1040g2jo31b593h86ng005p4rmeo7531ts9tr1og?imageView2/2/w/540/format/webp|imageMogr2/strip2')
+
+// 导出头像状态和设置函数
+export const getUserAvatar = () => {
+  // 优先从 localStorage 中获取头像
+  const userInfo = localStorage.getItem('userInfo')
+  if (userInfo) {
+    const { avatar } = JSON.parse(userInfo)
+    if (avatar) {
+      userAvatar.value = avatar
+      return avatar
+    }
+  }
+  return userAvatar.value
+}
+
+export const setUserAvatar = (newAvatar: string) => {
+  // 更新内存中的状态
+  userAvatar.value = newAvatar
+  // 同时更新 localStorage 中的头像
+  const userInfo = localStorage.getItem('userInfo')
+  if (userInfo) {
+    const info = JSON.parse(userInfo)
+    info.avatar = newAvatar
+    localStorage.setItem('userInfo', JSON.stringify(info))
+  }
+  // 触发自定义事件，通知其他组件头像已更新
+  window.dispatchEvent(new CustomEvent('avatar-updated', { detail: { avatar: newAvatar } }))
+}
 
 // 添加自动登录函数
 export async function autoLogin(): Promise<boolean> {
@@ -11,6 +43,7 @@ export async function autoLogin(): Promise<boolean> {
     const savedEmail = localStorage.getItem('savedEmail')
     const savedPassword = localStorage.getItem('savedPassword')
     const expiration = localStorage.getItem('expiration')
+    const savedUserInfo = localStorage.getItem('userInfo')
     
     // 只有在有保存的邮箱和密码时才进行自动登录
     if (token && savedEmail && savedPassword && expiration) {
@@ -34,6 +67,14 @@ export async function autoLogin(): Promise<boolean> {
       userModel.expiration = res.expiration
       userModel.isLoggedIn = true
       
+      // 如果有保存的用户信息，恢复头像
+      if (savedUserInfo) {
+        const userInfo = JSON.parse(savedUserInfo)
+        if (userInfo.avatar) {
+          setUserAvatar(userInfo.avatar)
+        }
+      }
+      
       return true
     }
     
@@ -48,6 +89,7 @@ export async function autoLogin(): Promise<boolean> {
     localStorage.removeItem('savedEmail')
     localStorage.removeItem('savedPassword')
     localStorage.removeItem('expiration')
+    localStorage.removeItem('userInfo')
     return false
   }
 }
@@ -67,6 +109,7 @@ export const login = async (request: LoginRequest, rememberMe: boolean): Promise
     userModel.token = res.token
     userModel.expiration = res.expiration
     userModel.isLoggedIn = true
+    userModel.userId = res.userId
     
     if (rememberMe) {
       // 记住我时，保存所有信息
@@ -74,15 +117,28 @@ export const login = async (request: LoginRequest, rememberMe: boolean): Promise
       localStorage.setItem('savedEmail', request.email)
       localStorage.setItem('savedPassword', request.password)
       localStorage.setItem('expiration', res.expiration)
+      localStorage.setItem('userInfo', JSON.stringify({
+        userId: res.userId,
+        username: res.username,
+        email: res.email,
+        avatar: userAvatar.value
+      }))
     } else {
       // 不记住我时，只保存当前会话的 token
       sessionStorage.setItem('token', res.token)
       sessionStorage.setItem('expiration', res.expiration)
+      sessionStorage.setItem('userInfo', JSON.stringify({
+        userId: res.userId,
+        username: res.username,
+        email: res.email,
+        avatar: userAvatar.value
+      }))
       // 清除所有本地存储的登录信息
       localStorage.removeItem('token')
       localStorage.removeItem('savedEmail')
       localStorage.removeItem('savedPassword')
       localStorage.removeItem('expiration')
+      localStorage.removeItem('userInfo')
     }
     
     return true
@@ -236,6 +292,7 @@ export async function logout(): Promise<void> {
       localStorage.removeItem('savedEmail')
       localStorage.removeItem('savedPassword')
       localStorage.removeItem('expiration')
+      localStorage.removeItem('userInfo')
       
       // 重置用户模型
       userModel.username = ''
@@ -243,6 +300,9 @@ export async function logout(): Promise<void> {
       userModel.token = ''
       userModel.expiration = ''
       userModel.isLoggedIn = false
+      
+      // 重置头像
+      setUserAvatar('https://sns-avatar-qc.xhscdn.com/avatar/1040g2jo31b593h86ng005p4rmeo7531ts9tr1og?imageView2/2/w/540/format/webp|imageMogr2/strip2')
       
       console.log('数据清理完成，准备跳转到登录页')
       window.location.href = '/login'

@@ -9,6 +9,7 @@ export interface LoginResponse {
   username: string;
   email: string;
   expiration: string;
+  userId: string;
 }
 
 export interface RegisterRequest {
