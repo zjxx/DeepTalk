@@ -3,10 +3,15 @@ server:
 
 spring:
   datasource:
-    url: jdbc:postgresql://115.175.45.173:5432/deeptalk
+    url: jdbc:postgresql://115.175.45.173:5432/deeptalk?characterEncoding=UTF-8&useUnicode=true
     username: postgres
     password: DeepTalk@2024
     driver-class-name: org.postgresql.Driver
+  http:
+    encoding:
+      charset: UTF-8
+      force: true
+      enabled: true
   jpa:
     hibernate:
       ddl-auto: update
@@ -15,6 +20,11 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
+        connection:
+          characterEncoding: UTF-8
+        jdbc:
+          useUnicode: true
+          characterEncoding: UTF-8
   mail:
     host: smtp.qq.com
     port: 587
