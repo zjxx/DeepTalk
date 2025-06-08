@@ -14,6 +14,11 @@ export class VersusController {
   private questionManager: QuestionManager
   private webSocketService: WebSocketService
   
+  // AI对话模拟相关
+  private aiResponseIndex: number = 0
+  private readonly maxAiResponses: number = 6
+  private aiAudioElement: HTMLAudioElement | null = null
+  
   // 回调函数，用于通知 View 层状态变化
   private onStateChange?: () => void
 
@@ -71,11 +76,16 @@ export class VersusController {
       this.model.updateMatchState({ lastRecordedAudio: audioBlob })
       this.sendAudioForTranscription(audioBlob)
 
-      // 如果是真人对战模式，则通过 WebSocket 广播音频
-      if (this.webSocketService.getIsConnected() && this.model.getState().matchType === '真人对战') {
+      // AI智能对话模式：自动播放AI回应音频
+      if (this.model.getState().matchType === 'AI辅助') {
+        this.playNextAiResponse()
+      }
+      // 真人对战模式：通过WebSocket发送音频
+      else if (this.webSocketService.getIsConnected() && this.model.getState().matchType === '真人对战') {
         console.log('真人对战模式，发送音频广播')
         this.webSocketService.sendAudio(audioBlob)
       }
+      
       this.notifyStateChange()
     }
 
@@ -414,6 +424,12 @@ export class VersusController {
     this.timerService.stopAllTimers()
     this.audioService.cleanup()
     this.aiService.cleanup()
+    
+    // 清理AI音频播放
+    if (this.aiAudioElement) {
+      this.aiAudioElement.pause()
+      this.aiAudioElement = null
+    }
   }
 
   // 格式化时间的工具方法
@@ -560,5 +576,78 @@ export class VersusController {
   // 检查是否使用服务器主题
   isUsingServerTopic(): boolean {
     return this.questionManager.isUsingServerTopic()
+  }
+
+  // AI智能对话：播放下一个AI回应音频
+  private playNextAiResponse(): void {
+    if (this.aiResponseIndex >= this.maxAiResponses) {
+      console.log('AI回应已达到最大次数，不再播放')
+      return
+    }
+
+    // 计算当前应该播放的音频文件编号
+    const audioIndex = (this.aiResponseIndex % this.maxAiResponses) + 1
+    const audioPath = `/audios/${audioIndex}.mp3`
+    
+    console.log(`播放AI回应音频 ${audioIndex}.mp3`)
+    
+    // 设置AI正在回应状态
+    this.model.updateMatchState({ isPartnerSpeaking: true })
+    this.notifyStateChange()
+    
+    // 创建新的音频元素
+    this.aiAudioElement = new Audio(audioPath)
+    
+    this.aiAudioElement.onloadstart = () => {
+      console.log(`开始加载AI音频 ${audioIndex}.mp3`)
+    }
+    
+    this.aiAudioElement.oncanplay = () => {
+      console.log(`AI音频 ${audioIndex}.mp3 可以开始播放`)
+    }
+    
+    this.aiAudioElement.onplay = () => {
+      console.log(`AI音频 ${audioIndex}.mp3 开始播放`)
+      // 确保状态显示AI正在回应
+      this.model.updateMatchState({ isPartnerSpeaking: true })
+      this.notifyStateChange()
+    }
+    
+    this.aiAudioElement.onended = () => {
+      console.log(`AI音频 ${audioIndex}.mp3 播放完成`)
+      // 重置AI状态
+      this.model.updateMatchState({ isPartnerSpeaking: false })
+      this.notifyStateChange()
+      
+      // 增加响应计数
+      this.aiResponseIndex++
+      
+      // 清理音频元素
+      if (this.aiAudioElement) {
+        this.aiAudioElement = null
+      }
+    }
+    
+    this.aiAudioElement.onerror = (error) => {
+      console.error(`播放AI音频 ${audioIndex}.mp3 失败:`, error)
+      // 重置状态
+      this.model.updateMatchState({ isPartnerSpeaking: false })
+      this.notifyStateChange()
+      
+      // 仍然增加计数，避免卡住
+      this.aiResponseIndex++
+      
+      if (this.aiAudioElement) {
+        this.aiAudioElement = null
+      }
+    }
+    
+    // 开始播放
+    this.aiAudioElement.play().catch(error => {
+      console.error(`播放AI音频 ${audioIndex}.mp3 失败:`, error)
+      this.model.updateMatchState({ isPartnerSpeaking: false })
+      this.notifyStateChange()
+      this.aiResponseIndex++
+    })
   }
 }
