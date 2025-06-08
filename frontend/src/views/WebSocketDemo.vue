@@ -53,6 +53,8 @@
 
 <script setup lang="ts">
 import { ref, onUnmounted, computed, nextTick } from 'vue'
+import { connectWebSocketApi  } from '../api/versusAPI'
+import type { ConnectRequest } from '../interface/versus'
 
 interface User {
   id: string;
@@ -92,22 +94,23 @@ const toggleConnection = () => {
 const connectWebSocket = async () => {
   try {
     // 首先获取sessionId
-    const response = await fetch('http://115.175.45.173:8080/api/speech/connect', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        userId: userId.value
-      })
-    })
-
-    if (!response.ok) {
-      throw new Error('获取sessionId失败')
+    // const response = await fetch('http://115.175.45.173:8080/api/speech/connect', {
+    //   method: 'POST',
+    //   headers: {
+    //     'Content-Type': 'application/json'
+    //   },
+    //   body: JSON.stringify({
+    //     userId: userId.value
+    //   })
+    // })
+    const request: ConnectRequest = {
+      userId: userId.value
     }
-
+    const data = await connectWebSocketApi(request)
+    console.log(data)
+    // console.log(response)
     // 直接使用返回的 token 作为 sessionId
-    sessionId.value = await response.text()
+    sessionId.value = data.sessionId
 
     // 使用完整URL建立WebSocket连接
     const wsUrl = `ws://115.175.45.173:8080/api/speech/ws`

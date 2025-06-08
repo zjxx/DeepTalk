@@ -36,6 +36,10 @@ export const API_ENDPOINTS = {
       CHECK: '/api/shop/product/check',
     },
   },
+  // WebSocket 相关
+  VERSUS: {
+    CONNECT: '/api/speech/connect'
+  },
   // 其他模块的 API 端点可以在这里添加
   // 例如：
   // CHAT: {

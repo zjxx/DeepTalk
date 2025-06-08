@@ -13,6 +13,10 @@ import Matching from './views/Matching.vue'
 import PostDetail from './views/PostDetail.vue'
 import Shop from './views/Shop.vue'
 import ShopLive2dView from './views/ShopLive2dView.vue'
+import MyRepositories from './views/MyRepositories.vue'
+import RepositoriesLive2dView from './views/RepositoriesLive2dView.vue'
+import PostAdding from './views/PostAdding.vue'
+
 // 你可以后续添加Profile等页面
 
 const routes = [
@@ -58,6 +62,12 @@ const routes = [
     name: 'Community',
     component: Community,
     meta: { requiresAuth: true }
+  },
+  {
+  path: '/post/create',
+  name: 'PostAdding',
+  component: PostAdding,
+  meta: { requiresAuth: true }
   },
   {
     path: '/shop',
@@ -106,6 +116,18 @@ const routes = [
     name: 'Evaluation',
     component: Evaluation,
     meta: { requiresAuth: false }
+  },
+  {
+    path: '/repositories',
+    name: 'MyRepositories',
+    component: MyRepositories,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/repositories/live2d/:id',
+    name: 'RepositoriesLive2dView',
+    component: RepositoriesLive2dView,
+    meta: { requiresAuth: true }
   },
   // { path: '/profile', component: () => import('./views/Profile.vue') },
 ]
