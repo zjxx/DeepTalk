@@ -102,8 +102,8 @@
             v-if="displayBattleType === 'AI辅助'" 
             class="ai-avatar"
             :style="{
-              left: `${state.canvasWidth * 0.75}px`,
-              top: `${state.canvasHeight * 0.65}px`
+              left: `${state.canvasWidth * 0.68}px`,
+              top: `${state.canvasHeight * 0.4}px`
             }"
           >
             <v-avatar size="200" color="primary">
@@ -130,14 +130,15 @@
           </v-card-title>
           <v-card-actions class="d-flex justify-center py-2">
             <v-chip 
-              :color="state.isRecording ? 'error' : (isWebSocketConnected ? 'success' : 'warning')" 
+              :color="state.isRecording ? 'error' : (displayBattleType === 'AI辅助' || isWebSocketConnected ? 'success' : 'warning')" 
               class="mr-2"
               :class="{ 'speaking-pulse': state.isRecording }"
               size="large"
             >
               {{ 
                 state.isRecording ? '🎤 录音中... (点击停止并发送)' : 
-                (isWebSocketConnected ? '✅ 可以随时开始录音通话' : '⚠️ WebSocket未连接')
+                (displayBattleType === 'AI辅助' ? '✅ 可以随时开始录音对话' :
+                 (isWebSocketConnected ? '✅ 可以随时开始录音通话' : '⚠️ WebSocket未连接'))
               }}
             </v-chip>
             
@@ -153,7 +154,7 @@
               :icon="state.isRecording ? 'mdi-stop' : 'mdi-microphone'"
               @click="handleToggleRecording"
               :class="{ 'recording-btn': state.isRecording }"
-              :disabled="!isWebSocketConnected || state.isPlayingAudio"
+              :disabled="(displayBattleType === '真人对战' && !isWebSocketConnected) || state.isPlayingAudio"
               size="large"
               class="mr-2"
             >
@@ -287,13 +288,13 @@
                 :color="state.isRecording ? 'error' : 'success'" 
                 :prepend-icon="state.isRecording ? 'mdi-stop' : 'mdi-microphone'"
                 @click="handleToggleRecording"
-                :disabled="!isWebSocketConnected"
+                :disabled="(displayBattleType === '真人对战' && !isWebSocketConnected) || state.isPlayingAudio"
                 :class="{ 'recording-btn': state.isRecording }"
                 size="large"
               >
-                {{ state.isRecording ? '停止录音' : '开始通话' }}
+                {{ state.isRecording ? '停止录音' : (displayBattleType === 'AI辅助' ? '开始对话' : '开始通话') }}
                 <v-tooltip activator="parent" location="top">
-                  {{ state.isRecording ? '停止录音并发送到对方' : 'WebSocket语音通话' }}
+                  {{ state.isRecording ? '停止录音并发送' : (displayBattleType === 'AI辅助' ? 'AI智能对话' : 'WebSocket语音通话') }}
                 </v-tooltip>
               </v-btn>
               
@@ -635,23 +636,23 @@ const endBattleAndGoToEvaluation = async () => {
 
 const handleToggleRecording = async () => {
   try {
-    // 检查WebSocket连接状态
-    if (!isWebSocketConnected.value) {
-      alert('WebSocket未连接，无法进行语音通话。请检查网络连接。')
+    // AI模式下不需要WebSocket连接检查
+    if (displayBattleType.value === '真人对战' && !isWebSocketConnected.value) {
+      alert('真人对战模式下WebSocket未连接，无法进行语音通话。请检查网络连接。')
       return
     }
     
     if (state.isRecording) {
-      // 停止录音并发送到WebSocket
-      console.log('准备停止录音并发送...')
+      // 停止录音
+      console.log('准备停止录音...')
       await controller.toggleRecording()
       
       // 等待一小段时间确保录音数据已保存
       await new Promise(resolve => setTimeout(resolve, 100))
       
-      // 如果有录音数据且WebSocket连接正常，发送到WebSocket
-      if (state.lastRecordedAudio && ws.value && ws.value.readyState === WebSocket.OPEN) {
-        console.log('录音完成，准备发送:', {
+      // 真人对战模式：发送到WebSocket
+      if (displayBattleType.value === '真人对战' && state.lastRecordedAudio && ws.value && ws.value.readyState === WebSocket.OPEN) {
+        console.log('真人对战模式：录音完成，准备发送到对方:', {
           size: state.lastRecordedAudio.size,
           type: state.lastRecordedAudio.type,
           wsState: ws.value.readyState
@@ -659,7 +660,7 @@ const handleToggleRecording = async () => {
         
         // 显示发送状态
         const sendingToast = document.createElement('div')
-        sendingToast.textContent = '正在发送音频...'
+        sendingToast.textContent = '正在发送音频到对方...'
         sendingToast.style.cssText = 'position:fixed;top:20px;right:20px;background:#2196F3;color:white;padding:12px;border-radius:8px;z-index:9999;font-family:monospace'
         document.body.appendChild(sendingToast)
         
@@ -682,8 +683,32 @@ const handleToggleRecording = async () => {
           }, 3000)
           throw error
         }
-      } else {
-        console.warn('录音数据为空或WebSocket连接异常:', {
+      } 
+      // AI模式：本地处理
+      else if (displayBattleType.value === 'AI辅助' && state.lastRecordedAudio) {
+        console.log('AI智能对战模式：录音完成，本地处理:', {
+          size: state.lastRecordedAudio.size,
+          type: state.lastRecordedAudio.type
+        })
+        
+        // 显示AI处理状态
+        const aiToast = document.createElement('div')
+        aiToast.textContent = '🤖 AI正在分析您的语音...'
+        aiToast.style.cssText = 'position:fixed;top:20px;right:20px;background:#FF9800;color:white;padding:12px;border-radius:8px;z-index:9999;font-family:monospace'
+        document.body.appendChild(aiToast)
+        
+        // 模拟AI处理过程
+        setTimeout(() => {
+          aiToast.textContent = '✅ AI分析完成!'
+          aiToast.style.background = '#4CAF50'
+          setTimeout(() => {
+            if (document.body.contains(aiToast)) {
+              document.body.removeChild(aiToast)
+            }
+          }, 2000)
+        }, 1500)
+      } else if (displayBattleType.value === '真人对战') {
+        console.warn('真人对战模式：录音数据为空或WebSocket连接异常:', {
           hasAudio: !!state.lastRecordedAudio,
           audioSize: state.lastRecordedAudio?.size,
           wsExists: !!ws.value,
@@ -693,7 +718,7 @@ const handleToggleRecording = async () => {
       }
     } else {
       // 开始录音
-      console.log('开始WebSocket语音录音...')
+      console.log(`开始${displayBattleType.value}模式录音...`)
       await controller.toggleRecording()
     }
     
@@ -1091,11 +1116,11 @@ onMounted(async () => {
     state.remainingTime = parseInt(route.query.duration as string) * 60
   }
   
-  // 获取WebSocket连接信息并自动连接
-  if (route.query.sessionId && route.query.userId) {
+  // 获取WebSocket连接信息并自动连接（仅真人对战模式）
+  if (route.query.sessionId && route.query.userId && displayBattleType.value === '真人对战') {
     sessionId.value = route.query.sessionId as string
     userId.value = route.query.userId as string
-    console.log('检测到WebSocket连接信息，开始建立连接...')
+    console.log('真人对战模式：检测到WebSocket连接信息，开始建立连接...')
     // 自动建立WebSocket连接
     await connectWebSocket()
     
@@ -1121,8 +1146,8 @@ onMounted(async () => {
     }
     checkSync()
   } else {
-    console.warn('未检测到WebSocket连接信息，使用本地时间启动计时器')
-    // 没有WebSocket连接，直接启动计时器
+    console.log('AI智能对战模式：跳过WebSocket连接，直接启动本地计时器')
+    // AI对战模式或没有WebSocket连接信息，直接启动计时器
     setTimeout(() => {
       controller.startSyncedTimer(state.remainingTime)
     }, 1000)
@@ -1614,14 +1639,7 @@ const handlePartnerLeftBattle = (data: { message?: string; [key: string]: unknow
   flex-direction: column;
   align-items: center;
   z-index: 10;
-  transform: translate(-50%, -50%);
-  transition: all 0.3s ease;
-}
-
-.ai-avatar .v-avatar {
-  border: 3px solid #1976d2;
-  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3);
-  animation: ai-idle 3s ease-in-out infinite;
+  pointer-events: none;
 }
 
 .ai-status-indicator {
@@ -1630,27 +1648,21 @@ const handlePartnerLeftBattle = (data: { message?: string; [key: string]: unknow
 }
 
 .ai-status-indicator.speaking {
-  animation: ai-speaking 1s ease-in-out infinite alternate;
+  animation: ai-pulse 1.5s infinite;
 }
 
-/* AI动画效果 */
-@keyframes ai-idle {
-  0%, 100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-5px);
-  }
-}
-
-@keyframes ai-speaking {
+@keyframes ai-pulse {
   0% {
     transform: scale(1);
     opacity: 1;
   }
-  100% {
+  50% {
     transform: scale(1.05);
     opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
   }
 }
 

@@ -42,8 +42,8 @@ export class VersusController {
         speakingTurn: 'user'
       })
       
-      // 注意：不立即启动计时器，等待时间同步后再启动
-      console.log('VersusController: 等待时间同步完成后启动计时器...')
+      // 不在这里启动计时器，等待versus.vue调用startSyncedTimer
+      console.log('VersusController: 等待外部调用startSyncedTimer启动计时器...')
       
       // 加载默认题目
       await this.questionManager.loadQuestionByLevel(this.model.getState().difficultyLevel)
