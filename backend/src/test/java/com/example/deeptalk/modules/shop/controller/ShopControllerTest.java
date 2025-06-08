@@ -55,13 +55,14 @@ public class ShopControllerTest {
     @BeforeEach
     void setUp() {
         testProduct = new Product();
-        testProduct.setId(1L);
+        testProduct.setId("1");
         testProduct.setName("测试产品");
+        testProduct.setDescription("这是一个测试产品");
         testProduct.setPrice(99.99);
-        testProduct.setStock(100);
+        testProduct.setImageUrl("https://example.com/image.jpg");
 
         testOrder = new Order();
-        testOrder.setId(1L);
+        testOrder.setId("1");
         testOrder.setProduct(testProduct);
         testOrder.setUserId("user123");
     }
@@ -77,8 +78,11 @@ public class ShopControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.products[0].id").value("1"))
                 .andExpect(jsonPath("$.products[0].name").value("测试产品"))
-                .andExpect(jsonPath("$.products[0].price").value(99.99));
+                .andExpect(jsonPath("$.products[0].description").value("这是一个测试产品"))
+                .andExpect(jsonPath("$.products[0].price").value(99.99))
+                .andExpect(jsonPath("$.products[0].imageUrl").value("https://example.com/image.jpg"));
     }
 
     @Test
@@ -92,7 +96,11 @@ public class ShopControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.products[0].name").value("测试产品"));
+                .andExpect(jsonPath("$.products[0].id").value("1"))
+                .andExpect(jsonPath("$.products[0].name").value("测试产品"))
+                .andExpect(jsonPath("$.products[0].description").value("这是一个测试产品"))
+                .andExpect(jsonPath("$.products[0].price").value(99.99))
+                .andExpect(jsonPath("$.products[0].imageUrl").value("https://example.com/image.jpg"));
     }
 
     @Test
@@ -106,7 +114,11 @@ public class ShopControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.productList[0].name").value("测试产品"));
+                .andExpect(jsonPath("$.productList[0].id").value("1"))
+                .andExpect(jsonPath("$.productList[0].name").value("测试产品"))
+                .andExpect(jsonPath("$.productList[0].description").value("这是一个测试产品"))
+                .andExpect(jsonPath("$.productList[0].price").value(99.99))
+                .andExpect(jsonPath("$.productList[0].imageUrl").value("https://example.com/image.jpg"));
     }
 
     @Test
@@ -120,6 +132,16 @@ public class ShopControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.order.product.name").value("测试产品"));
+                .andExpect(jsonPath("$.order.id").value("1"))
+                .andExpect(jsonPath("$.order.userId").value("user123"))
+                .andExpect(jsonPath("$.order.product.id").value("1"))
+                .andExpect(jsonPath("$.order.product.name").value("测试产品"))
+                .andExpect(jsonPath("$.order.product.description").value("这是一个测试产品"))
+                .andExpect(jsonPath("$.order.product.price").value(99.99))
+                .andExpect(jsonPath("$.order.product.imageUrl").value("https://example.com/image.jpg"))
+                .andExpect(jsonPath("$.userId").value("user123"))
+                .andExpect(jsonPath("$.product.id").value("1"))
+                .andExpect(jsonPath("$.product.name").value("测试产品"))
+                .andExpect(jsonPath("$.status").value("completed"));
     }
 } 

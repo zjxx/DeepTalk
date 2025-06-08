@@ -2,7 +2,10 @@ package com.example.deeptalk.modules.community.controller;
 
 import com.example.deeptalk.modules.community.dto.LikeRequest;
 import com.example.deeptalk.modules.community.dto.LikeResponse;
+import com.example.deeptalk.modules.community.dto.CheckAuthorRequest;
+import com.example.deeptalk.modules.community.dto.CheckAuthorResponse;
 import com.example.deeptalk.modules.community.entity.Post;
+import com.example.deeptalk.modules.community.entity.Author;
 import com.example.deeptalk.modules.community.service.PostService;
 import com.example.deeptalk.service.TokenBlacklistService;
 import com.example.deeptalk.config.TestConfig;
@@ -48,6 +51,7 @@ public class CommunityControllerTest {
 
     private Post testPost;
     private LikeResponse testLikeResponse;
+    private Author testAuthor;
 
     @BeforeEach
     void setUp() {
@@ -60,6 +64,13 @@ public class CommunityControllerTest {
         testLikeResponse = new LikeResponse();
         testLikeResponse.setSuccess(true);
         testLikeResponse.setMessage("点赞成功");
+
+        testAuthor = new Author();
+        testAuthor.setId("user123");
+        testAuthor.setUsername("测试用户");
+        testAuthor.setAvatar("");
+        testAuthor.setPosts(1);
+        testAuthor.setLikes(0);
     }
 
     @Test
@@ -108,12 +119,18 @@ public class CommunityControllerTest {
 
     @Test
     void checkPostAuthor() throws Exception {
-        when(postService.getPostsByAuthor("user123")).thenReturn(Arrays.asList(testPost));
+        CheckAuthorResponse response = new CheckAuthorResponse();
+        response.setAuthor(testAuthor);
+        when(postService.getAuthorInfo("user123")).thenReturn(response);
+
+        CheckAuthorRequest request = new CheckAuthorRequest();
+        request.setAuthorId("user123");
 
         mockMvc.perform(post("/api/community/posts/check-author")
-                .param("authorId", "user123"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].title").value("测试帖子"))
-                .andExpect(jsonPath("$[0].authorId").value("user123"));
+                .andExpect(jsonPath("$.author.id").value("user123"))
+                .andExpect(jsonPath("$.author.username").value("测试用户"));
     }
 } 

@@ -1,9 +1,11 @@
 package com.example.deeptalk.modules.shop.dto;
 
 import com.example.deeptalk.modules.shop.entity.Order;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
-@Data
+@Getter
+@Setter
 public class PurchaseRequest {
     private Order order;
 } 

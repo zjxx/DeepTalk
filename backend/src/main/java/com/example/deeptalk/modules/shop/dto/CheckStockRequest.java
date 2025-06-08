@@ -1,8 +1,10 @@
 package com.example.deeptalk.modules.shop.dto;
 
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
-@Data
+@Getter
+@Setter
 public class CheckStockRequest {
     private String userId;
 } 
