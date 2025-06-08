@@ -1,9 +1,6 @@
 package com.example.deeptalk.modules.community.controller;
 
-import com.example.deeptalk.modules.community.dto.LikeRequest;
-import com.example.deeptalk.modules.community.dto.LikeResponse;
-import com.example.deeptalk.modules.community.dto.CheckAuthorRequest;
-import com.example.deeptalk.modules.community.dto.CheckAuthorResponse;
+import com.example.deeptalk.modules.community.dto.*;
 import com.example.deeptalk.modules.community.entity.Post;
 import com.example.deeptalk.modules.community.entity.Author;
 import com.example.deeptalk.modules.community.service.PostService;
@@ -75,6 +72,13 @@ public class CommunityControllerTest {
 
     @Test
     void searchCommunity() throws Exception {
+        Author author = new Author();
+        author.setId("user123");
+        author.setUsername("测试用户");
+        author.setAvatar("");
+        author.setAuthorPosts(1);
+        author.setAuthorLikes(0);
+        testPost.setAuthor(author);
         when(postService.searchPosts("测试", "posts")).thenReturn(Arrays.asList(testPost));
 
         SearchRequest request = new SearchRequest();
@@ -85,8 +89,10 @@ public class CommunityControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].title").value("测试帖子"))
-                .andExpect(jsonPath("$[0].content").value("测试内容"));
+                .andExpect(jsonPath("$.posts[0].title").value("测试帖子"))
+                .andExpect(jsonPath("$.posts[0].content").value("测试内容"))
+                .andExpect(jsonPath("$.posts[0].author.id").value("user123"))
+                .andExpect(jsonPath("$.posts[0].author.username").value("测试用户"));
     }
 
     @Test
@@ -107,14 +113,25 @@ public class CommunityControllerTest {
 
     @Test
     void addPost() throws Exception {
+        Author author = new Author();
+        author.setId("user123");
+        author.setUsername("测试用户");
+        author.setAvatar("");
+        author.setAuthorPosts(1);
+        author.setAuthorLikes(0);
+        testPost.setAuthor(author);
         when(postService.addPost(any(Post.class))).thenReturn(testPost);
 
         mockMvc.perform(post("/api/community/posts/add")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(testPost)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.title").value("测试帖子"))
-                .andExpect(jsonPath("$.content").value("测试内容"));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("发帖成功"))
+                .andExpect(jsonPath("$.post.title").value("测试帖子"))
+                .andExpect(jsonPath("$.post.content").value("测试内容"))
+                .andExpect(jsonPath("$.post.author.id").value("user123"))
+                .andExpect(jsonPath("$.post.author.username").value("测试用户"));
     }
 
     @Test
