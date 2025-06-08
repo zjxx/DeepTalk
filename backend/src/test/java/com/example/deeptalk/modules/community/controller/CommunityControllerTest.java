@@ -69,8 +69,8 @@ public class CommunityControllerTest {
         testAuthor.setId("user123");
         testAuthor.setUsername("测试用户");
         testAuthor.setAvatar("");
-        testAuthor.setPosts(1);
-        testAuthor.setLikes(0);
+        testAuthor.setAuthorPosts(1);
+        testAuthor.setAuthorLikes(0);
     }
 
     @Test
