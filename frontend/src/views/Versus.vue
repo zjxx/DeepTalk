@@ -10,7 +10,6 @@
               prepend-icon="mdi-arrow-left" 
               color="secondary" 
               @click="handleBackToMatching"
-              :disabled="state.matchStarted"
               class="back-to-matching-btn"
             >
               返回匹配
@@ -24,20 +23,47 @@
               <v-divider vertical class="mx-2" />
               语音分析：<span class="font-weight-bold">{{ displayVoiceAnalysis }}</span>
             </div>
-            <div class="text-body-1" v-if="state.matchStarted && controller.currentTopic">
-              当前主题: <span class="font-weight-bold">{{ controller.currentTopic }}</span>
+            <div class="text-body-1" v-if="controller.currentTopic">
+              当前主题: <span class="font-weight-bold text-primary">{{ controller.currentTopic }}</span>
+              <v-chip 
+                v-if="controller.isUsingServerTopic()" 
+                color="success" 
+                size="x-small" 
+                class="ml-2"
+              >
+                <v-icon start size="12">mdi-check-circle</v-icon>
+                已同步
+              </v-chip>
+              <v-chip 
+                v-else 
+                color="warning" 
+                size="x-small" 
+                class="ml-2"
+              >
+                <v-icon start size="12">mdi-alert</v-icon>
+                本地
+              </v-chip>
             </div>
-            <div class="text-body-1" v-else-if="!state.matchStarted">
-              <span class="text-grey-5">点击"开始对话"来获取随机题目</span>
+            <div class="text-body-1" v-else>
+              <span class="text-grey-5">正在加载题目...</span>
             </div>
             <div class="d-flex justify-center align-center mt-2">
               <v-chip color="primary" class="mr-2">
                 <v-icon start>mdi-clock-outline</v-icon>
                 总时间: {{ controller.formatTime(state.remainingTime) }}
               </v-chip>
-              <v-chip v-if="!state.matchStarted" color="grey">
-                <v-icon start>mdi-pause</v-icon>
-                等待开始
+              <v-chip color="success" class="mr-2">
+                <v-icon start>mdi-play</v-icon>
+                对战进行中
+              </v-chip>
+              <!-- WebSocket连接状态 -->
+              <v-chip 
+                :color="isWebSocketConnected ? 'success' : 'warning'" 
+                class="ml-2"
+                size="small"
+              >
+                <v-icon start>{{ isWebSocketConnected ? 'mdi-check-circle' : 'mdi-wifi-off' }}</v-icon>
+                {{ isWebSocketConnected ? '已连接' : '未连接' }}
               </v-chip>
             </div>
           </v-card-text>
@@ -76,8 +102,8 @@
             v-if="displayBattleType === 'AI辅助'" 
             class="ai-avatar"
             :style="{
-              left: `${state.canvasWidth * 0.75}px`,
-              top: `${state.canvasHeight * 0.65}px`
+              left: `${state.canvasWidth * 0.68}px`,
+              top: `${state.canvasHeight * 0.4}px`
             }"
           >
             <v-avatar size="200" color="primary">
@@ -104,13 +130,15 @@
           </v-card-title>
           <v-card-actions class="d-flex justify-center py-2">
             <v-chip 
-              :color="state.isUserSpeaking ? 'success' : 'primary'" 
+              :color="state.isRecording ? 'error' : (displayBattleType === 'AI辅助' || isWebSocketConnected ? 'success' : 'warning')" 
               class="mr-2"
               :class="{ 'speaking-pulse': state.isRecording }"
+              size="large"
             >
               {{ 
-                state.isRecording ? '录音中... (再按一次结束)' : 
-                (state.isUserSpeaking ? '正在发言' : '可以随时发言')
+                state.isRecording ? '🎤 录音中... (点击停止并发送)' : 
+                (displayBattleType === 'AI辅助' ? '✅ 可以随时开始录音对话' :
+                 (isWebSocketConnected ? '✅ 可以随时开始录音通话' : '⚠️ WebSocket未连接'))
               }}
             </v-chip>
             
@@ -121,16 +149,17 @@
             
             <!-- 录音按钮 -->
             <v-btn 
-              :color="state.isRecording ? 'error' : (controller.canUserSpeak ? 'primary' : 'grey')" 
-              variant="outlined" 
-              :icon="state.isRecording ? 'mdi-stop' : (state.userMuted ? 'mdi-microphone-off' : 'mdi-microphone')"
+              :color="state.isRecording ? 'error' : 'primary'" 
+              variant="elevated" 
+              :icon="state.isRecording ? 'mdi-stop' : 'mdi-microphone'"
               @click="handleToggleRecording"
               :class="{ 'recording-btn': state.isRecording }"
-              :disabled="!state.matchStarted || state.isPlayingAudio"
+              :disabled="(displayBattleType === '真人对战' && !isWebSocketConnected) || state.isPlayingAudio"
+              size="large"
               class="mr-2"
             >
               <v-tooltip activator="parent" location="top">
-                {{ state.isRecording ? '停止录音并结束发言' : '开始录音' }}
+                {{ state.isRecording ? '停止录音并发送' : '开始录音对话' }}
               </v-tooltip>
             </v-btn>
             
@@ -186,25 +215,14 @@
             >
               {{ 
                 state.isPartnerSpeaking ? 
-                  (displayBattleType === 'AI辅助' ? 'AI正在回应' : '对方正在发言') : 
+                  (displayBattleType === 'AI辅助' ? 'AI正在回应' : '对方正在说话') : 
                   (state.speakingTurn === 'partner' ? 
                     (displayBattleType === 'AI辅助' ? 'AI正在思考' : '对方正在思考') : 
                     '等待轮换')
               }}
             </v-chip>
             
-            <!-- 对方发言时的跳过按钮（仅开发模式显示） -->
-            <v-btn 
-              v-if="state.speakingTurn === 'partner' && isDev"
-              color="orange"
-              variant="outlined"
-              size="small"
-              @click="handleSkipPartnerTurn"
-              class="mr-2"
-            >
-              <v-icon start size="small">mdi-skip-next</v-icon>
-              跳过
-            </v-btn>
+            <!-- 对方发言时的跳过按钮已删除 -->
             
             <!-- AI对战模式下显示AI状态指示器 -->
             <v-btn 
@@ -254,18 +272,25 @@
         <v-card>
           <v-card-text class="d-flex justify-space-between align-center flex-wrap">
             <v-btn-group class="my-2">
+              <!-- WebSocket通话按钮 -->
               <v-btn 
-                prepend-icon="mdi-play" 
-                color="success" 
-                @click="handleStartMatch" 
-                :disabled="state.matchStarted"
+                :color="state.isRecording ? 'error' : 'success'" 
+                :prepend-icon="state.isRecording ? 'mdi-stop' : 'mdi-microphone'"
+                @click="handleToggleRecording"
+                :disabled="(displayBattleType === '真人对战' && !isWebSocketConnected) || state.isPlayingAudio"
+                :class="{ 'recording-btn': state.isRecording }"
+                size="large"
               >
-                开始对话
+                {{ state.isRecording ? '停止录音' : (displayBattleType === 'AI辅助' ? '开始对话' : '开始通话') }}
+                <v-tooltip activator="parent" location="top">
+                  {{ state.isRecording ? '停止录音并发送' : (displayBattleType === 'AI辅助' ? 'AI智能对话' : 'WebSocket语音通话') }}
+                </v-tooltip>
               </v-btn>
+              
               <v-btn 
                 prepend-icon="mdi-skip-next" 
-                @click="handleNextTopic" 
-                :disabled="!state.matchStarted"
+                @click="handleNextTopic"
+                color="primary"
               >
                 下一话题
               </v-btn>
@@ -294,7 +319,12 @@
               </v-chip>
             </div>
 
-            <v-btn color="error" prepend-icon="mdi-exit-to-app" @click="handleEndMatch" class="my-2">
+            <v-btn 
+              color="error" 
+              :prepend-icon="'mdi-stop'" 
+              @click="handleEndMatch" 
+              class="my-2"
+            >
               结束对战
             </v-btn>
           </v-card-text>
@@ -382,6 +412,40 @@
         </v-card>
       </v-col>
 
+      <!-- WebSocket调试面板已隐藏 -->
+      <!-- <v-col cols="12" v-if="isDev" class="py-1">
+        <v-card>
+          <v-card-title class="d-flex justify-space-between">
+            <span>WebSocket调试信息</span>
+            <v-chip :color="isWebSocketConnected ? 'success' : 'error'" size="small">
+              {{ isWebSocketConnected ? '已连接' : '未连接' }}
+            </v-chip>
+          </v-card-title>
+          <v-card-text>
+            <div class="debug-info">
+              <div><strong>用户ID:</strong> {{ userId }}</div>
+              <div><strong>会话ID:</strong> {{ sessionId }}</div>
+              <div><strong>连接状态:</strong> {{ isWebSocketConnected ? '✅ 已连接' : '❌ 未连接' }}</div>
+              <div><strong>WebSocket状态:</strong> {{ ws?.readyState ?? 'null' }}</div>
+              <div><strong>时间同步状态:</strong> {{ isTimeSynced ? '✅ 已同步' : '⏳ 未同步' }}</div>
+              <div><strong>服务器时间偏移:</strong> {{ serverTimeOffset }}ms</div>
+              <div><strong>对战开始时间:</strong> {{ battleStartTime ? new Date(battleStartTime).toLocaleTimeString() : '未设置' }}</div>
+              <div><strong>当前服务器时间:</strong> {{ isTimeSynced ? new Date(getServerTime()).toLocaleTimeString() : '未同步' }}</div>
+              <div><strong>当前主题:</strong> {{ controller.currentTopic || '无' }}</div>
+              <div><strong>主题来源:</strong> {{ controller.isUsingServerTopic() ? '🌐 服务器分配' : '🎲 本地随机' }}</div>
+              <div><strong>对方正在说话:</strong> {{ state.isPartnerSpeaking ? '是' : '否' }}</div>
+              <div><strong>正在播放对方音频:</strong> {{ isPlayingPartnerAudio ? '是' : '否' }}</div>
+              <div><strong>最后录音:</strong> {{ state.lastRecordedAudio ? `${state.lastRecordedAudio.size} bytes` : '无' }}</div>
+              <div><strong>消息发送测试:</strong> 
+                <v-btn size="x-small" color="warning" @click="testEndBattleMessage">
+                  发送测试WebSocket消息
+                </v-btn>
+              </div>
+            </div>
+          </v-card-text>
+        </v-card>
+      </v-col> -->
+
       <!-- 实时转写面板 -->
       <v-col cols="12" v-if="state.matchStarted" class="py-1">
         <v-card>
@@ -424,7 +488,6 @@ type Live2DModelComponent = InstanceType<typeof Live2DModel>
 
 const router = useRouter()
 const route = useRoute()
-const isDev = true // 或者根据您的需要设置
 
 // PIXI App refs and state
 const pixiContainerRef = ref<HTMLDivElement | null>(null)
@@ -432,6 +495,21 @@ const pixiAppInstance = ref<PIXI.Application | null>(null)
 const userModelRef = ref<Live2DModelComponent | null>(null)
 const partnerModelRef = ref<Live2DModelComponent | null>(null)
 let resizeObserver: ResizeObserver | null = null
+
+// WebSocket相关状态
+const userId = ref<string>('')
+const sessionId = ref<string>('')
+const ws = ref<WebSocket | null>(null)
+const isWebSocketConnected = ref(false)
+
+// 音频相关状态
+const audioContext = ref<AudioContext | null>(null)
+const isPlayingPartnerAudio = ref(false)
+
+// 时间同步相关状态
+const serverTimeOffset = ref(0) // 服务器时间与本地时间的差值
+const battleStartTime = ref<number | null>(null) // 对战开始的服务器时间
+const isTimeSynced = ref(false) // 是否已同步时间
 
 // 创建控制器实例
 const controller = new VersusController()
@@ -459,58 +537,178 @@ const voiceAnalysisEnabled = computed(() => {
 
 // 用户模型数据
 const userModel = computed(() => ({ email: 'test@example.com' }))
-const handleStartMatch = async () => {
-  try {
-    await controller.startMatch()
-    if (userModelRef.value) {
-      userModelRef.value.playMotion('Flick', undefined)
+
+// 发送结束对战通知（单向通知，不等待确认）
+const sendEndBattleNotification = () => {
+  if (ws.value && ws.value.readyState === WebSocket.OPEN) {
+    const message = {
+      type: 'battle_end_notification',
+      userId: userId.value,
+      sessionId: sessionId.value,
+      message: '对方已退出对战',
+      timestamp: Date.now()
     }
-  } catch (error) {
-    console.error('开始对战失败:', error)
+    
+    console.log('发送结束对战通知:', message)
+    ws.value.send(JSON.stringify(message))
+    console.log('✅ 结束对战通知已发送（单向通知）')
+  } else {
+    console.log('WebSocket未连接，跳过发送通知')
   }
 }
+
 const handleEndMatch = async () => {
-  if (state.matchStarted) {
-    if (confirm('确定要结束当前对战吗？')) {
-      try {
-        // 先停止所有可能的DOM操作
-        if (userModelRef.value) {
-          userModelRef.value.destroy?.()
-        }
-        if (partnerModelRef.value) {
-          partnerModelRef.value.destroy?.()
-        }
-        
-        // 然后结束对战并清理状态
-        controller.endMatch()
-        
-        // 清理PIXI应用
-        if (pixiAppInstance.value) {
-          pixiAppInstance.value.stop()
-        }
-        
-        // 仿照登录界面的逻辑，添加延迟确保清理完成
-        await new Promise(resolve => setTimeout(resolve, 500))
-        
-        // 延迟后跳转到评分界面
-        console.log('状态清理完成，准备跳转到评分界面')
-        await router.push('/evaluation')
-      } catch (error) {
-        console.error('结束对战时出错:', error)
-        // 即使出错也延迟跳转
-        await new Promise(resolve => setTimeout(resolve, 300))
-        await router.push('/evaluation')
+  console.log('点击结束对战，当前状态:', {
+    matchStarted: state.matchStarted,
+    battleType: displayBattleType.value,
+    wsConnected: isWebSocketConnected.value
+  })
+  
+  // 统一处理：直接结束对战并跳转到评分界面
+  if (confirm('确定要结束当前对战吗？')) {
+    try {
+      console.log('用户确认结束对战，开始清理资源并跳转到评分界面...')
+      
+      // 如果是真人对战且WebSocket连接正常，发送通知消息（但不等待确认）
+      if (displayBattleType.value === '真人对战' && isWebSocketConnected.value) {
+        sendEndBattleNotification()
       }
+      
+      // 直接结束对战并跳转
+      await endBattleAndGoToEvaluation()
+    } catch (error) {
+      console.error('结束对战时出错:', error)
+      // 即使出错也跳转到评分界面
+      await new Promise(resolve => setTimeout(resolve, 300))
+      await router.push('/evaluation')
     }
-  } else {
-    // 如果没有进行对战，则跳转到首页
-    await router.push('/home')
   }
+}
+
+// 统一的结束对战并跳转到评分界面的函数
+const endBattleAndGoToEvaluation = async () => {
+  // 清理资源
+  if (userModelRef.value) {
+    userModelRef.value.destroy?.()
+  }
+  if (partnerModelRef.value) {
+    partnerModelRef.value.destroy?.()
+  }
+  
+  // 结束对战
+  controller.endMatch()
+  
+  // 清理PIXI应用
+  if (pixiAppInstance.value) {
+    pixiAppInstance.value.stop()
+  }
+  
+  // 清理WebSocket连接（如果存在）
+  if (ws.value) {
+    ws.value.close()
+    ws.value = null
+  }
+  isWebSocketConnected.value = false
+  
+  // 清理音频上下文
+  if (audioContext.value) {
+    audioContext.value.close()
+    audioContext.value = null
+  }
+  
+  // 延迟跳转到评分界面
+  await new Promise(resolve => setTimeout(resolve, 500))
+  console.log('状态清理完成，跳转到评分界面')
+  await router.push('/evaluation')
 }
 
 const handleToggleRecording = async () => {
   try {
-    await controller.toggleRecording()
+    // AI模式下不需要WebSocket连接检查
+    if (displayBattleType.value === '真人对战' && !isWebSocketConnected.value) {
+      alert('真人对战模式下WebSocket未连接，无法进行语音通话。请检查网络连接。')
+      return
+    }
+    
+    if (state.isRecording) {
+      // 停止录音
+      console.log('准备停止录音...')
+      await controller.toggleRecording()
+      
+      // 等待一小段时间确保录音数据已保存
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      // 真人对战模式：发送到WebSocket
+      if (displayBattleType.value === '真人对战' && state.lastRecordedAudio && ws.value && ws.value.readyState === WebSocket.OPEN) {
+        console.log('真人对战模式：录音完成，准备发送到对方:', {
+          size: state.lastRecordedAudio.size,
+          type: state.lastRecordedAudio.type,
+          wsState: ws.value.readyState
+        })
+        
+        // 显示发送状态
+        const sendingToast = document.createElement('div')
+        sendingToast.textContent = '正在发送音频到对方...'
+        sendingToast.style.cssText = 'position:fixed;top:20px;right:20px;background:#2196F3;color:white;padding:12px;border-radius:8px;z-index:9999;font-family:monospace'
+        document.body.appendChild(sendingToast)
+        
+        try {
+          await sendAudioToWebSocket(state.lastRecordedAudio)
+          sendingToast.textContent = '✅ 音频发送成功!'
+          sendingToast.style.background = '#4CAF50'
+          setTimeout(() => {
+            if (document.body.contains(sendingToast)) {
+              document.body.removeChild(sendingToast)
+            }
+          }, 2000)
+        } catch (error) {
+          sendingToast.textContent = '❌ 发送失败'
+          sendingToast.style.background = '#F44336'
+          setTimeout(() => {
+            if (document.body.contains(sendingToast)) {
+              document.body.removeChild(sendingToast)
+            }
+          }, 3000)
+          throw error
+        }
+      } 
+      // AI模式：本地处理
+      else if (displayBattleType.value === 'AI辅助' && state.lastRecordedAudio) {
+        console.log('AI智能对战模式：录音完成，本地处理:', {
+          size: state.lastRecordedAudio.size,
+          type: state.lastRecordedAudio.type
+        })
+        
+        // 显示AI处理状态
+        const aiToast = document.createElement('div')
+        aiToast.textContent = '🤖 AI正在分析您的语音...'
+        aiToast.style.cssText = 'position:fixed;top:20px;right:20px;background:#FF9800;color:white;padding:12px;border-radius:8px;z-index:9999;font-family:monospace'
+        document.body.appendChild(aiToast)
+        
+        // 模拟AI处理过程
+        setTimeout(() => {
+          aiToast.textContent = '✅ AI分析完成!'
+          aiToast.style.background = '#4CAF50'
+          setTimeout(() => {
+            if (document.body.contains(aiToast)) {
+              document.body.removeChild(aiToast)
+            }
+          }, 2000)
+        }, 1500)
+      } else if (displayBattleType.value === '真人对战') {
+        console.warn('真人对战模式：录音数据为空或WebSocket连接异常:', {
+          hasAudio: !!state.lastRecordedAudio,
+          audioSize: state.lastRecordedAudio?.size,
+          wsExists: !!ws.value,
+          wsState: ws.value?.readyState
+        })
+        alert('录音数据异常，请重试')
+      }
+    } else {
+      // 开始录音
+      console.log(`开始${displayBattleType.value}模式录音...`)
+      await controller.toggleRecording()
+    }
     
     // 更新模型表情
     if (userModelRef.value) {
@@ -541,37 +739,50 @@ const handleDeleteRecording = () => {
   controller.deleteRecording()
 }
 
-const handleSkipPartnerTurn = () => {
-  controller.skipPartnerTurn()
-}
-
 const handleNextTopic = () => {
   controller.nextTopic()
 }
 
 const handleBackToMatching = async () => {
-  if (state.matchStarted) {
-    if (confirm('当前对战正在进行中，确定要返回匹配界面吗？这将结束当前对战。')) {
-      try {
-        // 清理当前对战状态
-        controller.endMatch()
-        
-        // 清理PIXI应用
-        if (pixiAppInstance.value) {
-          pixiAppInstance.value.stop()
-        }
-        
-        // 延迟后跳转
-        await new Promise(resolve => setTimeout(resolve, 300))
-        await router.push('/matching')
-      } catch (error) {
-        console.error('返回匹配界面时出错:', error)
-        await router.push('/matching')
+  if (confirm('当前对战正在进行中，确定要返回匹配界面吗？这将结束当前对战。')) {
+    try {
+      // 清理当前对战状态
+      if (userModelRef.value) {
+        userModelRef.value.destroy?.()
       }
+      if (partnerModelRef.value) {
+        partnerModelRef.value.destroy?.()
+      }
+      
+      // 结束对战
+      controller.endMatch()
+      
+      // 清理PIXI应用
+      if (pixiAppInstance.value) {
+        pixiAppInstance.value.stop()
+      }
+      
+      // 清理WebSocket连接（如果存在）
+      if (ws.value) {
+        ws.value.close()
+        ws.value = null
+      }
+      isWebSocketConnected.value = false
+      
+      // 清理音频上下文
+      if (audioContext.value) {
+        audioContext.value.close()
+        audioContext.value = null
+      }
+      
+      // 延迟跳转到匹配界面
+      await new Promise(resolve => setTimeout(resolve, 500))
+      console.log('状态清理完成，跳转到匹配界面')
+      await router.push('/matching')  // 返回到匹配界面
+    } catch (error) {
+      console.error('返回匹配界面时出错:', error)
+      await router.push('/matching')  // 即使出错也要跳转到匹配界面
     }
-  } else {
-    // 如果没有开始对战，直接返回匹配界面
-    await router.push('/matching')
   }
 }
 
@@ -607,10 +818,298 @@ const handleDownloadRecording = () => {
   }
 }
 
+// WebSocket连接函数
+const connectWebSocket = async () => {
+  if (!sessionId.value || !userId.value) {
+    console.warn('缺少sessionId或userId，无法建立WebSocket连接')
+    return
+  }
+  
+  try {
+    const wsUrl = `ws://115.175.45.173:8080/api/speech/ws`
+    ws.value = new WebSocket(wsUrl)
+    
+    ws.value.onopen = () => {
+      // 连接成功后发送注册消息，包含用户偏好
+      ws.value?.send(JSON.stringify({
+        type: 'register',
+        userId: userId.value,
+        sessionId: sessionId.value,
+        userPreferences: {
+          difficulty: state.difficultyLevel,
+          battleType: state.matchType,
+          duration: Math.floor(state.remainingTime / 60)
+        },
+        timestamp: Date.now()
+      }))
+      isWebSocketConnected.value = true
+      console.log('WebSocket连接成功，已发送用户偏好，sessionId:', sessionId.value)
+      
+      // 请求服务器时间同步
+      requestTimeSync()
+      
+      // 发送连接测试消息
+      setTimeout(() => {
+        if (ws.value && ws.value.readyState === WebSocket.OPEN) {
+          ws.value.send(JSON.stringify({
+            type: 'test',
+            message: '连接测试',
+            userId: userId.value,
+            sessionId: sessionId.value,
+            timestamp: Date.now()
+          }))
+          console.log('已发送连接测试消息')
+        }
+      }, 1000)
+    }
+    
+    ws.value.onmessage = async (event) => {
+      console.log('收到WebSocket消息:', {
+        dataType: typeof event.data,
+        isBlob: event.data instanceof Blob,
+        isArrayBuffer: event.data instanceof ArrayBuffer,
+        size: event.data instanceof Blob ? event.data.size : 
+              event.data instanceof ArrayBuffer ? event.data.byteLength :
+              event.data.length,
+        timestamp: new Date().toISOString()
+      })
+      
+      // 处理接收到的消息
+      if (event.data instanceof Blob) {
+        // 处理二进制音频数据
+        console.log('收到对方音频Blob数据:', {
+          size: event.data.size,
+          type: event.data.type
+        })
+        // 设置对方正在说话状态
+        state.isPartnerSpeaking = true
+        await playPartnerAudio(event.data)
+      } else {
+        // 处理文本消息
+        try {
+          const data = JSON.parse(event.data)
+          console.log('收到WebSocket文本消息:', data)
+          
+          switch (data.type) {
+            case 'system':
+              console.log('系统消息:', data.message)
+              break
+            case 'test':
+              console.log('收到测试消息:', data.message)
+              break
+            case 'audio':
+              console.log('音频元数据:', data)
+              // 对方发送音频的元数据，准备接收音频数据
+              state.isPartnerSpeaking = true
+              break
+            case 'partner_speaking':
+              // 对方开始说话
+              state.isPartnerSpeaking = true
+              if (partnerModelRef.value && displayBattleType.value === '真人对战') {
+                partnerModelRef.value.playMotion('Talk', undefined)
+              }
+              break
+            case 'partner_stopped':
+              // 对方停止说话
+              state.isPartnerSpeaking = false
+              if (partnerModelRef.value && displayBattleType.value === '真人对战') {
+                partnerModelRef.value.playMotion('Idle', undefined)
+              }
+              break
+            case 'partner_end_battle':
+              // 对方请求结束对战 (旧版本兼容)
+              console.log('对方请求结束对战(旧版本)')
+              handlePartnerEndBattle()
+              break
+            case 'battle_ended':
+              // 服务器确认对战结束 (旧版本兼容)
+              console.log('服务器确认对战结束，准备跳转到评分界面')
+              handleBattleEnded()
+              break
+            case 'user_connected':
+              console.log('用户连接成功:', data)
+              break
+            case 'error':
+              console.error('服务器错误:', data.message)
+              alert('服务器错误: ' + data.message)
+              break
+            case 'time_sync_request': {
+              // 处理时间同步请求
+              console.log('收到时间同步请求:', data)
+              const serverTime = Date.now()
+              ws.value?.send(JSON.stringify({
+                type: 'time_sync_response',
+                serverTime: serverTime,
+                userId: userId.value,
+                sessionId: sessionId.value,
+                timestamp: Date.now()
+              }))
+              console.log('已发送时间同步响应')
+              break
+            }
+            case 'time_sync_response': {
+              // 处理时间同步响应
+              handleTimeSync(data.serverTime, data.clientRequestTime)
+              break
+            }
+            case 'battle_sync': {
+              // 同步对战信息
+              console.log('收到对战同步消息:', data)
+              startSyncedBattle(data.serverStartTime, data.duration, data.topic, data.prompts)
+              break
+            }
+            case 'topic_sync': {
+              // 同步主题信息
+              console.log('收到主题同步消息:', data)
+              syncBattleTopic(data.topic, data.prompts, data.difficulty)
+              break
+            }
+            case 'end_battle_request': {
+              // 收到对方的结束对战请求
+              console.log('收到对方的结束对战请求:', data)
+              handlePartnerEndBattleRequest(data)
+              break
+            }
+            case 'end_battle_confirm': {
+              // 对方同意结束对战
+              console.log('对方同意结束对战:', data)
+              handleBattleEndConfirmed()
+              break
+            }
+            case 'end_battle_refuse': {
+              // 对方拒绝结束对战
+              console.log('对方拒绝结束对战:', data)
+              handleBattleEndRefused()
+              break
+            }
+            case 'battle_end_notification': {
+              // 收到对方退出对战的通知
+              console.log('收到对方退出对战通知:', data)
+              handlePartnerLeftBattle(data)
+              break
+            }
+            default:
+              console.log('未知消息类型:', data)
+          }
+        } catch (error) {
+          console.error('解析WebSocket消息失败:', error, '原始数据:', event.data)
+        }
+      }
+    }
+    
+    ws.value.onclose = () => {
+      console.log('WebSocket连接关闭')
+      isWebSocketConnected.value = false
+    }
+    
+    ws.value.onerror = (error) => {
+      console.error('WebSocket连接错误:', error)
+      isWebSocketConnected.value = false
+    }
+  } catch (error) {
+    console.error('建立WebSocket连接失败:', error)
+  }
+}
+
+// 初始化音频上下文
+const initAudioContext = () => {
+  if (!audioContext.value) {
+    audioContext.value = new AudioContext()
+  }
+  return audioContext.value
+}
+
+// 播放对方音频
+const playPartnerAudio = async (audioBlob: Blob) => {
+  try {
+    const arrayBuffer = await audioBlob.arrayBuffer()
+    const context = initAudioContext()
+    
+    const audioBuffer = await context.decodeAudioData(arrayBuffer)
+    const source = context.createBufferSource()
+    source.buffer = audioBuffer
+    
+    const gainNode = context.createGain()
+    gainNode.gain.value = 1.0
+    
+    source.connect(gainNode)
+    gainNode.connect(context.destination)
+    
+    source.onended = () => {
+      isPlayingPartnerAudio.value = false
+      state.isPartnerSpeaking = false
+      console.log('对方音频播放完成')
+      
+      // 播放完成后更新模型状态
+      if (partnerModelRef.value && displayBattleType.value === '真人对战') {
+        partnerModelRef.value.playMotion('Idle', undefined)
+      }
+    }
+    
+    isPlayingPartnerAudio.value = true
+    
+    // 更新模型状态为说话
+    if (partnerModelRef.value && displayBattleType.value === '真人对战') {
+      partnerModelRef.value.playMotion('Talk', undefined)
+    }
+    
+    source.start(0)
+    console.log('开始播放对方音频', {
+      duration: audioBuffer.duration,
+      sampleRate: audioBuffer.sampleRate,
+      size: audioBlob.size
+    })
+  } catch (error) {
+    console.error('播放对方音频失败:', error)
+    isPlayingPartnerAudio.value = false
+  }
+}
+
+// 发送音频数据到WebSocket
+const sendAudioToWebSocket = async (audioBlob: Blob) => {
+  if (!ws.value || ws.value.readyState !== WebSocket.OPEN) {
+    console.warn('WebSocket未连接，无法发送音频')
+    return
+  }
+  
+  try {
+    // 检查音频数据大小
+    if (audioBlob.size < 100) {
+      console.log('音频数据太小，跳过发送:', audioBlob.size)
+      return
+    }
+    
+    console.log('准备发送音频数据:', {
+      size: audioBlob.size,
+      type: audioBlob.type,
+      sessionId: sessionId.value,
+      userId: userId.value
+    })
+    
+    // 简化发送逻辑 - 直接发送音频Blob
+    ws.value.send(audioBlob)
+    
+    console.log('音频数据发送完成:', {
+      size: audioBlob.size,
+      timestamp: new Date().toISOString()
+    })
+    
+  } catch (error) {
+    console.error('发送音频数据失败:', error)
+    alert('发送音频失败，请重试')
+  }
+}
+
 // 设置状态变化回调
 controller.setStateChangeCallback(() => {
   // 更新响应式状态
   Object.assign(state, controller.getState())
+})
+
+// 确保初始状态正确
+console.log('初始化状态检查:', {
+  matchStarted: controller.getState().matchStarted,
+  remainingTime: controller.getState().remainingTime
 })
 
 // PIXI App 初始化
@@ -620,6 +1119,11 @@ onMounted(async () => {
   // 应用匹配参数
   if (route.query.battleType) {
     controller.changeMatchType(route.query.battleType as '真人对战' | 'AI辅助')
+    console.log('Versus页面：设置对战类型为', route.query.battleType)
+  } else {
+    // 默认设置为AI辅助模式
+    controller.changeMatchType('AI辅助')
+    console.log('Versus页面：默认设置对战类型为 AI辅助')
   }
   if (route.query.difficulty) {
     // 四级/六级映射
@@ -627,9 +1131,47 @@ onMounted(async () => {
     if (mapped === '四级') mapped = '中级'
     if (mapped === '六级') mapped = '高级'
     controller.changeDifficultyLevel(mapped as '初级' | '中级' | '高级')
+    console.log('Versus页面：设置难度等级为', mapped)
   }
   if (route.query.duration) {
     state.remainingTime = parseInt(route.query.duration as string) * 60
+  }
+  
+  // 获取WebSocket连接信息并自动连接（仅真人对战模式）
+  if (route.query.sessionId && route.query.userId && displayBattleType.value === '真人对战') {
+    sessionId.value = route.query.sessionId as string
+    userId.value = route.query.userId as string
+    console.log('真人对战模式：检测到WebSocket连接信息，开始建立连接...')
+    // 自动建立WebSocket连接
+    await connectWebSocket()
+    
+    // 等待时间同步完成，然后启动计时器
+    let syncCheckCount = 0
+    const checkSync = () => {
+      if (isTimeSynced.value) {
+        console.log('时间同步完成，准备启动计时器')
+        // 如果没有收到服务器的battle_sync消息，使用默认时间启动
+        setTimeout(() => {
+          if (!battleStartTime.value) {
+            console.log('未收到服务器同步消息，使用默认时间启动计时器')
+            controller.startSyncedTimer(state.remainingTime)
+          }
+        }, 2000)
+      } else if (syncCheckCount < 50) { // 最多等待5秒
+        syncCheckCount++
+        setTimeout(checkSync, 100)
+      } else {
+        console.warn('时间同步超时，使用本地时间启动计时器')
+        controller.startSyncedTimer(state.remainingTime)
+      }
+    }
+    checkSync()
+  } else {
+    console.log('AI智能对战模式：跳过WebSocket连接，直接启动本地计时器')
+    // AI对战模式或没有WebSocket连接信息，直接启动计时器
+    setTimeout(() => {
+      controller.startSyncedTimer(state.remainingTime)
+    }, 1000)
   }
   
   await nextTick()
@@ -664,6 +1206,9 @@ onMounted(async () => {
   }
   
   console.log('PIXI应用初始化完成，对战模式:', displayBattleType.value)
+  console.log('WebSocket连接状态:', isWebSocketConnected.value)
+  console.log('对战状态 matchStarted:', state.matchStarted)
+  console.log('对战自动启动完成，计时器已开始')
 })
 
 // 清理资源
@@ -722,8 +1267,212 @@ onBeforeUnmount(() => {
     console.error('清理DOM引用时出错:', error)
   }
   
+  // 清理WebSocket连接
+  try {
+    if (ws.value) {
+      ws.value.close()
+      ws.value = null
+    }
+    if (audioContext.value) {
+      audioContext.value.close()
+      audioContext.value = null
+    }
+  } catch (error) {
+    console.error('清理WebSocket和音频上下文时出错:', error)
+  }
+  
   console.log('versus组件资源清理完成')
 })
+
+// 处理对方的结束对战请求（简化版，直接跳转）
+const handlePartnerEndBattleRequest = (data: { type: string; legacy?: boolean; [key: string]: unknown }) => {
+  console.log('收到对方结束对战请求:', data)
+  
+  // 显示通知，直接跳转到评分界面
+  alert('对方已退出对战，即将跳转到评分界面')
+  
+  // 延迟跳转
+  setTimeout(async () => {
+    await endBattleAndGoToEvaluation()
+  }, 1000)
+}
+
+// 处理对战结束确认（保留兼容性）
+const handleBattleEndConfirmed = async () => {
+  console.log('对方同意结束对战，准备跳转到评分界面')
+  
+  // 显示通知
+  alert('对方已同意结束对战，即将跳转到评分界面')
+  
+  // 清理资源并跳转
+  try {
+    await endBattleAndGoToEvaluation()
+  } catch (error) {
+    console.error('结束对战处理失败:', error)
+    await router.push('/evaluation')
+  }
+}
+
+// 处理对战结束拒绝（保留兼容性）
+const handleBattleEndRefused = () => {
+  console.log('对方拒绝结束对战')
+  alert('对方拒绝结束对战，继续当前对战')
+}
+
+// 结束对战相关函数（旧版本，保持兼容性）
+const handlePartnerEndBattle = () => {
+  console.log('收到旧版本的对方结束对战请求')
+  // 为了兼容性，调用新的处理函数
+  handlePartnerEndBattleRequest({ type: 'end_battle_request', legacy: true })
+}
+
+const handleBattleEnded = async () => {
+  // 服务器确认对战结束，清理资源并跳转
+  try {
+    // 清理WebSocket连接
+    if (ws.value) {
+      ws.value.close()
+      ws.value = null
+    }
+    isWebSocketConnected.value = false
+    
+    // 清理音频上下文
+    if (audioContext.value) {
+      audioContext.value.close()
+      audioContext.value = null
+    }
+    
+    // 停止录音等操作
+    if (state.isRecording) {
+      await controller.toggleRecording()
+    }
+    
+    console.log('对战资源清理完成，跳转到评分界面')
+    
+    // 延迟跳转确保清理完成
+    setTimeout(async () => {
+      await router.push('/evaluation')
+    }, 500)
+  } catch (error) {
+    console.error('结束对战处理失败:', error)
+    // 即使出错也要跳转
+    await router.push('/evaluation')
+  }
+}
+
+// 时间同步相关函数
+const requestTimeSync = () => {
+  if (!ws.value || ws.value.readyState !== WebSocket.OPEN) {
+    return
+  }
+  
+  const clientTime = Date.now()
+  ws.value.send(JSON.stringify({
+    type: 'time_sync_request',
+    clientTime: clientTime,
+    userId: userId.value,
+    sessionId: sessionId.value
+  }))
+  console.log('发送时间同步请求，客户端时间:', clientTime)
+}
+
+// 处理服务器时间同步响应
+const handleTimeSync = (serverTime: number, clientRequestTime: number) => {
+  const clientReceiveTime = Date.now()
+  const networkDelay = (clientReceiveTime - clientRequestTime) / 2
+  
+  // 计算服务器时间偏移
+  serverTimeOffset.value = serverTime - clientReceiveTime + networkDelay
+  isTimeSynced.value = true
+  
+  console.log('时间同步完成:', {
+    serverTime,
+    clientTime: clientReceiveTime,
+    networkDelay,
+    serverTimeOffset: serverTimeOffset.value
+  })
+}
+
+// 获取同步后的服务器时间
+const getServerTime = () => {
+  return Date.now() + serverTimeOffset.value
+}
+
+// 启动同步对战
+const startSyncedBattle = (serverStartTime: number, duration: number, topic?: string, prompts?: string[]) => {
+  console.log('启动同步对战:', {
+    serverStartTime,
+    duration,
+    topic,
+    prompts,
+    currentServerTime: getServerTime()
+  })
+  
+  // 如果服务器提供了主题和提示，先同步主题
+  if (topic && prompts) {
+    console.log('同步服务器分配的主题:', topic)
+    controller.syncServerTopic(topic, prompts, state.difficultyLevel)
+  }
+  
+  battleStartTime.value = serverStartTime
+  const currentTime = getServerTime()
+  
+  // 如果对战已经开始，计算剩余时间
+  if (currentTime >= serverStartTime) {
+    const elapsedTime = Math.floor((currentTime - serverStartTime) / 1000)
+    const remainingTime = Math.max(0, duration - elapsedTime)
+    
+    console.log('对战已开始:', {
+      elapsedTime,
+      remainingTime
+    })
+    
+    // 启动同步计时器
+    controller.startSyncedTimer(remainingTime)
+  } else {
+    // 对战还未开始，等待开始时间
+    const delayMs = serverStartTime - currentTime
+    console.log('对战将在', delayMs, 'ms后开始')
+    
+    setTimeout(() => {
+      console.log('同步对战正式开始!')
+      controller.startSyncedTimer(duration)
+    }, delayMs)
+  }
+}
+
+// 同步对战主题
+const syncBattleTopic = (topic: string, prompts: string[], difficulty: string) => {
+  console.log('同步对战主题:', {
+    topic,
+    prompts,
+    difficulty
+  })
+  
+  // 同步主题到控制器
+  controller.syncServerTopic(topic, prompts, difficulty)
+  
+  console.log('主题同步完成，当前主题:', controller.currentTopic)
+}
+
+// 处理对方退出对战的通知
+const handlePartnerLeftBattle = (data: { message?: string; [key: string]: unknown }) => {
+  console.log('对方已退出对战:', data)
+  
+  // 显示通知
+  const message = data.message || '对方已退出对战'
+  alert(`${message}\n\n即将跳转到评分界面`)
+  
+  // 延迟跳转到评分界面
+  setTimeout(async () => {
+    try {
+      await endBattleAndGoToEvaluation()
+    } catch (error) {
+      console.error('处理对方退出时出错:', error)
+      await router.push('/evaluation')
+    }
+  }, 1000)
+}
 </script>
 
 <style scoped>
@@ -838,6 +1587,7 @@ onBeforeUnmount(() => {
 .recording-btn {
   animation: recording-pulse 1.5s infinite;
   transform-origin: center;
+  box-shadow: 0 4px 12px rgba(244, 67, 54, 0.4) !important;
 }
 
 @keyframes recording-pulse {
@@ -893,14 +1643,7 @@ onBeforeUnmount(() => {
   flex-direction: column;
   align-items: center;
   z-index: 10;
-  transform: translate(-50%, -50%);
-  transition: all 0.3s ease;
-}
-
-.ai-avatar .v-avatar {
-  border: 3px solid #1976d2;
-  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3);
-  animation: ai-idle 3s ease-in-out infinite;
+  pointer-events: none;
 }
 
 .ai-status-indicator {
@@ -909,27 +1652,21 @@ onBeforeUnmount(() => {
 }
 
 .ai-status-indicator.speaking {
-  animation: ai-speaking 1s ease-in-out infinite alternate;
+  animation: ai-pulse 1.5s infinite;
 }
 
-/* AI动画效果 */
-@keyframes ai-idle {
-  0%, 100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-5px);
-  }
-}
-
-@keyframes ai-speaking {
+@keyframes ai-pulse {
   0% {
     transform: scale(1);
     opacity: 1;
   }
-  100% {
+  50% {
     transform: scale(1.05);
     opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
   }
 }
 
@@ -942,5 +1679,26 @@ onBeforeUnmount(() => {
   min-width: 120px;
   height: 40px;
   font-size: 14px;
+}
+
+/* 调试面板样式 */
+.debug-info {
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  background-color: #f5f5f5;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.debug-info div {
+  margin-bottom: 4px;
+}
+
+.debug-info strong {
+  color: #1976d2;
+  min-width: 120px;
+  display: inline-block;
 }
 </style>

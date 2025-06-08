@@ -14,6 +14,11 @@ export class VersusController {
   private questionManager: QuestionManager
   private webSocketService: WebSocketService
   
+  // AI对话模拟相关
+  private aiResponseIndex: number = 0
+  private readonly maxAiResponses: number = 6
+  private aiAudioElement: HTMLAudioElement | null = null
+  
   // 回调函数，用于通知 View 层状态变化
   private onStateChange?: () => void
 
@@ -26,6 +31,43 @@ export class VersusController {
     this.webSocketService = new WebSocketService('ws://115.175.45.173:8765')
     
     this.setupEventListeners()
+    
+    // 自动启动对战状态和计时
+    this.autoStartMatch()
+  }
+
+  // 自动启动对战方法
+  private async autoStartMatch(): Promise<void> {
+    try {
+      console.log('VersusController: 自动启动对战')
+      
+      // 立即启动对战状态
+      this.model.updateMatchState({ 
+        matchStarted: true,
+        speakingTurn: 'user'
+      })
+      
+      // 不在这里启动计时器，等待versus.vue调用startSyncedTimer启动计时器
+      console.log('VersusController: 等待外部调用startSyncedTimer启动计时器...')
+      
+      // 根据对战模式加载不同的题目
+      const currentMatchType = this.model.getState().matchType
+      if (currentMatchType === 'AI辅助') {
+        // AI模式：使用固定的英语对话主题
+        this.setAIModeTopic()
+      } else {
+        // 真人对战模式：加载题库中的题目
+        await this.questionManager.loadQuestionByLevel(this.model.getState().difficultyLevel)
+      }
+      
+      this.notifyStateChange()
+      console.log('VersusController: 自动对战初始化完成，matchStarted =', this.model.getState().matchStarted)
+      console.log('自动加载题目:', this.currentTopic)
+      console.log('当前使用的是服务器主题:', this.questionManager.isUsingServerTopic())
+      console.log('题目管理器当前主题:', this.questionManager.getCurrentTopic())
+    } catch (error) {
+      console.error('自动启动对战失败:', error)
+    }
   }
 
   private setupEventListeners(): void {
@@ -43,11 +85,16 @@ export class VersusController {
       this.model.updateMatchState({ lastRecordedAudio: audioBlob })
       this.sendAudioForTranscription(audioBlob)
 
-      // 如果是真人对战模式，则通过 WebSocket 广播音频
-      if (this.webSocketService.getIsConnected() && this.model.getState().matchType === '真人对战') {
+      // AI智能对话模式：自动播放AI回应音频
+      if (this.model.getState().matchType === 'AI辅助') {
+        this.playNextAiResponse()
+      }
+      // 真人对战模式：通过WebSocket发送音频
+      else if (this.webSocketService.getIsConnected() && this.model.getState().matchType === '真人对战') {
         console.log('真人对战模式，发送音频广播')
         this.webSocketService.sendAudio(audioBlob)
       }
+      
       this.notifyStateChange()
     }
 
@@ -113,39 +160,32 @@ export class VersusController {
   }
 
   get currentTopic(): string {
-    const state = this.model.getState()
-    
-    // 如果对话还没开始，不显示任何主题
-    if (!state.matchStarted) {
-      return ''
-    }
-    
-    // 对话开始后，优先使用题库中的题目
+    // 优先使用题库中的题目
     const questionTopic = this.questionManager.getCurrentTopic()
     if (questionTopic) {
       return questionTopic
     }
     
-    // 备用：使用VersusModel中的原有主题（但通常不会用到）
+    // 备用：使用VersusModel中的原有主题
     return this.model.currentTopic
   }
 
   get currentPrompt(): string {
     const state = this.model.getState()
     
+    // 如果对话已经开始，优先使用题库中的提示
+    if (state.matchStarted) {
+      const questionPrompt = this.questionManager.getPromptByIndex(state.currentPromptIndex)
+      if (questionPrompt) {
+        return questionPrompt
+      }
+      
+      // 备用：使用VersusModel中的原有提示
+      return this.model.currentPrompt
+    }
+    
     // 如果对话还没开始，显示默认提示
-    if (!state.matchStarted) {
-      return '准备好了吗？点击"开始对话"来开始练习！'
-    }
-    
-    // 优先使用题库中的提示
-    const questionPrompt = this.questionManager.getPromptByIndex(state.currentPromptIndex)
-    if (questionPrompt) {
-      return questionPrompt
-    }
-    
-    // 备用：使用VersusModel中的原有提示
-    return this.model.currentPrompt
+    return '对战即将开始，计时已经启动！'
   }  // 重要：录音功能实现
   async toggleRecording(): Promise<void> {
     const state = this.model.getState()
@@ -169,6 +209,8 @@ export class VersusController {
   // 业务逻辑方法
   async startMatch(): Promise<void> {
     try {
+      console.log('VersusController: 开始启动对战')
+      
       // 对战开始时连接 WebSocket
       if (!this.webSocketService.getIsConnected()) {
         await this.webSocketService.connect()
@@ -182,7 +224,7 @@ export class VersusController {
       
       // 权限获取成功后，启动对战状态
       this.model.updateMatchState({ 
-        matchStarted: true,
+        matchStarted: true,  // 只有在这里才设置为true
         speakingTurn: 'user'
       })
       
@@ -196,6 +238,7 @@ export class VersusController {
       this.timerService.startMainTimer(this.model.getState().remainingTime)
       
       this.notifyStateChange()
+      console.log('VersusController: 对战启动完成，matchStarted =', this.model.getState().matchStarted)
       console.log('对战开始，已加载新题目:', this.questionManager.getCurrentTopic())
     } catch (error) {
       console.error('开始对战失败:', error)
@@ -303,16 +346,6 @@ export class VersusController {
     console.log(`发言权切换到: ${newState.speakingTurn}`)
   }
 
-  skipPartnerTurn(): void {
-    const state = this.model.getState()
-    if (state.speakingTurn === 'partner') {
-      console.log('跳过对方发言，切换回用户')
-      this.aiService.stopSpeaking()
-      this.model.updateMatchState({ isPartnerSpeaking: false })
-      this.switchSpeakingTurn()
-    }
-  }
-
   togglePlayback(): void {
     const state = this.model.getState()
     if (state.isPlayingAudio) {
@@ -353,6 +386,16 @@ export class VersusController {
       isPartnerSpeaking: false,
       isUserSpeaking: false
     })
+    
+    // 如果切换到AI模式，立即设置AI专用主题
+    if (matchType === 'AI辅助') {
+      console.log('切换到AI模式，设置AI专用主题')
+      this.setAIModeTopic()
+    } else {
+      console.log('切换到真人对战模式，重置题库状态')
+      this.questionManager.reset()
+    }
+    
     this.notifyStateChange()
   }
 
@@ -390,6 +433,12 @@ export class VersusController {
     this.timerService.stopAllTimers()
     this.audioService.cleanup()
     this.aiService.cleanup()
+    
+    // 清理AI音频播放
+    if (this.aiAudioElement) {
+      this.aiAudioElement.pause()
+      this.aiAudioElement = null
+    }
   }
 
   // 格式化时间的工具方法
@@ -490,5 +539,140 @@ export class VersusController {
       // 返回一个空的 Blob 对象以避免后续代码出错
       return new Blob([], { type: contentType })
     }
+  }
+
+  // 更新剩余时间（用于时间同步）
+  updateRemainingTime(timeInSeconds: number): void {
+    this.model.updateMatchState({ remainingTime: timeInSeconds })
+    this.notifyStateChange()
+    console.log('更新剩余时间为:', timeInSeconds, '秒')
+  }
+
+  // 开始同步计时器（在时间同步后调用）
+  startSyncedTimer(remainingTimeInSeconds: number): void {
+    console.log('VersusController: 开始同步计时器，剩余时间:', remainingTimeInSeconds, '秒')
+    
+    // 更新剩余时间
+    this.model.updateMatchState({ remainingTime: remainingTimeInSeconds })
+    
+    // 启动计时器
+    this.timerService.startMainTimer(remainingTimeInSeconds)
+    
+    this.notifyStateChange()
+    console.log('VersusController: 同步计时器已启动')
+  }
+
+  // 同步服务器分配的主题和提示
+  syncServerTopic(topic: string, prompts: string[], difficulty: string): void {
+    console.log('VersusController: 同步服务器主题:', {
+      topic,
+      prompts,
+      difficulty
+    })
+    
+    // 直接设置服务器分配的主题
+    this.questionManager.setServerTopic(topic, prompts)
+    
+    // 可选：同步难度等级
+    if (difficulty) {
+      this.model.updateMatchState({ difficultyLevel: difficulty as '初级' | '中级' | '高级' })
+    }
+    
+    this.notifyStateChange()
+    console.log('VersusController: 服务器主题同步完成')
+  }
+
+  // 检查是否使用服务器主题
+  isUsingServerTopic(): boolean {
+    return this.questionManager.isUsingServerTopic()
+  }
+
+  // AI智能对话：播放下一个AI回应音频
+  private playNextAiResponse(): void {
+    if (this.aiResponseIndex >= this.maxAiResponses) {
+      console.log('AI回应已达到最大次数，不再播放')
+      return
+    }
+
+    // 计算当前应该播放的音频文件编号
+    const audioIndex = (this.aiResponseIndex % this.maxAiResponses) + 1
+    const audioPath = `/audios/${audioIndex}.mp3`
+    
+    console.log(`播放AI回应音频 ${audioIndex}.mp3`)
+    
+    // 设置AI正在回应状态
+    this.model.updateMatchState({ isPartnerSpeaking: true })
+    this.notifyStateChange()
+    
+    // 创建新的音频元素
+    this.aiAudioElement = new Audio(audioPath)
+    
+    this.aiAudioElement.onloadstart = () => {
+      console.log(`开始加载AI音频 ${audioIndex}.mp3`)
+    }
+    
+    this.aiAudioElement.oncanplay = () => {
+      console.log(`AI音频 ${audioIndex}.mp3 可以开始播放`)
+    }
+    
+    this.aiAudioElement.onplay = () => {
+      console.log(`AI音频 ${audioIndex}.mp3 开始播放`)
+      // 确保状态显示AI正在回应
+      this.model.updateMatchState({ isPartnerSpeaking: true })
+      this.notifyStateChange()
+    }
+    
+    this.aiAudioElement.onended = () => {
+      console.log(`AI音频 ${audioIndex}.mp3 播放完成`)
+      // 重置AI状态
+      this.model.updateMatchState({ isPartnerSpeaking: false })
+      this.notifyStateChange()
+      
+      // 增加响应计数
+      this.aiResponseIndex++
+      
+      // 清理音频元素
+      if (this.aiAudioElement) {
+        this.aiAudioElement = null
+      }
+    }
+    
+    this.aiAudioElement.onerror = (error) => {
+      console.error(`播放AI音频 ${audioIndex}.mp3 失败:`, error)
+      // 重置状态
+      this.model.updateMatchState({ isPartnerSpeaking: false })
+      this.notifyStateChange()
+      
+      // 仍然增加计数，避免卡住
+      this.aiResponseIndex++
+      
+      if (this.aiAudioElement) {
+        this.aiAudioElement = null
+      }
+    }
+    
+    // 开始播放
+    this.aiAudioElement.play().catch(error => {
+      console.error(`播放AI音频 ${audioIndex}.mp3 失败:`, error)
+      this.model.updateMatchState({ isPartnerSpeaking: false })
+      this.notifyStateChange()
+      this.aiResponseIndex++
+    })
+  }
+
+  // 设置AI模式的专用主题
+  private setAIModeTopic(): void {
+    const aiTopic = "You will talk with your partner about your favorite book. Your discussion may include:"
+    const aiPrompts = [
+      "What is the book?",
+      "Who wrote the book?", 
+      "What is it about?"
+    ]
+    
+    // 直接设置AI模式的主题和提示
+    this.questionManager.setServerTopic(aiTopic, aiPrompts)
+    
+    console.log('AI模式主题已设置:', aiTopic)
+    console.log('AI模式提示已设置:', aiPrompts)
   }
 }
