@@ -1,15 +1,19 @@
 package com.example.deeptalk.modules.shop.entity;
 
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import javax.persistence.*;
+import org.hibernate.annotations.GenericGenerator;
 
-@Data
+@Getter
+@Setter
 @Entity
 @Table(name = "products")
 public class Product {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(generator = "uuid")
+    @GenericGenerator(name = "uuid", strategy = "uuid2")
+    private String id;
 
     @Column(nullable = false)
     private String name;
@@ -18,11 +22,8 @@ public class Product {
     private String description;
 
     @Column(nullable = false)
-    private Double price;
+    private double price;
 
     @Column(name = "image_url")
     private String imageUrl;
-
-    @Column(nullable = false)
-    private Integer stock;
 } 
