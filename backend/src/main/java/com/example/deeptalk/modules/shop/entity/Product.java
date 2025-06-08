@@ -1,28 +1,14 @@
 package com.example.deeptalk.modules.shop.entity;
 
-import lombok.Data;
-import javax.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 
-@Data
-@Entity
-@Table(name = "products")
+@Getter
+@Setter
 public class Product {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Column(nullable = false)
+    private String id;
     private String name;
-
-    @Column(nullable = false)
     private String description;
-
-    @Column(nullable = false)
-    private Double price;
-
-    @Column(name = "image_url")
+    private double price;
     private String imageUrl;
-
-    @Column(nullable = false)
-    private Integer stock;
 } 
