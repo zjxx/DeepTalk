@@ -26,6 +26,34 @@ export class VersusController {
     this.webSocketService = new WebSocketService('ws://115.175.45.173:8765')
     
     this.setupEventListeners()
+    
+    // 自动启动对战状态和计时
+    this.autoStartMatch()
+  }
+
+  // 自动启动对战方法
+  private async autoStartMatch(): Promise<void> {
+    try {
+      console.log('VersusController: 自动启动对战')
+      
+      // 立即启动对战状态
+      this.model.updateMatchState({ 
+        matchStarted: true,
+        speakingTurn: 'user'
+      })
+      
+      // 注意：不立即启动计时器，等待时间同步后再启动
+      console.log('VersusController: 等待时间同步完成后启动计时器...')
+      
+      // 加载默认题目
+      await this.questionManager.loadQuestionByLevel(this.model.getState().difficultyLevel)
+      
+      this.notifyStateChange()
+      console.log('VersusController: 自动对战初始化完成，matchStarted =', this.model.getState().matchStarted)
+      console.log('自动加载题目:', this.questionManager.getCurrentTopic())
+    } catch (error) {
+      console.error('自动启动对战失败:', error)
+    }
   }
 
   private setupEventListeners(): void {
@@ -113,39 +141,32 @@ export class VersusController {
   }
 
   get currentTopic(): string {
-    const state = this.model.getState()
-    
-    // 如果对话还没开始，不显示任何主题
-    if (!state.matchStarted) {
-      return ''
-    }
-    
-    // 对话开始后，优先使用题库中的题目
+    // 优先使用题库中的题目
     const questionTopic = this.questionManager.getCurrentTopic()
     if (questionTopic) {
       return questionTopic
     }
     
-    // 备用：使用VersusModel中的原有主题（但通常不会用到）
+    // 备用：使用VersusModel中的原有主题
     return this.model.currentTopic
   }
 
   get currentPrompt(): string {
     const state = this.model.getState()
     
+    // 如果对话已经开始，优先使用题库中的提示
+    if (state.matchStarted) {
+      const questionPrompt = this.questionManager.getPromptByIndex(state.currentPromptIndex)
+      if (questionPrompt) {
+        return questionPrompt
+      }
+      
+      // 备用：使用VersusModel中的原有提示
+      return this.model.currentPrompt
+    }
+    
     // 如果对话还没开始，显示默认提示
-    if (!state.matchStarted) {
-      return '准备好了吗？点击"开始对话"来开始练习！'
-    }
-    
-    // 优先使用题库中的提示
-    const questionPrompt = this.questionManager.getPromptByIndex(state.currentPromptIndex)
-    if (questionPrompt) {
-      return questionPrompt
-    }
-    
-    // 备用：使用VersusModel中的原有提示
-    return this.model.currentPrompt
+    return '对战即将开始，计时已经启动！'
   }  // 重要：录音功能实现
   async toggleRecording(): Promise<void> {
     const state = this.model.getState()
@@ -493,5 +514,51 @@ export class VersusController {
       // 返回一个空的 Blob 对象以避免后续代码出错
       return new Blob([], { type: contentType })
     }
+  }
+
+  // 更新剩余时间（用于时间同步）
+  updateRemainingTime(timeInSeconds: number): void {
+    this.model.updateMatchState({ remainingTime: timeInSeconds })
+    this.notifyStateChange()
+    console.log('更新剩余时间为:', timeInSeconds, '秒')
+  }
+
+  // 开始同步计时器（在时间同步后调用）
+  startSyncedTimer(remainingTimeInSeconds: number): void {
+    console.log('VersusController: 开始同步计时器，剩余时间:', remainingTimeInSeconds, '秒')
+    
+    // 更新剩余时间
+    this.model.updateMatchState({ remainingTime: remainingTimeInSeconds })
+    
+    // 启动计时器
+    this.timerService.startMainTimer(remainingTimeInSeconds)
+    
+    this.notifyStateChange()
+    console.log('VersusController: 同步计时器已启动')
+  }
+
+  // 同步服务器分配的主题和提示
+  syncServerTopic(topic: string, prompts: string[], difficulty: string): void {
+    console.log('VersusController: 同步服务器主题:', {
+      topic,
+      prompts,
+      difficulty
+    })
+    
+    // 直接设置服务器分配的主题
+    this.questionManager.setServerTopic(topic, prompts)
+    
+    // 可选：同步难度等级
+    if (difficulty) {
+      this.model.updateMatchState({ difficultyLevel: difficulty as '初级' | '中级' | '高级' })
+    }
+    
+    this.notifyStateChange()
+    console.log('VersusController: 服务器主题同步完成')
+  }
+
+  // 检查是否使用服务器主题
+  isUsingServerTopic(): boolean {
+    return this.questionManager.isUsingServerTopic()
   }
 }

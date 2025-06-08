@@ -10,7 +10,6 @@
               prepend-icon="mdi-arrow-left" 
               color="secondary" 
               @click="handleBackToMatching"
-              :disabled="state.matchStarted"
               class="back-to-matching-btn"
             >
               返回匹配
@@ -24,22 +23,36 @@
               <v-divider vertical class="mx-2" />
               语音分析：<span class="font-weight-bold">{{ displayVoiceAnalysis }}</span>
             </div>
-            <div class="text-body-1" v-if="state.matchStarted && controller.currentTopic">
+            <div class="text-body-1" v-if="controller.currentTopic">
               当前主题: <span class="font-weight-bold text-primary">{{ controller.currentTopic }}</span>
+              <v-chip 
+                v-if="controller.isUsingServerTopic()" 
+                color="success" 
+                size="x-small" 
+                class="ml-2"
+              >
+                <v-icon start size="12">mdi-check-circle</v-icon>
+                已同步
+              </v-chip>
+              <v-chip 
+                v-else 
+                color="warning" 
+                size="x-small" 
+                class="ml-2"
+              >
+                <v-icon start size="12">mdi-alert</v-icon>
+                本地
+              </v-chip>
             </div>
-            <div class="text-body-1" v-else-if="!state.matchStarted">
-              <span class="text-grey-5">点击"开始对话"来获取随机题目并开始对战</span>
+            <div class="text-body-1" v-else>
+              <span class="text-grey-5">正在加载题目...</span>
             </div>
             <div class="d-flex justify-center align-center mt-2">
               <v-chip color="primary" class="mr-2">
                 <v-icon start>mdi-clock-outline</v-icon>
                 总时间: {{ controller.formatTime(state.remainingTime) }}
               </v-chip>
-              <v-chip v-if="!state.matchStarted" color="warning" class="mr-2">
-                <v-icon start>mdi-pause</v-icon>
-                未开始 - 点击"开始对话"
-              </v-chip>
-              <v-chip v-else color="success" class="mr-2">
+              <v-chip color="success" class="mr-2">
                 <v-icon start>mdi-play</v-icon>
                 对战进行中
               </v-chip>
@@ -285,17 +298,9 @@
               </v-btn>
               
               <v-btn 
-                prepend-icon="mdi-play" 
-                color="primary" 
-                @click="handleStartMatch" 
-                :disabled="state.matchStarted"
-              >
-                开始对话
-              </v-btn>
-              <v-btn 
                 prepend-icon="mdi-skip-next" 
-                @click="handleNextTopic" 
-                :disabled="!state.matchStarted"
+                @click="handleNextTopic"
+                color="primary"
               >
                 下一话题
               </v-btn>
@@ -325,12 +330,12 @@
             </div>
 
             <v-btn 
-              :color="state.matchStarted ? 'error' : 'warning'" 
-              :prepend-icon="state.matchStarted ? 'mdi-stop' : 'mdi-exit-to-app'" 
+              color="error" 
+              :prepend-icon="'mdi-stop'" 
               @click="handleEndMatch" 
               class="my-2"
             >
-              {{ state.matchStarted ? '结束对战' : '退出房间' }}
+              结束对战
             </v-btn>
           </v-card-text>
         </v-card>
@@ -432,9 +437,20 @@
               <div><strong>会话ID:</strong> {{ sessionId }}</div>
               <div><strong>连接状态:</strong> {{ isWebSocketConnected ? '✅ 已连接' : '❌ 未连接' }}</div>
               <div><strong>WebSocket状态:</strong> {{ ws?.readyState ?? 'null' }}</div>
+              <div><strong>时间同步状态:</strong> {{ isTimeSynced ? '✅ 已同步' : '⏳ 未同步' }}</div>
+              <div><strong>服务器时间偏移:</strong> {{ serverTimeOffset }}ms</div>
+              <div><strong>对战开始时间:</strong> {{ battleStartTime ? new Date(battleStartTime).toLocaleTimeString() : '未设置' }}</div>
+              <div><strong>当前服务器时间:</strong> {{ isTimeSynced ? new Date(getServerTime()).toLocaleTimeString() : '未同步' }}</div>
+              <div><strong>当前主题:</strong> {{ controller.currentTopic || '无' }}</div>
+              <div><strong>主题来源:</strong> {{ controller.isUsingServerTopic() ? '🌐 服务器分配' : '🎲 本地随机' }}</div>
               <div><strong>对方正在说话:</strong> {{ state.isPartnerSpeaking ? '是' : '否' }}</div>
               <div><strong>正在播放对方音频:</strong> {{ isPlayingPartnerAudio ? '是' : '否' }}</div>
               <div><strong>最后录音:</strong> {{ state.lastRecordedAudio ? `${state.lastRecordedAudio.size} bytes` : '无' }}</div>
+              <div><strong>消息发送测试:</strong> 
+                <v-btn size="x-small" color="warning" @click="testEndBattleMessage">
+                  发送测试WebSocket消息
+                </v-btn>
+              </div>
             </div>
           </v-card-text>
         </v-card>
@@ -501,6 +517,11 @@ const isWebSocketConnected = ref(false)
 const audioContext = ref<AudioContext | null>(null)
 const isPlayingPartnerAudio = ref(false)
 
+// 时间同步相关状态
+const serverTimeOffset = ref(0) // 服务器时间与本地时间的差值
+const battleStartTime = ref<number | null>(null) // 对战开始的服务器时间
+const isTimeSynced = ref(false) // 是否已同步时间
+
 // 创建控制器实例
 const controller = new VersusController()
 const state = reactive(controller.getState())
@@ -527,16 +548,26 @@ const voiceAnalysisEnabled = computed(() => {
 
 // 用户模型数据
 const userModel = computed(() => ({ email: 'test@example.com' }))
-const handleStartMatch = async () => {
-  try {
-    await controller.startMatch()
-    if (userModelRef.value) {
-      userModelRef.value.playMotion('Flick', undefined)
+
+// 发送结束对战通知（单向通知，不等待确认）
+const sendEndBattleNotification = () => {
+  if (ws.value && ws.value.readyState === WebSocket.OPEN) {
+    const message = {
+      type: 'battle_end_notification',
+      userId: userId.value,
+      sessionId: sessionId.value,
+      message: '对方已退出对战',
+      timestamp: Date.now()
     }
-  } catch (error) {
-    console.error('开始对战失败:', error)
+    
+    console.log('发送结束对战通知:', message)
+    ws.value.send(JSON.stringify(message))
+    console.log('✅ 结束对战通知已发送（单向通知）')
+  } else {
+    console.log('WebSocket未连接，跳过发送通知')
   }
 }
+
 const handleEndMatch = async () => {
   console.log('点击结束对战，当前状态:', {
     matchStarted: state.matchStarted,
@@ -544,39 +575,23 @@ const handleEndMatch = async () => {
     wsConnected: isWebSocketConnected.value
   })
   
-  if (state.matchStarted) {
-    // 对战进行中，需要结束对战
-    if (displayBattleType.value === '真人对战' && isWebSocketConnected.value) {
-      // 真人对战模式，发送结束对战请求
-      if (confirm('确定要结束当前对战吗？需要等待对方同意。')) {
-        sendEndBattleRequest()
-        // 显示等待提示
-        alert('已发送结束对战请求，等待对方确认...')
+  // 统一处理：直接结束对战并跳转到评分界面
+  if (confirm('确定要结束当前对战吗？')) {
+    try {
+      console.log('用户确认结束对战，开始清理资源并跳转到评分界面...')
+      
+      // 如果是真人对战且WebSocket连接正常，发送通知消息（但不等待确认）
+      if (displayBattleType.value === '真人对战' && isWebSocketConnected.value) {
+        sendEndBattleNotification()
       }
-    } else {
-      // AI对战模式或未连接WebSocket，直接结束并跳转到评分界面
-      if (confirm('确定要结束当前对战吗？')) {
-        try {
-          console.log('开始清理资源并跳转到评分界面...')
-          await endBattleAndGoToEvaluation()
-        } catch (error) {
-          console.error('结束对战时出错:', error)
-          // 即使出错也跳转到评分界面
-          await new Promise(resolve => setTimeout(resolve, 300))
-          await router.push('/evaluation')
-        }
-      }
-    }
-  } else {
-    // 对战尚未开始，直接退出房间到评分界面
-    console.log('对战尚未开始，直接退出到评分界面')
-    if (confirm('确定要退出当前房间吗？')) {
-      try {
-        await endBattleAndGoToEvaluation()
-      } catch (error) {
-        console.error('退出房间时出错:', error)
-        await router.push('/evaluation')
-      }
+      
+      // 直接结束对战并跳转
+      await endBattleAndGoToEvaluation()
+    } catch (error) {
+      console.error('结束对战时出错:', error)
+      // 即使出错也跳转到评分界面
+      await new Promise(resolve => setTimeout(resolve, 300))
+      await router.push('/evaluation')
     }
   }
 }
@@ -720,22 +735,12 @@ const handleNextTopic = () => {
 }
 
 const handleBackToMatching = async () => {
-  if (state.matchStarted) {
-    if (confirm('当前对战正在进行中，确定要返回匹配界面吗？这将结束当前对战。')) {
-      try {
-        // 清理当前对战状态并跳转到评分界面
-        await endBattleAndGoToEvaluation()
-      } catch (error) {
-        console.error('返回时结束对战出错:', error)
-        await router.push('/evaluation')
-      }
-    }
-  } else {
-    // 如果没有开始对战，询问是否返回匹配界面或进入评分界面
-    const choice = confirm('点击"确定"返回匹配界面，点击"取消"进入评分界面')
-    if (choice) {
-      await router.push('/matching')
-    } else {
+  if (confirm('当前对战正在进行中，确定要返回匹配界面吗？这将结束当前对战。')) {
+    try {
+      // 清理当前对战状态并跳转到评分界面
+      await endBattleAndGoToEvaluation()
+    } catch (error) {
+      console.error('返回时结束对战出错:', error)
       await router.push('/evaluation')
     }
   }
@@ -785,14 +790,23 @@ const connectWebSocket = async () => {
     ws.value = new WebSocket(wsUrl)
     
     ws.value.onopen = () => {
-      // 连接成功后发送注册消息
+      // 连接成功后发送注册消息，包含用户偏好
       ws.value?.send(JSON.stringify({
         type: 'register',
         userId: userId.value,
-        sessionId: sessionId.value
+        sessionId: sessionId.value,
+        userPreferences: {
+          difficulty: state.difficultyLevel,
+          battleType: state.matchType,
+          duration: Math.floor(state.remainingTime / 60)
+        },
+        timestamp: Date.now()
       }))
       isWebSocketConnected.value = true
-      console.log('WebSocket连接成功，sessionId:', sessionId.value)
+      console.log('WebSocket连接成功，已发送用户偏好，sessionId:', sessionId.value)
+      
+      // 请求服务器时间同步
+      requestTimeSync()
       
       // 发送连接测试消息
       setTimeout(() => {
@@ -863,12 +877,12 @@ const connectWebSocket = async () => {
               }
               break
             case 'partner_end_battle':
-              // 对方请求结束对战
-              console.log('对方请求结束对战')
+              // 对方请求结束对战 (旧版本兼容)
+              console.log('对方请求结束对战(旧版本)')
               handlePartnerEndBattle()
               break
             case 'battle_ended':
-              // 服务器确认对战结束
+              // 服务器确认对战结束 (旧版本兼容)
               console.log('服务器确认对战结束，准备跳转到评分界面')
               handleBattleEnded()
               break
@@ -879,6 +893,61 @@ const connectWebSocket = async () => {
               console.error('服务器错误:', data.message)
               alert('服务器错误: ' + data.message)
               break
+            case 'time_sync_request': {
+              // 处理时间同步请求
+              console.log('收到时间同步请求:', data)
+              const serverTime = Date.now()
+              ws.value?.send(JSON.stringify({
+                type: 'time_sync_response',
+                serverTime: serverTime,
+                userId: userId.value,
+                sessionId: sessionId.value,
+                timestamp: Date.now()
+              }))
+              console.log('已发送时间同步响应')
+              break
+            }
+            case 'time_sync_response': {
+              // 处理时间同步响应
+              handleTimeSync(data.serverTime, data.clientRequestTime)
+              break
+            }
+            case 'battle_sync': {
+              // 同步对战信息
+              console.log('收到对战同步消息:', data)
+              startSyncedBattle(data.serverStartTime, data.duration, data.topic, data.prompts)
+              break
+            }
+            case 'topic_sync': {
+              // 同步主题信息
+              console.log('收到主题同步消息:', data)
+              syncBattleTopic(data.topic, data.prompts, data.difficulty)
+              break
+            }
+            case 'end_battle_request': {
+              // 收到对方的结束对战请求
+              console.log('收到对方的结束对战请求:', data)
+              handlePartnerEndBattleRequest(data)
+              break
+            }
+            case 'end_battle_confirm': {
+              // 对方同意结束对战
+              console.log('对方同意结束对战:', data)
+              handleBattleEndConfirmed()
+              break
+            }
+            case 'end_battle_refuse': {
+              // 对方拒绝结束对战
+              console.log('对方拒绝结束对战:', data)
+              handleBattleEndRefused()
+              break
+            }
+            case 'battle_end_notification': {
+              // 收到对方退出对战的通知
+              console.log('收到对方退出对战通知:', data)
+              handlePartnerLeftBattle(data)
+              break
+            }
             default:
               console.log('未知消息类型:', data)
           }
@@ -1007,7 +1076,7 @@ console.log('初始化状态检查:', {
 onMounted(async () => {
   console.log('Versus页面已挂载')
   
-  // 应用匹配参数，但不启动对战
+  // 应用匹配参数
   if (route.query.battleType) {
     controller.changeMatchType(route.query.battleType as '真人对战' | 'AI辅助')
   }
@@ -1022,15 +1091,41 @@ onMounted(async () => {
     state.remainingTime = parseInt(route.query.duration as string) * 60
   }
   
-  // 获取WebSocket连接信息并自动连接（但不启动对战）
+  // 获取WebSocket连接信息并自动连接
   if (route.query.sessionId && route.query.userId) {
     sessionId.value = route.query.sessionId as string
     userId.value = route.query.userId as string
     console.log('检测到WebSocket连接信息，开始建立连接...')
-    // 自动建立WebSocket连接，但不启动对战
+    // 自动建立WebSocket连接
     await connectWebSocket()
+    
+    // 等待时间同步完成，然后启动计时器
+    let syncCheckCount = 0
+    const checkSync = () => {
+      if (isTimeSynced.value) {
+        console.log('时间同步完成，准备启动计时器')
+        // 如果没有收到服务器的battle_sync消息，使用默认时间启动
+        setTimeout(() => {
+          if (!battleStartTime.value) {
+            console.log('未收到服务器同步消息，使用默认时间启动计时器')
+            controller.startSyncedTimer(state.remainingTime)
+          }
+        }, 2000)
+      } else if (syncCheckCount < 50) { // 最多等待5秒
+        syncCheckCount++
+        setTimeout(checkSync, 100)
+      } else {
+        console.warn('时间同步超时，使用本地时间启动计时器')
+        controller.startSyncedTimer(state.remainingTime)
+      }
+    }
+    checkSync()
   } else {
-    console.warn('未检测到WebSocket连接信息，跳过连接')
+    console.warn('未检测到WebSocket连接信息，使用本地时间启动计时器')
+    // 没有WebSocket连接，直接启动计时器
+    setTimeout(() => {
+      controller.startSyncedTimer(state.remainingTime)
+    }, 1000)
   }
   
   await nextTick()
@@ -1067,6 +1162,7 @@ onMounted(async () => {
   console.log('PIXI应用初始化完成，对战模式:', displayBattleType.value)
   console.log('WebSocket连接状态:', isWebSocketConnected.value)
   console.log('对战状态 matchStarted:', state.matchStarted)
+  console.log('对战自动启动完成，计时器已开始')
 })
 
 // 清理资源
@@ -1142,16 +1238,46 @@ onBeforeUnmount(() => {
   console.log('versus组件资源清理完成')
 })
 
-// 结束对战相关函数
-const handlePartnerEndBattle = () => {
-  // 显示对方结束对战的提示
-  if (confirm('对方请求结束对战，是否同意？')) {
-    // 同意结束对战
-    sendEndBattleConfirmation()
-  } else {
-    // 拒绝结束对战，发送拒绝消息
-    sendEndBattleRefusal()
+// 处理对方的结束对战请求（简化版，直接跳转）
+const handlePartnerEndBattleRequest = (data: { type: string; legacy?: boolean; [key: string]: unknown }) => {
+  console.log('收到对方结束对战请求:', data)
+  
+  // 显示通知，直接跳转到评分界面
+  alert('对方已退出对战，即将跳转到评分界面')
+  
+  // 延迟跳转
+  setTimeout(async () => {
+    await endBattleAndGoToEvaluation()
+  }, 1000)
+}
+
+// 处理对战结束确认（保留兼容性）
+const handleBattleEndConfirmed = async () => {
+  console.log('对方同意结束对战，准备跳转到评分界面')
+  
+  // 显示通知
+  alert('对方已同意结束对战，即将跳转到评分界面')
+  
+  // 清理资源并跳转
+  try {
+    await endBattleAndGoToEvaluation()
+  } catch (error) {
+    console.error('结束对战处理失败:', error)
+    await router.push('/evaluation')
   }
+}
+
+// 处理对战结束拒绝（保留兼容性）
+const handleBattleEndRefused = () => {
+  console.log('对方拒绝结束对战')
+  alert('对方拒绝结束对战，继续当前对战')
+}
+
+// 结束对战相关函数（旧版本，保持兼容性）
+const handlePartnerEndBattle = () => {
+  console.log('收到旧版本的对方结束对战请求')
+  // 为了兼容性，调用新的处理函数
+  handlePartnerEndBattleRequest({ type: 'end_battle_request', legacy: true })
 }
 
 const handleBattleEnded = async () => {
@@ -1188,43 +1314,135 @@ const handleBattleEnded = async () => {
   }
 }
 
-const sendEndBattleRequest = () => {
-  // 发送结束对战请求
+// 测试WebSocket连接
+const testEndBattleMessage = () => {
   if (ws.value && ws.value.readyState === WebSocket.OPEN) {
+    console.log('发送测试WebSocket消息')
+    // 发送一个测试消息
     ws.value.send(JSON.stringify({
-      type: 'end_battle_request',
+      type: 'test',
+      message: '测试连接',
       userId: userId.value,
       sessionId: sessionId.value,
       timestamp: Date.now()
     }))
-    console.log('已发送结束对战请求')
+  } else {
+    alert('WebSocket未连接，无法发送测试消息')
   }
 }
 
-const sendEndBattleConfirmation = () => {
-  // 发送结束对战确认
-  if (ws.value && ws.value.readyState === WebSocket.OPEN) {
-    ws.value.send(JSON.stringify({
-      type: 'end_battle_confirm',
-      userId: userId.value,
-      sessionId: sessionId.value,
-      timestamp: Date.now()
-    }))
-    console.log('已发送结束对战确认')
+// 时间同步相关函数
+const requestTimeSync = () => {
+  if (!ws.value || ws.value.readyState !== WebSocket.OPEN) {
+    return
+  }
+  
+  const clientTime = Date.now()
+  ws.value.send(JSON.stringify({
+    type: 'time_sync_request',
+    clientTime: clientTime,
+    userId: userId.value,
+    sessionId: sessionId.value
+  }))
+  console.log('发送时间同步请求，客户端时间:', clientTime)
+}
+
+// 处理服务器时间同步响应
+const handleTimeSync = (serverTime: number, clientRequestTime: number) => {
+  const clientReceiveTime = Date.now()
+  const networkDelay = (clientReceiveTime - clientRequestTime) / 2
+  
+  // 计算服务器时间偏移
+  serverTimeOffset.value = serverTime - clientReceiveTime + networkDelay
+  isTimeSynced.value = true
+  
+  console.log('时间同步完成:', {
+    serverTime,
+    clientTime: clientReceiveTime,
+    networkDelay,
+    serverTimeOffset: serverTimeOffset.value
+  })
+}
+
+// 获取同步后的服务器时间
+const getServerTime = () => {
+  return Date.now() + serverTimeOffset.value
+}
+
+// 启动同步对战
+const startSyncedBattle = (serverStartTime: number, duration: number, topic?: string, prompts?: string[]) => {
+  console.log('启动同步对战:', {
+    serverStartTime,
+    duration,
+    topic,
+    prompts,
+    currentServerTime: getServerTime()
+  })
+  
+  // 如果服务器提供了主题和提示，先同步主题
+  if (topic && prompts) {
+    console.log('同步服务器分配的主题:', topic)
+    controller.syncServerTopic(topic, prompts, state.difficultyLevel)
+  }
+  
+  battleStartTime.value = serverStartTime
+  const currentTime = getServerTime()
+  
+  // 如果对战已经开始，计算剩余时间
+  if (currentTime >= serverStartTime) {
+    const elapsedTime = Math.floor((currentTime - serverStartTime) / 1000)
+    const remainingTime = Math.max(0, duration - elapsedTime)
+    
+    console.log('对战已开始:', {
+      elapsedTime,
+      remainingTime
+    })
+    
+    // 启动同步计时器
+    controller.startSyncedTimer(remainingTime)
+  } else {
+    // 对战还未开始，等待开始时间
+    const delayMs = serverStartTime - currentTime
+    console.log('对战将在', delayMs, 'ms后开始')
+    
+    setTimeout(() => {
+      console.log('同步对战正式开始!')
+      controller.startSyncedTimer(duration)
+    }, delayMs)
   }
 }
 
-const sendEndBattleRefusal = () => {
-  // 发送结束对战拒绝
-  if (ws.value && ws.value.readyState === WebSocket.OPEN) {
-    ws.value.send(JSON.stringify({
-      type: 'end_battle_refuse',
-      userId: userId.value,
-      sessionId: sessionId.value,
-      timestamp: Date.now()
-    }))
-    console.log('已发送结束对战拒绝')
-  }
+// 同步对战主题
+const syncBattleTopic = (topic: string, prompts: string[], difficulty: string) => {
+  console.log('同步对战主题:', {
+    topic,
+    prompts,
+    difficulty
+  })
+  
+  // 同步主题到控制器
+  controller.syncServerTopic(topic, prompts, difficulty)
+  
+  console.log('主题同步完成，当前主题:', controller.currentTopic)
+}
+
+// 处理对方退出对战的通知
+const handlePartnerLeftBattle = (data: { message?: string; [key: string]: unknown }) => {
+  console.log('对方已退出对战:', data)
+  
+  // 显示通知
+  const message = data.message || '对方已退出对战'
+  alert(`${message}\n\n即将跳转到评分界面`)
+  
+  // 延迟跳转到评分界面
+  setTimeout(async () => {
+    try {
+      await endBattleAndGoToEvaluation()
+    } catch (error) {
+      console.error('处理对方退出时出错:', error)
+      await router.push('/evaluation')
+    }
+  }, 1000)
 }
 </script>
 
