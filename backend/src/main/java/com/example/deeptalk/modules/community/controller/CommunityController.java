@@ -1,9 +1,6 @@
 package com.example.deeptalk.modules.community.controller;
 
-import com.example.deeptalk.modules.community.dto.LikeRequest;
-import com.example.deeptalk.modules.community.dto.LikeResponse;
-import com.example.deeptalk.modules.community.dto.CheckAuthorRequest;
-import com.example.deeptalk.modules.community.dto.CheckAuthorResponse;
+import com.example.deeptalk.modules.community.dto.*;
 import com.example.deeptalk.modules.community.entity.Post;
 import com.example.deeptalk.modules.community.service.PostService;
 import lombok.Getter;
@@ -22,9 +19,11 @@ public class CommunityController {
     private PostService postService;
 
     @PostMapping(value = "/search", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
-    public ResponseEntity<List<Post>> searchCommunity(@RequestBody SearchRequest request) {
+    public ResponseEntity<SearchResult> searchCommunity(@RequestBody SearchRequest request) {
         List<Post> posts = postService.searchPosts(request.getQuery(), request.getType());
-        return ResponseEntity.ok(posts);
+        SearchResult result = new SearchResult();
+        result.setPosts(posts);
+        return ResponseEntity.ok(result);
     }
 
     @PostMapping(value = "/posts/like", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
@@ -34,9 +33,13 @@ public class CommunityController {
     }
 
     @PostMapping(value = "/posts/add", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
-    public ResponseEntity<Post> addPost(@RequestBody Post post) {
+    public ResponseEntity<AddPostResponse> addPost(@RequestBody Post post) {
         Post savedPost = postService.addPost(post);
-        return ResponseEntity.ok(savedPost);
+        AddPostResponse response = new AddPostResponse();
+        response.setSuccess(true);
+        response.setMessage("发帖成功");
+        response.setPost(savedPost);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping(value = "/posts/check-author", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")

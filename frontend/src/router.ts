@@ -86,7 +86,7 @@ const routes = [
     path: '/versus',
     name: 'Versus',
     component: Versus,
-    meta: { requiresAuth: false }
+    meta: { requiresAuth: true }
   },
   {
     path: '/post/:id',
@@ -110,13 +110,13 @@ const routes = [
     path: '/matching',
     name: 'Matching',
     component: Matching,
-    meta: { requiresAuth: false }
+    meta: { requiresAuth: true }
   },
   {
     path: '/evaluation',
     name: 'Evaluation',
     component: Evaluation,
-    meta: { requiresAuth: false }
+    meta: { requiresAuth: true }
   },
   {
     path: '/repositories',

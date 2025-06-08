@@ -199,14 +199,16 @@
                 </v-btn>
               </v-btn-group>
               
-              <div class="mt-3">
+              <div class="mt-4">
                 <v-btn 
-                  color="grey" 
-                  variant="text"
+                  color="orange" 
+                  variant="elevated"
                   prepend-icon="mdi-home"
+                  size="x-large"
+                  class="home-btn"
                   @click="handleGoHome"
                 >
-                  返回首页
+                  返回主页
                 </v-btn>
               </div>
             </v-card-text>
@@ -492,6 +494,20 @@ onBeforeUnmount(() => {
 
 .v-btn-group .v-btn {
   border-radius: 25px;
+}
+
+.home-btn {
+  border-radius: 30px !important;
+  padding: 0 2rem !important;
+  min-width: 200px;
+  font-weight: bold;
+  box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3) !important;
+  transition: all 0.3s ease;
+}
+
+.home-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 152, 0, 0.4) !important;
 }
 
 /* 响应式设计 */

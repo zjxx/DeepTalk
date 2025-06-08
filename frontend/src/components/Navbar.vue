@@ -14,9 +14,9 @@
       </a-menu-item>
       
       <a-menu-item key="explore">
-        <router-link to="/explore">
+        <router-link to="/matching">
           <compass-outlined />
-          探索
+          匹配
         </router-link>
       </a-menu-item>
       <a-menu-item key="community">

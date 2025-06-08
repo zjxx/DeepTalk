@@ -3,6 +3,7 @@ package com.example.deeptalk.modules.community.entity;
 import javax.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
+import javax.persistence.Transient;
 
 @Data
 @Entity
@@ -32,6 +33,9 @@ public class Post {
 
     @Column(name = "likes_count", nullable = false)
     private Integer likesCount = 0;
+
+    @Transient
+    private Author author;
 
     @PrePersist
     protected void onCreate() {
