@@ -1,15 +1,30 @@
 <template>
-  <div>
-    <h1>首页</h1>
-    <p>欢迎来到首页！</p>
+  <div class="home">
+    <v-container fluid>
+      <v-row>
+        <!-- 左侧待办列表 -->
+        <v-col cols="12" md="6">
+          <TodoList />
+        </v-col>
+        
+        <!-- 右侧评分图表 -->
+        <v-col cols="12" md="6">
+          <ScoreChart />
+        </v-col>
+      </v-row>
+    </v-container>
   </div>
 </template>
 
 <script setup lang="ts">
-// 这里可以添加一些首页相关的脚本，如果需要的话
-// 目前保持精简，不包含个人资料逻辑
+import TodoList from '../components/TodoList.vue'
+import ScoreChart from '../components/ScoreChart.vue'
 </script>
 
 <style scoped>
-/* 首页的样式，目前为空 */
+.home {
+  padding: 20px;
+  background-color: #f5f5f5;
+  min-height: 100vh;
+}
 </style>

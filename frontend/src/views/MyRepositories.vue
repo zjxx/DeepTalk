@@ -163,14 +163,14 @@ const handleSearch = async () => {
 
 // 查看物品详情
 const viewItem = (itemId: string) => {
-  router.push(`/repositories/item/${itemId}`)
+  router.push(`/repositories/live2d/${itemId}`)
 }
 
 // 使用物品
 const useItem = async (product: Product) => {
   try {
-    // TODO: 实现使用物品的逻辑
-    console.log('使用物品:', product.name)
+    // 跳转到 Live2D 预览页面
+    router.push(`/repositories/live2d/${product.id}`)
   } catch {
     error.value = '使用物品失败，请重试'
   }
