@@ -16,6 +16,9 @@ public class ForwardingService {
     // 用于存储语音会话信息, sessionId -> SpeechSessionInfo
     private final ConcurrentHashMap<String, SpeechSessionInfo> activeSessions = new ConcurrentHashMap<>();
 
+    // 实例化并持有RecordingHandler的引用
+    private final RecordingHandler recordingHandler = new RecordingHandler();
+
     public SpeechSessionInfo makeConnection(String user1Id, String user2Id) {
         String sessionId = java.util.UUID.randomUUID().toString();
         SpeechSessionInfo session = new SpeechSessionInfo(sessionId, user1Id, user2Id);
@@ -29,6 +32,8 @@ public class ForwardingService {
         // 例如：从数据库或缓存中删除会话信息
         log.info("[ForwardingService] 终止会话: {}", sessionId);
         try {
+            // 首先结束录制
+            recordingHandler.finalizeSessionRecordings(sessionId);
             activeSessions.remove(sessionId);
         } catch (Exception e) {
             log.error("[ForwardingService] 终止会话 {} 时发生错误: {}", sessionId, e.getMessage());
@@ -75,6 +80,10 @@ public class ForwardingService {
         }
         // 转发音频数据到对手用户的 WebSocket 会话
         try {
+            // 只记录能够成功转发的音频数据
+            // 调用RecordingHandler来记录音频块
+            recordingHandler.recordAudioChunk(userInfo.getSessionId(), userInfo.getUserId(), audioData);
+
             opponentSession.sendMessage(new org.springframework.web.socket.BinaryMessage(audioData));
             log.info("[ForwardingService] 已成功转发音频数据到对手用户 {} 的 WebSocket 会话 {}", opponentUserInfo.getUserId(), opponentUserInfo.getWsSession().getId());
         } catch (Exception e) {
