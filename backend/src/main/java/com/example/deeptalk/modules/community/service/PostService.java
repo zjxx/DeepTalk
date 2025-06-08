@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class PostService {
@@ -22,16 +23,28 @@ public class PostService {
     private PostLikeRepository postLikeRepository;
 
     public List<Post> searchPosts(String keyword, String type) {
+        List<Post> posts;
         if (keyword == null || keyword.trim().isEmpty()) {
-            return postRepository.findAll();
-        }
-
-        if ("authors".equals(type)) {
-            return postRepository.searchAuthors(keyword);
+            posts = postRepository.findAll();
+        } else if ("authors".equals(type)) {
+            posts = postRepository.searchAuthors(keyword);
         } else {
-            // 默认搜索帖子（标题和内容）
-            return postRepository.searchPosts(keyword);
+            posts = postRepository.searchPosts(keyword);
         }
+        // 组装 author 字段
+        return posts.stream().map(post -> {
+            Author author = new Author();
+            author.setId(post.getAuthorId());
+            author.setUsername(post.getAuthorName());
+            author.setAvatar(post.getAuthorAvatar());
+            // 查询作者发帖数和获赞数
+            List<Post> authorPosts = postRepository.findByAuthorId(post.getAuthorId());
+            author.setAuthorPosts(authorPosts.size());
+            int totalLikes = authorPosts.stream().mapToInt(Post::getLikesCount).sum();
+            author.setAuthorLikes(totalLikes);
+            post.setAuthor(author);
+            return post;
+        }).collect(Collectors.toList());
     }
 
     @Transactional
