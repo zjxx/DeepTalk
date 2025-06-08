@@ -39,6 +39,15 @@
                 <v-icon start>mdi-pause</v-icon>
                 等待开始
               </v-chip>
+              <!-- WebSocket连接状态 -->
+              <v-chip 
+                :color="isWebSocketConnected ? 'success' : 'warning'" 
+                class="ml-2"
+                size="small"
+              >
+                <v-icon start>{{ isWebSocketConnected ? 'mdi-check-circle' : 'mdi-wifi-off' }}</v-icon>
+                {{ isWebSocketConnected ? '已连接' : '未连接' }}
+              </v-chip>
             </div>
           </v-card-text>
         </v-card>
@@ -104,13 +113,14 @@
           </v-card-title>
           <v-card-actions class="d-flex justify-center py-2">
             <v-chip 
-              :color="state.isUserSpeaking ? 'success' : 'primary'" 
+              :color="state.isRecording ? 'error' : (isWebSocketConnected ? 'success' : 'warning')" 
               class="mr-2"
               :class="{ 'speaking-pulse': state.isRecording }"
+              size="large"
             >
               {{ 
-                state.isRecording ? '录音中... (再按一次结束)' : 
-                (state.isUserSpeaking ? '正在发言' : '可以随时发言')
+                state.isRecording ? '🎤 录音中... (点击停止并发送)' : 
+                (isWebSocketConnected ? '✅ 可以随时开始录音通话' : '⚠️ WebSocket未连接')
               }}
             </v-chip>
             
@@ -121,16 +131,17 @@
             
             <!-- 录音按钮 -->
             <v-btn 
-              :color="state.isRecording ? 'error' : (controller.canUserSpeak ? 'primary' : 'grey')" 
-              variant="outlined" 
-              :icon="state.isRecording ? 'mdi-stop' : (state.userMuted ? 'mdi-microphone-off' : 'mdi-microphone')"
+              :color="state.isRecording ? 'error' : 'primary'" 
+              variant="elevated" 
+              :icon="state.isRecording ? 'mdi-stop' : 'mdi-microphone'"
               @click="handleToggleRecording"
               :class="{ 'recording-btn': state.isRecording }"
-              :disabled="!state.matchStarted || state.isPlayingAudio"
+              :disabled="!isWebSocketConnected || state.isPlayingAudio"
+              size="large"
               class="mr-2"
             >
               <v-tooltip activator="parent" location="top">
-                {{ state.isRecording ? '停止录音并结束发言' : '开始录音' }}
+                {{ state.isRecording ? '停止录音并发送' : '开始录音对话' }}
               </v-tooltip>
             </v-btn>
             
@@ -254,9 +265,24 @@
         <v-card>
           <v-card-text class="d-flex justify-space-between align-center flex-wrap">
             <v-btn-group class="my-2">
+              <!-- WebSocket通话按钮 -->
+              <v-btn 
+                :color="state.isRecording ? 'error' : 'success'" 
+                :prepend-icon="state.isRecording ? 'mdi-stop' : 'mdi-microphone'"
+                @click="handleToggleRecording"
+                :disabled="!isWebSocketConnected"
+                :class="{ 'recording-btn': state.isRecording }"
+                size="large"
+              >
+                {{ state.isRecording ? '停止录音' : '开始通话' }}
+                <v-tooltip activator="parent" location="top">
+                  {{ state.isRecording ? '停止录音并发送到对方' : 'WebSocket语音通话' }}
+                </v-tooltip>
+              </v-btn>
+              
               <v-btn 
                 prepend-icon="mdi-play" 
-                color="success" 
+                color="primary" 
                 @click="handleStartMatch" 
                 :disabled="state.matchStarted"
               >
@@ -382,6 +408,29 @@
         </v-card>
       </v-col>
 
+      <!-- WebSocket调试面板 -->
+      <v-col cols="12" v-if="isDev" class="py-1">
+        <v-card>
+          <v-card-title class="d-flex justify-space-between">
+            <span>WebSocket调试信息</span>
+            <v-chip :color="isWebSocketConnected ? 'success' : 'error'" size="small">
+              {{ isWebSocketConnected ? '已连接' : '未连接' }}
+            </v-chip>
+          </v-card-title>
+          <v-card-text>
+            <div class="debug-info">
+              <div><strong>用户ID:</strong> {{ userId }}</div>
+              <div><strong>会话ID:</strong> {{ sessionId }}</div>
+              <div><strong>连接状态:</strong> {{ isWebSocketConnected ? '✅ 已连接' : '❌ 未连接' }}</div>
+              <div><strong>WebSocket状态:</strong> {{ ws?.readyState ?? 'null' }}</div>
+              <div><strong>对方正在说话:</strong> {{ state.isPartnerSpeaking ? '是' : '否' }}</div>
+              <div><strong>正在播放对方音频:</strong> {{ isPlayingPartnerAudio ? '是' : '否' }}</div>
+              <div><strong>最后录音:</strong> {{ state.lastRecordedAudio ? `${state.lastRecordedAudio.size} bytes` : '无' }}</div>
+            </div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+
       <!-- 实时转写面板 -->
       <v-col cols="12" v-if="state.matchStarted" class="py-1">
         <v-card>
@@ -432,6 +481,16 @@ const pixiAppInstance = ref<PIXI.Application | null>(null)
 const userModelRef = ref<Live2DModelComponent | null>(null)
 const partnerModelRef = ref<Live2DModelComponent | null>(null)
 let resizeObserver: ResizeObserver | null = null
+
+// WebSocket相关状态
+const userId = ref<string>('')
+const sessionId = ref<string>('')
+const ws = ref<WebSocket | null>(null)
+const isWebSocketConnected = ref(false)
+
+// 音频相关状态
+const audioContext = ref<AudioContext | null>(null)
+const isPlayingPartnerAudio = ref(false)
 
 // 创建控制器实例
 const controller = new VersusController()
@@ -510,7 +569,55 @@ const handleEndMatch = async () => {
 
 const handleToggleRecording = async () => {
   try {
-    await controller.toggleRecording()
+    // 检查WebSocket连接状态
+    if (!isWebSocketConnected.value) {
+      alert('WebSocket未连接，无法进行语音通话。请检查网络连接。')
+      return
+    }
+    
+    if (state.isRecording) {
+      // 停止录音并发送到WebSocket
+      console.log('准备停止录音并发送...')
+      await controller.toggleRecording()
+      
+      // 如果有录音数据且WebSocket连接正常，发送到WebSocket
+      if (state.lastRecordedAudio && ws.value && ws.value.readyState === WebSocket.OPEN) {
+        console.log('录音完成，准备发送:', {
+          size: state.lastRecordedAudio.size,
+          type: state.lastRecordedAudio.type,
+          wsState: ws.value.readyState
+        })
+        
+        // 显示发送状态
+        const sendingToast = document.createElement('div')
+        sendingToast.textContent = '正在发送音频...'
+        sendingToast.style.cssText = 'position:fixed;top:20px;right:20px;background:#2196F3;color:white;padding:12px;border-radius:8px;z-index:9999'
+        document.body.appendChild(sendingToast)
+        
+        try {
+          await sendAudioToWebSocket(state.lastRecordedAudio)
+          sendingToast.textContent = '✅ 音频发送成功!'
+          sendingToast.style.background = '#4CAF50'
+          setTimeout(() => document.body.removeChild(sendingToast), 2000)
+        } catch (error) {
+          sendingToast.textContent = '❌ 发送失败'
+          sendingToast.style.background = '#F44336'
+          setTimeout(() => document.body.removeChild(sendingToast), 3000)
+          throw error
+        }
+      } else {
+        console.warn('录音数据为空或WebSocket连接异常:', {
+          hasAudio: !!state.lastRecordedAudio,
+          wsExists: !!ws.value,
+          wsState: ws.value?.readyState
+        })
+        alert('录音数据异常，请重试')
+      }
+    } else {
+      // 开始录音
+      console.log('开始WebSocket语音录音...')
+      await controller.toggleRecording()
+    }
     
     // 更新模型表情
     if (userModelRef.value) {
@@ -607,6 +714,196 @@ const handleDownloadRecording = () => {
   }
 }
 
+// WebSocket连接函数
+const connectWebSocket = async () => {
+  if (!sessionId.value || !userId.value) {
+    console.warn('缺少sessionId或userId，无法建立WebSocket连接')
+    return
+  }
+  
+  try {
+    const wsUrl = `ws://115.175.45.173:8080/api/speech/ws`
+    ws.value = new WebSocket(wsUrl)
+    
+    ws.value.onopen = () => {
+      // 连接成功后发送注册消息
+      ws.value?.send(JSON.stringify({
+        type: 'register',
+        userId: userId.value,
+        sessionId: sessionId.value
+      }))
+      isWebSocketConnected.value = true
+      console.log('WebSocket连接成功，sessionId:', sessionId.value)
+    }
+    
+    ws.value.onmessage = async (event) => {
+      console.log('收到WebSocket消息:', {
+        dataType: typeof event.data,
+        isBlob: event.data instanceof Blob,
+        size: event.data instanceof Blob ? event.data.size : event.data.length,
+        timestamp: new Date().toISOString()
+      })
+      
+      // 处理接收到的消息
+      if (event.data instanceof Blob) {
+        // 处理二进制音频数据
+        console.log('收到对方音频数据:', {
+          size: event.data.size,
+          type: event.data.type
+        })
+        await playPartnerAudio(event.data)
+      } else {
+        // 处理文本消息
+        try {
+          const data = JSON.parse(event.data)
+          console.log('收到WebSocket文本消息:', data)
+          
+          switch (data.type) {
+            case 'system':
+              console.log('系统消息:', data.message)
+              break
+            case 'audio':
+              console.log('音频元数据:', data)
+              // 对方发送音频的元数据，准备接收音频数据
+              state.isPartnerSpeaking = true
+              if (partnerModelRef.value && displayBattleType.value === '真人对战') {
+                partnerModelRef.value.playMotion('Talk', undefined)
+              }
+              break
+            case 'partner_speaking':
+              // 对方开始说话
+              state.isPartnerSpeaking = true
+              if (partnerModelRef.value && displayBattleType.value === '真人对战') {
+                partnerModelRef.value.playMotion('Talk', undefined)
+              }
+              break
+            case 'partner_stopped':
+              // 对方停止说话
+              state.isPartnerSpeaking = false
+              if (partnerModelRef.value && displayBattleType.value === '真人对战') {
+                partnerModelRef.value.playMotion('Idle', undefined)
+              }
+              break
+            case 'user_connected':
+              console.log('用户连接成功:', data)
+              break
+            case 'error':
+              console.error('服务器错误:', data.message)
+              alert('服务器错误: ' + data.message)
+              break
+            default:
+              console.log('未知消息类型:', data)
+          }
+        } catch (error) {
+          console.error('解析WebSocket消息失败:', error, '原始数据:', event.data)
+        }
+      }
+    }
+    
+    ws.value.onclose = () => {
+      console.log('WebSocket连接关闭')
+      isWebSocketConnected.value = false
+    }
+    
+    ws.value.onerror = (error) => {
+      console.error('WebSocket连接错误:', error)
+      isWebSocketConnected.value = false
+    }
+  } catch (error) {
+    console.error('建立WebSocket连接失败:', error)
+  }
+}
+
+// 初始化音频上下文
+const initAudioContext = () => {
+  if (!audioContext.value) {
+    audioContext.value = new AudioContext()
+  }
+  return audioContext.value
+}
+
+// 播放对方音频
+const playPartnerAudio = async (audioBlob: Blob) => {
+  try {
+    const arrayBuffer = await audioBlob.arrayBuffer()
+    const context = initAudioContext()
+    
+    const audioBuffer = await context.decodeAudioData(arrayBuffer)
+    const source = context.createBufferSource()
+    source.buffer = audioBuffer
+    
+    const gainNode = context.createGain()
+    gainNode.gain.value = 1.0
+    
+    source.connect(gainNode)
+    gainNode.connect(context.destination)
+    
+    source.onended = () => {
+      isPlayingPartnerAudio.value = false
+      console.log('对方音频播放完成')
+    }
+    
+    isPlayingPartnerAudio.value = true
+    source.start(0)
+    console.log('开始播放对方音频')
+  } catch (error) {
+    console.error('播放对方音频失败:', error)
+    isPlayingPartnerAudio.value = false
+  }
+}
+
+// 发送音频数据到WebSocket
+const sendAudioToWebSocket = async (audioBlob: Blob) => {
+  if (!ws.value || ws.value.readyState !== WebSocket.OPEN) {
+    console.warn('WebSocket未连接，无法发送音频')
+    return
+  }
+  
+  try {
+    // 检查音频数据大小
+    if (audioBlob.size < 100) {
+      console.log('音频数据太小，跳过发送:', audioBlob.size)
+      return
+    }
+    
+    console.log('准备发送音频数据:', {
+      size: audioBlob.size,
+      type: audioBlob.type,
+      sessionId: sessionId.value,
+      userId: userId.value
+    })
+    
+    // 创建包含元数据的消息
+    const audioMessage = {
+      type: 'audio',
+      userId: userId.value,
+      sessionId: sessionId.value,
+      audioSize: audioBlob.size,
+      audioType: audioBlob.type,
+      timestamp: Date.now()
+    }
+    
+    // 先发送音频元数据
+    ws.value.send(JSON.stringify(audioMessage))
+    
+    // 延迟一小段时间后发送音频数据
+    setTimeout(async () => {
+      if (ws.value && ws.value.readyState === WebSocket.OPEN) {
+        // 直接发送音频Blob
+        ws.value.send(audioBlob)
+        console.log('音频数据发送完成:', {
+          size: audioBlob.size,
+          timestamp: new Date().toISOString()
+        })
+      }
+    }, 50)
+    
+  } catch (error) {
+    console.error('发送音频数据失败:', error)
+    alert('发送音频失败，请重试')
+  }
+}
+
 // 设置状态变化回调
 controller.setStateChangeCallback(() => {
   // 更新响应式状态
@@ -630,6 +927,17 @@ onMounted(async () => {
   }
   if (route.query.duration) {
     state.remainingTime = parseInt(route.query.duration as string) * 60
+  }
+  
+  // 获取WebSocket连接信息并自动连接
+  if (route.query.sessionId && route.query.userId) {
+    sessionId.value = route.query.sessionId as string
+    userId.value = route.query.userId as string
+    console.log('检测到WebSocket连接信息，开始建立连接...')
+    // 自动建立WebSocket连接
+    await connectWebSocket()
+  } else {
+    console.warn('未检测到WebSocket连接信息，跳过连接')
   }
   
   await nextTick()
@@ -664,6 +972,7 @@ onMounted(async () => {
   }
   
   console.log('PIXI应用初始化完成，对战模式:', displayBattleType.value)
+  console.log('WebSocket连接状态:', isWebSocketConnected.value)
 })
 
 // 清理资源
@@ -720,6 +1029,20 @@ onBeforeUnmount(() => {
     }
   } catch (error) {
     console.error('清理DOM引用时出错:', error)
+  }
+  
+  // 清理WebSocket连接
+  try {
+    if (ws.value) {
+      ws.value.close()
+      ws.value = null
+    }
+    if (audioContext.value) {
+      audioContext.value.close()
+      audioContext.value = null
+    }
+  } catch (error) {
+    console.error('清理WebSocket和音频上下文时出错:', error)
   }
   
   console.log('versus组件资源清理完成')
@@ -838,6 +1161,7 @@ onBeforeUnmount(() => {
 .recording-btn {
   animation: recording-pulse 1.5s infinite;
   transform-origin: center;
+  box-shadow: 0 4px 12px rgba(244, 67, 54, 0.4) !important;
 }
 
 @keyframes recording-pulse {
@@ -942,5 +1266,26 @@ onBeforeUnmount(() => {
   min-width: 120px;
   height: 40px;
   font-size: 14px;
+}
+
+/* 调试面板样式 */
+.debug-info {
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  background-color: #f5f5f5;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.debug-info div {
+  margin-bottom: 4px;
+}
+
+.debug-info strong {
+  color: #1976d2;
+  min-width: 120px;
+  display: inline-block;
 }
 </style>

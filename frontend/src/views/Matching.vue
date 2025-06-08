@@ -341,6 +341,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
+import { connectWebSocketApi } from '../api/versusAPI'
+import type { ConnectRequest } from '../interface/versus'
 
 const router = useRouter()
 
@@ -354,6 +356,12 @@ const enableVoiceAnalysis = ref(true)
 const isMatching = ref(false)
 const matchingStatus = ref('')
 const matchingTip = ref('')
+
+// WebSocket相关状态
+const userId = ref<string>(`user_${Math.random().toString(36).substr(2, 9)}`)
+const sessionId = ref<string>('')
+const ws = ref<WebSocket | null>(null)
+const isWebSocketConnected = ref(false)
 
 // 选项配置
 const durationOptions = [
@@ -394,8 +402,71 @@ const handleStartMatching = async () => {
   isMatching.value = true
   matchingStepIndex = 0
   
-  // 开始匹配流程
-  startMatchingProcess()
+  try {
+    // 第一步：建立WebSocket连接并获取sessionId
+    await connectWebSocket()
+    
+    // 开始匹配流程
+    startMatchingProcess()
+  } catch (error) {
+    console.error('WebSocket连接失败:', error)
+    isMatching.value = false
+    alert('连接失败，请检查网络后重试')
+  }
+}
+
+// 建立WebSocket连接
+const connectWebSocket = async () => {
+  try {
+    // 调用API获取sessionId
+    const request: ConnectRequest = {
+      userId: userId.value
+    }
+    const data = await connectWebSocketApi(request)
+    sessionId.value = data.sessionId
+    
+    // 建立WebSocket连接
+    const wsUrl = `ws://115.175.45.173:8080/api/speech/ws`
+    ws.value = new WebSocket(wsUrl)
+    
+    return new Promise<void>((resolve, reject) => {
+      if (!ws.value) {
+        reject(new Error('WebSocket创建失败'))
+        return
+      }
+      
+      ws.value.onopen = () => {
+        // 连接成功后发送注册消息
+        ws.value?.send(JSON.stringify({
+          type: 'register',
+          userId: userId.value,
+          sessionId: sessionId.value
+        }))
+        isWebSocketConnected.value = true
+        console.log('WebSocket连接成功，sessionId:', sessionId.value)
+        resolve()
+      }
+      
+      ws.value.onerror = (error) => {
+        console.error('WebSocket连接错误:', error)
+        isWebSocketConnected.value = false
+        reject(new Error('WebSocket连接失败'))
+      }
+      
+      ws.value.onclose = () => {
+        console.log('WebSocket连接关闭')
+        isWebSocketConnected.value = false
+      }
+      
+      ws.value.onmessage = (event) => {
+        // 在匹配阶段可能收到的消息处理
+        console.log('收到WebSocket消息:', event.data)
+      }
+    })
+  } catch (error) {
+    console.error('获取sessionId失败:', error)
+    throw error
+  }
 }
 
 // 匹配流程
@@ -420,12 +491,25 @@ const startMatchingProcess = () => {
 // 进入对战
 const enterBattle = async () => {
   try {
-    // 将选择的参数传递给对战界面
+    // 将选择的参数和WebSocket信息传递给对战界面
     const query = {
       battleType: selectedBattleType.value,
       difficulty: selectedDifficulty.value,
       duration: sessionDuration.value.toString(),
-      voiceAnalysis: enableVoiceAnalysis.value.toString()
+      voiceAnalysis: enableVoiceAnalysis.value.toString(),
+      sessionId: sessionId.value,
+      userId: userId.value
+    }
+    
+    // 将WebSocket连接存储到全局状态，供对战界面使用
+    if (ws.value && isWebSocketConnected.value) {
+      // 可以通过 provide/inject 或 store 传递 WebSocket 连接
+      // 这里我们通过 sessionStorage 临时存储连接信息
+      sessionStorage.setItem('websocket-info', JSON.stringify({
+        sessionId: sessionId.value,
+        userId: userId.value,
+        isConnected: isWebSocketConnected.value
+      }))
     }
     
     await router.push({
@@ -466,6 +550,10 @@ onMounted(() => {
 onBeforeUnmount(() => {
   if (matchingTimer) {
     clearTimeout(matchingTimer)
+  }
+  // 清理WebSocket连接
+  if (ws.value) {
+    ws.value.close()
   }
 })
 </script>
