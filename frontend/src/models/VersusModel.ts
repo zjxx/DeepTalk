@@ -52,7 +52,7 @@ export class VersusModel {
     return {
       canvasWidth: 0,
       canvasHeight: 0,
-      matchStarted: false,
+      matchStarted: false, // 确保初始状态为未开始
       remainingTime: 300,
       matchType: '真人对战',
       difficultyLevel: '中级',

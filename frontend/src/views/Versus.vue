@@ -25,19 +25,23 @@
               语音分析：<span class="font-weight-bold">{{ displayVoiceAnalysis }}</span>
             </div>
             <div class="text-body-1" v-if="state.matchStarted && controller.currentTopic">
-              当前主题: <span class="font-weight-bold">{{ controller.currentTopic }}</span>
+              当前主题: <span class="font-weight-bold text-primary">{{ controller.currentTopic }}</span>
             </div>
             <div class="text-body-1" v-else-if="!state.matchStarted">
-              <span class="text-grey-5">点击"开始对话"来获取随机题目</span>
+              <span class="text-grey-5">点击"开始对话"来获取随机题目并开始对战</span>
             </div>
             <div class="d-flex justify-center align-center mt-2">
               <v-chip color="primary" class="mr-2">
                 <v-icon start>mdi-clock-outline</v-icon>
                 总时间: {{ controller.formatTime(state.remainingTime) }}
               </v-chip>
-              <v-chip v-if="!state.matchStarted" color="grey">
+              <v-chip v-if="!state.matchStarted" color="warning" class="mr-2">
                 <v-icon start>mdi-pause</v-icon>
-                等待开始
+                未开始 - 点击"开始对话"
+              </v-chip>
+              <v-chip v-else color="success" class="mr-2">
+                <v-icon start>mdi-play</v-icon>
+                对战进行中
               </v-chip>
               <!-- WebSocket连接状态 -->
               <v-chip 
@@ -320,8 +324,13 @@
               </v-chip>
             </div>
 
-            <v-btn color="error" prepend-icon="mdi-exit-to-app" @click="handleEndMatch" class="my-2">
-              结束对战
+            <v-btn 
+              :color="state.matchStarted ? 'error' : 'warning'" 
+              :prepend-icon="state.matchStarted ? 'mdi-stop' : 'mdi-exit-to-app'" 
+              @click="handleEndMatch" 
+              class="my-2"
+            >
+              {{ state.matchStarted ? '结束对战' : '退出房间' }}
             </v-btn>
           </v-card-text>
         </v-card>
@@ -529,42 +538,84 @@ const handleStartMatch = async () => {
   }
 }
 const handleEndMatch = async () => {
+  console.log('点击结束对战，当前状态:', {
+    matchStarted: state.matchStarted,
+    battleType: displayBattleType.value,
+    wsConnected: isWebSocketConnected.value
+  })
+  
   if (state.matchStarted) {
-    if (confirm('确定要结束当前对战吗？')) {
-      try {
-        // 先停止所有可能的DOM操作
-        if (userModelRef.value) {
-          userModelRef.value.destroy?.()
+    // 对战进行中，需要结束对战
+    if (displayBattleType.value === '真人对战' && isWebSocketConnected.value) {
+      // 真人对战模式，发送结束对战请求
+      if (confirm('确定要结束当前对战吗？需要等待对方同意。')) {
+        sendEndBattleRequest()
+        // 显示等待提示
+        alert('已发送结束对战请求，等待对方确认...')
+      }
+    } else {
+      // AI对战模式或未连接WebSocket，直接结束并跳转到评分界面
+      if (confirm('确定要结束当前对战吗？')) {
+        try {
+          console.log('开始清理资源并跳转到评分界面...')
+          await endBattleAndGoToEvaluation()
+        } catch (error) {
+          console.error('结束对战时出错:', error)
+          // 即使出错也跳转到评分界面
+          await new Promise(resolve => setTimeout(resolve, 300))
+          await router.push('/evaluation')
         }
-        if (partnerModelRef.value) {
-          partnerModelRef.value.destroy?.()
-        }
-        
-        // 然后结束对战并清理状态
-        controller.endMatch()
-        
-        // 清理PIXI应用
-        if (pixiAppInstance.value) {
-          pixiAppInstance.value.stop()
-        }
-        
-        // 仿照登录界面的逻辑，添加延迟确保清理完成
-        await new Promise(resolve => setTimeout(resolve, 500))
-        
-        // 延迟后跳转到评分界面
-        console.log('状态清理完成，准备跳转到评分界面')
-        await router.push('/evaluation')
-      } catch (error) {
-        console.error('结束对战时出错:', error)
-        // 即使出错也延迟跳转
-        await new Promise(resolve => setTimeout(resolve, 300))
-        await router.push('/evaluation')
       }
     }
   } else {
-    // 如果没有进行对战，则跳转到首页
-    await router.push('/home')
+    // 对战尚未开始，直接退出房间到评分界面
+    console.log('对战尚未开始，直接退出到评分界面')
+    if (confirm('确定要退出当前房间吗？')) {
+      try {
+        await endBattleAndGoToEvaluation()
+      } catch (error) {
+        console.error('退出房间时出错:', error)
+        await router.push('/evaluation')
+      }
+    }
   }
+}
+
+// 统一的结束对战并跳转到评分界面的函数
+const endBattleAndGoToEvaluation = async () => {
+  // 清理资源
+  if (userModelRef.value) {
+    userModelRef.value.destroy?.()
+  }
+  if (partnerModelRef.value) {
+    partnerModelRef.value.destroy?.()
+  }
+  
+  // 结束对战
+  controller.endMatch()
+  
+  // 清理PIXI应用
+  if (pixiAppInstance.value) {
+    pixiAppInstance.value.stop()
+  }
+  
+  // 清理WebSocket连接（如果存在）
+  if (ws.value) {
+    ws.value.close()
+    ws.value = null
+  }
+  isWebSocketConnected.value = false
+  
+  // 清理音频上下文
+  if (audioContext.value) {
+    audioContext.value.close()
+    audioContext.value = null
+  }
+  
+  // 延迟跳转到评分界面
+  await new Promise(resolve => setTimeout(resolve, 500))
+  console.log('状态清理完成，跳转到评分界面')
+  await router.push('/evaluation')
 }
 
 const handleToggleRecording = async () => {
@@ -672,25 +723,21 @@ const handleBackToMatching = async () => {
   if (state.matchStarted) {
     if (confirm('当前对战正在进行中，确定要返回匹配界面吗？这将结束当前对战。')) {
       try {
-        // 清理当前对战状态
-        controller.endMatch()
-        
-        // 清理PIXI应用
-        if (pixiAppInstance.value) {
-          pixiAppInstance.value.stop()
-        }
-        
-        // 延迟后跳转
-        await new Promise(resolve => setTimeout(resolve, 300))
-        await router.push('/matching')
+        // 清理当前对战状态并跳转到评分界面
+        await endBattleAndGoToEvaluation()
       } catch (error) {
-        console.error('返回匹配界面时出错:', error)
-        await router.push('/matching')
+        console.error('返回时结束对战出错:', error)
+        await router.push('/evaluation')
       }
     }
   } else {
-    // 如果没有开始对战，直接返回匹配界面
-    await router.push('/matching')
+    // 如果没有开始对战，询问是否返回匹配界面或进入评分界面
+    const choice = confirm('点击"确定"返回匹配界面，点击"取消"进入评分界面')
+    if (choice) {
+      await router.push('/matching')
+    } else {
+      await router.push('/evaluation')
+    }
   }
 }
 
@@ -814,6 +861,16 @@ const connectWebSocket = async () => {
               if (partnerModelRef.value && displayBattleType.value === '真人对战') {
                 partnerModelRef.value.playMotion('Idle', undefined)
               }
+              break
+            case 'partner_end_battle':
+              // 对方请求结束对战
+              console.log('对方请求结束对战')
+              handlePartnerEndBattle()
+              break
+            case 'battle_ended':
+              // 服务器确认对战结束
+              console.log('服务器确认对战结束，准备跳转到评分界面')
+              handleBattleEnded()
               break
             case 'user_connected':
               console.log('用户连接成功:', data)
@@ -940,11 +997,17 @@ controller.setStateChangeCallback(() => {
   Object.assign(state, controller.getState())
 })
 
+// 确保初始状态正确
+console.log('初始化状态检查:', {
+  matchStarted: controller.getState().matchStarted,
+  remainingTime: controller.getState().remainingTime
+})
+
 // PIXI App 初始化
 onMounted(async () => {
   console.log('Versus页面已挂载')
   
-  // 应用匹配参数
+  // 应用匹配参数，但不启动对战
   if (route.query.battleType) {
     controller.changeMatchType(route.query.battleType as '真人对战' | 'AI辅助')
   }
@@ -959,12 +1022,12 @@ onMounted(async () => {
     state.remainingTime = parseInt(route.query.duration as string) * 60
   }
   
-  // 获取WebSocket连接信息并自动连接
+  // 获取WebSocket连接信息并自动连接（但不启动对战）
   if (route.query.sessionId && route.query.userId) {
     sessionId.value = route.query.sessionId as string
     userId.value = route.query.userId as string
     console.log('检测到WebSocket连接信息，开始建立连接...')
-    // 自动建立WebSocket连接
+    // 自动建立WebSocket连接，但不启动对战
     await connectWebSocket()
   } else {
     console.warn('未检测到WebSocket连接信息，跳过连接')
@@ -1003,6 +1066,7 @@ onMounted(async () => {
   
   console.log('PIXI应用初始化完成，对战模式:', displayBattleType.value)
   console.log('WebSocket连接状态:', isWebSocketConnected.value)
+  console.log('对战状态 matchStarted:', state.matchStarted)
 })
 
 // 清理资源
@@ -1077,6 +1141,91 @@ onBeforeUnmount(() => {
   
   console.log('versus组件资源清理完成')
 })
+
+// 结束对战相关函数
+const handlePartnerEndBattle = () => {
+  // 显示对方结束对战的提示
+  if (confirm('对方请求结束对战，是否同意？')) {
+    // 同意结束对战
+    sendEndBattleConfirmation()
+  } else {
+    // 拒绝结束对战，发送拒绝消息
+    sendEndBattleRefusal()
+  }
+}
+
+const handleBattleEnded = async () => {
+  // 服务器确认对战结束，清理资源并跳转
+  try {
+    // 清理WebSocket连接
+    if (ws.value) {
+      ws.value.close()
+      ws.value = null
+    }
+    isWebSocketConnected.value = false
+    
+    // 清理音频上下文
+    if (audioContext.value) {
+      audioContext.value.close()
+      audioContext.value = null
+    }
+    
+    // 停止录音等操作
+    if (state.isRecording) {
+      await controller.toggleRecording()
+    }
+    
+    console.log('对战资源清理完成，跳转到评分界面')
+    
+    // 延迟跳转确保清理完成
+    setTimeout(async () => {
+      await router.push('/evaluation')
+    }, 500)
+  } catch (error) {
+    console.error('结束对战处理失败:', error)
+    // 即使出错也要跳转
+    await router.push('/evaluation')
+  }
+}
+
+const sendEndBattleRequest = () => {
+  // 发送结束对战请求
+  if (ws.value && ws.value.readyState === WebSocket.OPEN) {
+    ws.value.send(JSON.stringify({
+      type: 'end_battle_request',
+      userId: userId.value,
+      sessionId: sessionId.value,
+      timestamp: Date.now()
+    }))
+    console.log('已发送结束对战请求')
+  }
+}
+
+const sendEndBattleConfirmation = () => {
+  // 发送结束对战确认
+  if (ws.value && ws.value.readyState === WebSocket.OPEN) {
+    ws.value.send(JSON.stringify({
+      type: 'end_battle_confirm',
+      userId: userId.value,
+      sessionId: sessionId.value,
+      timestamp: Date.now()
+    }))
+    console.log('已发送结束对战确认')
+  }
+}
+
+const sendEndBattleRefusal = () => {
+  // 发送结束对战拒绝
+  if (ws.value && ws.value.readyState === WebSocket.OPEN) {
+    ws.value.send(JSON.stringify({
+      type: 'end_battle_refuse',
+      userId: userId.value,
+      sessionId: sessionId.value,
+      timestamp: Date.now()
+    }))
+    console.log('已发送结束对战拒绝')
+  }
+}
 </script>
 
 <style scoped>

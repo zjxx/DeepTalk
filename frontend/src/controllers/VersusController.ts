@@ -169,6 +169,8 @@ export class VersusController {
   // 业务逻辑方法
   async startMatch(): Promise<void> {
     try {
+      console.log('VersusController: 开始启动对战')
+      
       // 对战开始时连接 WebSocket
       if (!this.webSocketService.getIsConnected()) {
         await this.webSocketService.connect()
@@ -182,7 +184,7 @@ export class VersusController {
       
       // 权限获取成功后，启动对战状态
       this.model.updateMatchState({ 
-        matchStarted: true,
+        matchStarted: true,  // 只有在这里才设置为true
         speakingTurn: 'user'
       })
       
@@ -196,6 +198,7 @@ export class VersusController {
       this.timerService.startMainTimer(this.model.getState().remainingTime)
       
       this.notifyStateChange()
+      console.log('VersusController: 对战启动完成，matchStarted =', this.model.getState().matchStarted)
       console.log('对战开始，已加载新题目:', this.questionManager.getCurrentTopic())
     } catch (error) {
       console.error('开始对战失败:', error)
