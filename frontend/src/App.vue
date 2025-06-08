@@ -4,9 +4,9 @@
       <Navbar />
     </v-app-bar>
 
-    <Sidebar v-if="showSideDrawer" />
-    <ExploreSidebar v-if="showExploreSidebar" />
 
+    <Sidebar v-if="showSidebar" />
+    <ExploreSidebar v-if="showExploreSidebar" />
     <v-main>
       <router-view></router-view>
     </v-main>
@@ -19,6 +19,7 @@ import { useRoute } from 'vue-router'
 import Navbar from './components/Navbar.vue'
 import Sidebar from './components/Sidebar.vue'
 import ExploreSidebar from './components/ExploreSidebar.vue'
+import UserModel from './models/user'
 
 export default defineComponent({
   name: 'App',
@@ -29,31 +30,49 @@ export default defineComponent({
   },
   setup() {
     const route = useRoute()
-    
     const showNavbar = ref(false)
-    const showSideDrawer = ref(false)
+    const showSidebar = ref(false)
     const showExploreSidebar = ref(false)
 
-    const navRoutes = ['/home', '/explore', '/community', '/shop', '/settings', '/security', '/privacy', '/profile','/repositories']
-    const sideDrawerRoutes = ['/home', '/profile', '/', '/security', '/privacy',   '/repositories']
-    const exploreRoutes = ['/explore', '/versus', '/evaluation']
+    // 定义需要显示导航栏的路由
+    const navRoutes = ['/home', '/matching', '/community', '/shop', '/settings', '/security', '/privacy', '/profile','/repositories']
+    // 定义需要显示侧边栏的路由
+    const sidebarRoutes = ['/home', '/profile', '/', '/security', '/privacy',   '/repositories']
+    // 定义需要显示探索侧边栏的路由
+    const exploreSidebarRoutes = ['/matching', '/versus', '/evaluation']
 
-    const checkRoute = () => {
-      const currentPath = route.path
-      console.log('当前路由路径:', currentPath);
-      console.log('navRoutes 包含当前路径:', navRoutes.includes(currentPath));
-      showNavbar.value = navRoutes.includes(currentPath)
-      showSideDrawer.value = sideDrawerRoutes.includes(currentPath)
-      showExploreSidebar.value = exploreRoutes.includes(currentPath)
+    // 从 localStorage 恢复用户信息
+    const restoreUserInfo = () => {
+      const userInfo = localStorage.getItem('userInfo')
+      if (userInfo) {
+        const { username, avatar } = JSON.parse(userInfo)
+        UserModel.username = username
+        UserModel.avatar = avatar
+        UserModel.isLoggedIn = true
+      }
     }
 
-    watch(() => route.path, checkRoute)
+    // 监听路由变化
+    watch(() => route.path, (newPath) => {
+      showNavbar.value = navRoutes.includes(newPath)
+      showSidebar.value = sidebarRoutes.includes(newPath)
+      showExploreSidebar.value = exploreSidebarRoutes.includes(newPath)
+    }, { immediate: true })
 
-    onMounted(checkRoute)
+    // 组件挂载时检查路由和恢复用户信息
+    onMounted(() => {
+      const currentPath = route.path
+      showNavbar.value = navRoutes.includes(currentPath)
+      showSidebar.value = sidebarRoutes.includes(currentPath)
+      showExploreSidebar.value = exploreSidebarRoutes.includes(currentPath)
+      
+      // 恢复用户信息
+      restoreUserInfo()
+    })
 
     return {
       showNavbar,
-      showSideDrawer,
+      showSidebar,
       showExploreSidebar
     }
   }
@@ -61,13 +80,12 @@ export default defineComponent({
 </script>
 
 <style>
-body {
-  margin: 0;
-  font-family: Arial, Helvetica, sans-serif;
+.v-application {
+  min-height: 100vh;
 }
 
-#app {
-  width: 100%;
-  min-height: 100vh;
+/* 确保主内容区域从导航栏下方开始 */
+.v-main {
+  padding-top: 64px !important; /* 导航栏的高度 */
 }
 </style> 

@@ -52,7 +52,7 @@ export class VersusModel {
     return {
       canvasWidth: 0,
       canvasHeight: 0,
-      matchStarted: false,
+      matchStarted: true, // 现在进入房间就自动开始对战
       remainingTime: 300,
       matchType: '真人对战',
       difficultyLevel: '中级',
@@ -84,7 +84,7 @@ export class VersusModel {
 
   get currentTopic(): string {
     const topics = [
-      'What do you think about online education?',
+      'You will talk with your partner about your favorite book. Your dscussiosn mayinclude:\nWhat is the book?\nWho wrote the book?\nWhat is it about?',
       'How important is it to learn a foreign language?',
       'Describe your favorite travel experience.',
       'What are the advantages and disadvantages of social media?',
