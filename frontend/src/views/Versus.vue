@@ -1104,6 +1104,11 @@ onMounted(async () => {
   // 应用匹配参数
   if (route.query.battleType) {
     controller.changeMatchType(route.query.battleType as '真人对战' | 'AI辅助')
+    console.log('Versus页面：设置对战类型为', route.query.battleType)
+  } else {
+    // 默认设置为AI辅助模式
+    controller.changeMatchType('AI辅助')
+    console.log('Versus页面：默认设置对战类型为 AI辅助')
   }
   if (route.query.difficulty) {
     // 四级/六级映射
@@ -1111,6 +1116,7 @@ onMounted(async () => {
     if (mapped === '四级') mapped = '中级'
     if (mapped === '六级') mapped = '高级'
     controller.changeDifficultyLevel(mapped as '初级' | '中级' | '高级')
+    console.log('Versus页面：设置难度等级为', mapped)
   }
   if (route.query.duration) {
     state.remainingTime = parseInt(route.query.duration as string) * 60

@@ -47,15 +47,24 @@ export class VersusController {
         speakingTurn: 'user'
       })
       
-      // 不在这里启动计时器，等待versus.vue调用startSyncedTimer
+      // 不在这里启动计时器，等待versus.vue调用startSyncedTimer启动计时器
       console.log('VersusController: 等待外部调用startSyncedTimer启动计时器...')
       
-      // 加载默认题目
-      await this.questionManager.loadQuestionByLevel(this.model.getState().difficultyLevel)
+      // 根据对战模式加载不同的题目
+      const currentMatchType = this.model.getState().matchType
+      if (currentMatchType === 'AI辅助') {
+        // AI模式：使用固定的英语对话主题
+        this.setAIModeTopic()
+      } else {
+        // 真人对战模式：加载题库中的题目
+        await this.questionManager.loadQuestionByLevel(this.model.getState().difficultyLevel)
+      }
       
       this.notifyStateChange()
       console.log('VersusController: 自动对战初始化完成，matchStarted =', this.model.getState().matchStarted)
-      console.log('自动加载题目:', this.questionManager.getCurrentTopic())
+      console.log('自动加载题目:', this.currentTopic)
+      console.log('当前使用的是服务器主题:', this.questionManager.isUsingServerTopic())
+      console.log('题目管理器当前主题:', this.questionManager.getCurrentTopic())
     } catch (error) {
       console.error('自动启动对战失败:', error)
     }
@@ -387,6 +396,16 @@ export class VersusController {
       isPartnerSpeaking: false,
       isUserSpeaking: false
     })
+    
+    // 如果切换到AI模式，立即设置AI专用主题
+    if (matchType === 'AI辅助') {
+      console.log('切换到AI模式，设置AI专用主题')
+      this.setAIModeTopic()
+    } else {
+      console.log('切换到真人对战模式，重置题库状态')
+      this.questionManager.reset()
+    }
+    
     this.notifyStateChange()
   }
 
@@ -649,5 +668,21 @@ export class VersusController {
       this.notifyStateChange()
       this.aiResponseIndex++
     })
+  }
+
+  // 设置AI模式的专用主题
+  private setAIModeTopic(): void {
+    const aiTopic = "You will talk with your partner about your favorite book. Your discussion may include:"
+    const aiPrompts = [
+      "What is the book?",
+      "Who wrote the book?", 
+      "What is it about?"
+    ]
+    
+    // 直接设置AI模式的主题和提示
+    this.questionManager.setServerTopic(aiTopic, aiPrompts)
+    
+    console.log('AI模式主题已设置:', aiTopic)
+    console.log('AI模式提示已设置:', aiPrompts)
   }
 }

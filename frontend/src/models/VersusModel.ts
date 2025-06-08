@@ -84,7 +84,7 @@ export class VersusModel {
 
   get currentTopic(): string {
     const topics = [
-      'What do you think about online education?',
+      'You will talk with your partner about your favorite book. Your dscussiosn mayinclude:\nWhat is the book?\nWho wrote the book?\nWhat is it about?',
       'How important is it to learn a foreign language?',
       'Describe your favorite travel experience.',
       'What are the advantages and disadvantages of social media?',
