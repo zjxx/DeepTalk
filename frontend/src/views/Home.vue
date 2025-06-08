@@ -92,22 +92,24 @@ onMounted(() => {
 }
 
 .welcome-card {
-  background: linear-gradient(135deg, #1976d2, #2196f3);
-  color: white;
+  background: linear-gradient(135deg, #4f8cff 0%, #7fd8ff 100%);
+  color: #3b5998;
 }
 
 .progress-card {
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(80,120,200,0.08);
+  color: #3b5998;
 }
 
 .text-h4 {
   font-weight: 600;
   margin: 0;
+  color: #111 !important; /* 欢迎回来黑色 */
 }
 
 .text-subtitle-1 {
   opacity: 0.9;
+  color: #fff !important; /* 小字白色 */
 }
 </style>

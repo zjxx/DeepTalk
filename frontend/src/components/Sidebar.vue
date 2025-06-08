@@ -31,6 +31,12 @@
         value="security"
         to="/security"
       ></v-list-item>
+      <v-list-item
+        prepend-icon="mdi-chart-line"
+        title="历史战绩"
+        value="historical-scores"
+        to="/historical-scores"
+      ></v-list-item>
     </v-list>
     <template v-slot:append>
       <div class="pa-2">

@@ -16,6 +16,7 @@ import ShopLive2dView from './views/ShopLive2dView.vue'
 import MyRepositories from './views/MyRepositories.vue'
 import RepositoriesLive2dView from './views/RepositoriesLive2dView.vue'
 import PostAdding from './views/PostAdding.vue'
+import HistoricalScores from './views/HistoricalScores.vue'
 
 // 你可以后续添加Profile等页面
 
@@ -127,6 +128,12 @@ const routes = [
     path: '/repositories/live2d/:id',
     name: 'RepositoriesLive2dView',
     component: RepositoriesLive2dView,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/historical-scores',
+    name: 'HistoricalScores',
+    component: HistoricalScores,
     meta: { requiresAuth: true }
   },
   // { path: '/profile', component: () => import('./views/Profile.vue') },
