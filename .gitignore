@@ -37,3 +37,6 @@ Thumbs.db
 frontend/package-lock.json
 
 kurento/
+
+# Audio recording
+backend/deploy/artifact/*
