@@ -2,8 +2,10 @@ package com.example.deeptalk.modules.community.service;
 
 import com.example.deeptalk.modules.community.dto.LikeRequest;
 import com.example.deeptalk.modules.community.dto.LikeResponse;
+import com.example.deeptalk.modules.community.dto.CheckAuthorResponse;
 import com.example.deeptalk.modules.community.entity.Post;
 import com.example.deeptalk.modules.community.entity.PostLike;
+import com.example.deeptalk.modules.community.entity.Author;
 import com.example.deeptalk.modules.community.repository.PostLikeRepository;
 import com.example.deeptalk.modules.community.repository.PostRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -82,5 +84,19 @@ public class PostService {
 
     public List<Post> getPostsByAuthor(String authorId) {
         return postRepository.findByAuthorId(authorId);
+    }
+
+    public CheckAuthorResponse getAuthorInfo(String authorId) {
+        // TODO: 实现从数据库获取作者信息的逻辑
+        Author author = new Author();
+        author.setId(authorId);
+        author.setUsername("测试用户"); // 这里应该从数据库获取
+        author.setAvatar("");
+        author.setPosts(0);
+        author.setLikes(0);
+
+        CheckAuthorResponse response = new CheckAuthorResponse();
+        response.setAuthor(author);
+        return response;
     }
 } 
