@@ -48,8 +48,9 @@ export interface UseModelRequest {
 
 // 使用模型响应
 export interface UseModelResponse {
-    success: boolean;
-    message: string;
+
+    status: number;
+    data: string;
 }
 
 // 获取用户正在使用的模型ID请求

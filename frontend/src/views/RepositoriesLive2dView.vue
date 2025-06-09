@@ -403,10 +403,25 @@ const handleUse = async () => {
   if (!currentProduct.value || isUsing.value) return
 
   isUsing.value = true
-  const success = await useModel(currentProduct.value.id)
-  showSuccessMessage.value = success
-  showErrorMessage.value = !success
-  isUsing.value = false
+  try {
+    const response = await useModel(currentProduct.value.id)
+    console.log('使用模型响应:', response)
+    if (response.status === 200) {
+      showSuccessMessage.value = true
+      showErrorMessage.value = false
+    } else {
+      showSuccessMessage.value = false
+      showErrorMessage.value = true
+      errorMessage.value = response.data || '使用失败，请稍后重试'
+    }
+  } catch (error: unknown) {
+    console.error('使用模型时发生错误:', error)
+    showSuccessMessage.value = false
+    showErrorMessage.value = true
+    errorMessage.value = '使用失败，请稍后重试'
+  } finally {
+    isUsing.value = false
+  }
 }
 
 // 返回仓库
