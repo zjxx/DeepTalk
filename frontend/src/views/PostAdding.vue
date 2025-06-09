@@ -222,7 +222,7 @@ const handlePublish = async () => {
           authorPosts: 0  // 将会在后端更新
         },
         likesCount: 0, // 新帖子默认0个赞
-        CreateAt: new Date().toISOString() // 当前时间，后端可能会覆盖
+        createdAt: new Date().toISOString() // 当前时间，后端可能会覆盖
       }
     }
 

@@ -5,7 +5,7 @@ export interface Post {
   content: string;
   author: Author;
   likesCount: number;
-  CreateAt: string;
+  createdAt: string;
 }
 //作者
 export interface Author {
