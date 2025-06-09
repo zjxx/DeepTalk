@@ -1,10 +1,4 @@
 <template>
-  <v-app>
-    <v-app-bar app>
-      <Navbar />
-    </v-app-bar>
-
-    <v-main>
       <v-container fluid class="fill-height pa-0">
         <!-- 页面容器：左右各留空0.125 -->
         <div class="page-container">
@@ -151,14 +145,11 @@
           </v-dialog>
         </div>
       </v-container>
-    </v-main>
-  </v-app>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import Navbar from '../components/Navbar.vue'
 import { useCommunityController } from '../controllers/CommunityController'
 import type { AddPostRequest } from '../interface/CommunityInterface'
 
@@ -303,8 +294,7 @@ const goBack = () => {
   margin: 0 auto;
   max-width: 1200px;
   width: 75%;
-  padding: 20px 0;
-  min-height: calc(100vh - 64px);
+  min-height: calc(90vh);
   display: flex;
   flex-direction: column;
 }
