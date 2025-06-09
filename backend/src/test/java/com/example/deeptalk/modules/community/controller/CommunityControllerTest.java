@@ -53,7 +53,7 @@ public class CommunityControllerTest {
     @BeforeEach
     void setUp() {
         testPost = new Post();
-        testPost.setId(1L);
+        testPost.setId("post123");
         testPost.setTitle("测试帖子");
         testPost.setContent("测试内容");
         testPost.setAuthorId("user123");

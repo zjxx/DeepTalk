@@ -55,7 +55,7 @@ public class PostService {
     @Transactional
     public LikeResponse likePost(LikeRequest request) {
         try {
-            Long postId = Long.parseLong(request.getPostId());
+            String postId = request.getPostId();
             Post post = postRepository.findById(postId)
                     .orElseThrow(() -> new RuntimeException("帖子不存在"));
 

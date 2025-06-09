@@ -4,14 +4,16 @@ import javax.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
 import javax.persistence.Transient;
+import org.hibernate.annotations.GenericGenerator;
 
 @Data
 @Entity
 @Table(name = "posts")
 public class Post {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(generator = "uuid")
+    @GenericGenerator(name = "uuid", strategy = "uuid2")
+    private String id;
 
     @Column(nullable = false, columnDefinition = "VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
     private String title;
