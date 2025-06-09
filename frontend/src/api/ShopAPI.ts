@@ -27,6 +27,17 @@ export function ShopCheckStockAPI(request: CheckStockRequest): Promise<CheckStoc
 
 //使用模型
 export function ShopUseModelAPI(request: UseModelRequest): Promise<UseModelResponse> {
-    console.log('发送的使用模型请求:', JSON.stringify(request));
-    return http.post<UseModelResponse, UseModelRequest>(API_ENDPOINTS.SHOP.PRODUCT.USE, request);
+    console.log('使用模型请求:', request)
+    return http.post<UseModelResponse, UseModelRequest>(API_ENDPOINTS.SHOP.PRODUCT.USE, request)
+    .then(response => {
+        // 如果响应是字符串'ok'，说明是成功的响应
+        if (typeof response === 'string' && response === 'ok') {
+            return {
+                status: 200,
+                data: 'ok'
+            }
+        }
+        // 否则返回原始响应
+        return response
+    })
 }

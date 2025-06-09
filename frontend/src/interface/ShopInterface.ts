@@ -48,7 +48,8 @@ export interface UseModelRequest {
 
 // 使用模型响应
 export interface UseModelResponse {
-    success: boolean;
-    message: string;
+
+    status: number;
+    data: string;
 }
 
