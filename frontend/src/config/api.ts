@@ -34,6 +34,7 @@ export const API_ENDPOINTS = {
       PURCHASE: '/api/shop/product/purchase',
       ORDER: '/api/shop/product/order',
       CHECK: '/api/shop/product/check',
+      USE: '/api/shop/product/use',
     },
   },
   // WebSocket 相关

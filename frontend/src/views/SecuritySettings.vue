@@ -59,17 +59,173 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- 更改密码弹窗 -->
+    <v-dialog v-model="passwordDialog" max-width="500">
+      <v-card>
+        <v-card-title class="text-h5">
+          更改密码
+        </v-card-title>
+        <v-card-text>
+          <v-form ref="changePasswordForm" v-model="changePasswordValid" @submit.prevent="handleChangePassword">
+            <v-text-field
+              v-model="changePassword.email"
+              label="邮箱"
+              type="email"
+              :rules="[rules.required, rules.email]"
+              required
+              :disabled="loading"
+            ></v-text-field>
+
+            <v-text-field
+              v-model="changePassword.verificationCode"
+              label="验证码"
+              :rules="[rules.required]"
+              required
+              :disabled="loading"
+            >
+              <template v-slot:append>
+                <v-btn
+                  :disabled="loading || !changePassword.email || !isValidEmail(changePassword.email) || countdown > 0"
+                  @click="sendChangePasswordCode"
+                  :loading="sendingCode"
+                >
+                  {{ countdown > 0 ? `${countdown}秒后重试` : '获取验证码' }}
+                </v-btn>
+              </template>
+            </v-text-field>
+
+            <v-text-field
+              v-model="changePassword.newPassword"
+              label="新密码"
+              type="password"
+              :rules="[rules.required, rules.password]"
+              required
+              :disabled="loading"
+            ></v-text-field>
+
+            <v-text-field
+              v-model="changePassword.confirmPassword"
+              label="确认新密码"
+              type="password"
+              :rules="[rules.required, rules.confirmPassword]"
+              required
+              :disabled="loading"
+            ></v-text-field>
+          </v-form>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="grey-darken-1" variant="text" @click="passwordDialog = false">
+            取消
+          </v-btn>
+          <v-btn
+            color="primary"
+            @click="handleChangePassword"
+            :loading="loading"
+            :disabled="!changePasswordValid"
+          >
+            确认修改
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
 <script lang="ts">
 import { defineComponent, ref } from 'vue'
+import { sendForgotPasswordCode, verifyForgotPasswordCode, resetPassword } from '../controllers/userController'
+import userModel from '../models/user'
 
 export default defineComponent({
   name: 'SecuritySettingsPage',
   setup() {
     const dialog = ref(false)
     const currentAction = ref('')
+    const passwordDialog = ref(false)
+    const loading = ref(false)
+    const sendingCode = ref(false)
+    const countdown = ref(0)
+    const changePasswordValid = ref(false)
+
+    const changePassword = ref({
+      email: userModel.email,
+      verificationCode: '',
+      newPassword: '',
+      confirmPassword: ''
+    })
+
+    const rules = {
+      required: (v: string) => !!v || '此项为必填项',
+      email: (v: string) => /.+@.+\..+/.test(v) || '请输入有效的邮箱地址',
+      password: (v: string) => v.length >= 6 || '密码长度至少为6位',
+      confirmPassword: (v: string) => v === changePassword.value.newPassword || '两次输入的密码不一致'
+    }
+
+    const isValidEmail = (email: string) => {
+      return /.+@.+\..+/.test(email)
+    }
+
+    const startCountdown = () => {
+      countdown.value = 60
+      const timer = setInterval(() => {
+        countdown.value--
+        if (countdown.value <= 0) {
+          clearInterval(timer)
+        }
+      }, 1000)
+    }
+
+    const sendChangePasswordCode = async () => {
+      if (!changePassword.value.email || !isValidEmail(changePassword.value.email)) {
+        return
+      }
+
+      sendingCode.value = true
+      try {
+        await sendForgotPasswordCode(changePassword.value.email)
+        startCountdown()
+      } catch (error) {
+        console.error('发送验证码失败:', error)
+        alert(error instanceof Error ? error.message : '发送验证码失败')
+      } finally {
+        sendingCode.value = false
+      }
+    }
+
+    const handleChangePassword = async () => {
+      if (!changePasswordValid.value) {
+        return
+      }
+
+      loading.value = true
+      try {
+        // 验证验证码
+        const resetToken = await verifyForgotPasswordCode(
+          changePassword.value.email,
+          changePassword.value.verificationCode
+        )
+
+        // 重置密码
+        await resetPassword(resetToken, changePassword.value.newPassword)
+
+        alert('密码修改成功')
+        // 清空表单并关闭弹窗
+        changePassword.value = {
+          email: userModel.email,
+          verificationCode: '',
+          newPassword: '',
+          confirmPassword: ''
+        }
+        passwordDialog.value = false
+      } catch (error) {
+        console.error('修改密码失败:', error)
+        alert(error instanceof Error ? error.message : '修改密码失败')
+      } finally {
+        loading.value = false
+      }
+    }
 
     const showConfirmDialog = (action: string) => {
       currentAction.value = action
@@ -86,7 +242,7 @@ export default defineComponent({
           handleChangeEmail()
           break
         case '更改密码':
-          handleChangePassword()
+          passwordDialog.value = true
           break
       }
     }
@@ -99,15 +255,23 @@ export default defineComponent({
       alert('更换邮箱功能开发中')
     }
 
-    const handleChangePassword = () => {
-      alert('更改密码功能开发中')
-    }
-
     return {
       dialog,
       currentAction,
+      passwordDialog,
+      loading,
+      sendingCode,
+      countdown,
+      changePasswordValid,
+      changePassword,
+      rules,
       showConfirmDialog,
-      handleConfirm
+      handleConfirm,
+      handleChangeName,
+      handleChangeEmail,
+      handleChangePassword,
+      sendChangePasswordCode,
+      isValidEmail
     }
   }
 })
@@ -187,4 +351,4 @@ export default defineComponent({
   color: #666;
   margin: 0;
 }
-</style> 
+</style>

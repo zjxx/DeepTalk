@@ -1,5 +1,5 @@
 import type { SearchRequest, SearchResponse, CheckStockRequest, CheckStockResponse,
-    PurchaseRequest, PurchaseResponse } from '../interface/ShopInterface';
+    PurchaseRequest, PurchaseResponse, UseModelRequest, UseModelResponse } from '../interface/ShopInterface';
 import { API_ENDPOINTS } from '../config/api';
 import { http } from '../utils/http'
 
@@ -24,4 +24,9 @@ export function ShopCheckStockAPI(request: CheckStockRequest): Promise<CheckStoc
     console.log('发送的查看库存请求:', JSON.stringify(request));
     return http.post<CheckStockResponse, CheckStockRequest>(API_ENDPOINTS.SHOP.CHECK_STOCK, request);
 }
-//
+
+//使用模型
+export function ShopUseModelAPI(request: UseModelRequest): Promise<UseModelResponse> {
+    console.log('发送的使用模型请求:', JSON.stringify(request));
+    return http.post<UseModelResponse, UseModelRequest>(API_ENDPOINTS.SHOP.USE_MODEL, request);
+}

@@ -341,6 +341,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
+import { connectWebSocketApi } from '../api/versusAPI'
+import type { ConnectRequest } from '../interface/versus'
 
 const router = useRouter()
 
@@ -355,6 +357,12 @@ const isMatching = ref(false)
 const matchingStatus = ref('')
 const matchingTip = ref('')
 
+// WebSocket相关状态
+const userId = ref<string>(`user_${Math.random().toString(36).substr(2, 9)}`)
+const sessionId = ref<string>('')
+const ws = ref<WebSocket | null>(null)
+const isWebSocketConnected = ref(false)
+
 // 选项配置
 const durationOptions = [
   { title: '3分钟', value: 3 },
@@ -365,6 +373,14 @@ const durationOptions = [
 
 // 匹配状态文本
 const matchingSteps = [
+  { status: '正在准备AI对话环境...', tip: '智能助手正在初始化' },
+  { status: '加载AI语言模型...', tip: '确保最佳的对话体验' },
+  { status: '准备对话主题...', tip: '根据您的难度等级选择合适的话题' },
+  { status: '即将开始AI对战...', tip: '3秒后进入对战界面' }
+]
+
+// 真人对战的匹配状态
+const realBattleSteps = [
   { status: '正在寻找对手...', tip: '根据您的难度等级匹配合适的对手' },
   { status: '检测网络质量...', tip: '确保最佳的对战体验' },
   { status: '准备对战房间...', tip: '正在初始化对战环境' },
@@ -394,20 +410,98 @@ const handleStartMatching = async () => {
   isMatching.value = true
   matchingStepIndex = 0
   
-  // 开始匹配流程
-  startMatchingProcess()
+  try {
+    // AI智能对战模式：跳过WebSocket连接，直接进入对战
+    if (selectedBattleType.value === 'AI辅助') {
+      console.log('AI智能对战模式：跳过WebSocket连接，直接开始匹配流程')
+      // 直接开始匹配流程，无需WebSocket连接
+      startMatchingProcess()
+    } else {
+      // 真人对战模式：建立WebSocket连接并获取sessionId
+      console.log('真人对战模式：建立WebSocket连接')
+      await connectWebSocket()
+      
+      // 开始匹配流程
+      startMatchingProcess()
+    }
+  } catch (error) {
+    console.error('匹配启动失败:', error)
+    isMatching.value = false
+    if (selectedBattleType.value === '真人对战') {
+      alert('连接失败，请检查网络后重试')
+    } else {
+      alert('启动AI对战失败，请重试')
+    }
+  }
+}
+
+// 建立WebSocket连接
+const connectWebSocket = async () => {
+  try {
+    // 调用API获取sessionId
+    const request: ConnectRequest = {
+      userId: userId.value
+    }
+    const data = await connectWebSocketApi(request)
+    sessionId.value = data.sessionId
+    
+    // 建立WebSocket连接
+    const wsUrl = `ws://115.175.45.173:8080/api/speech/ws`
+    ws.value = new WebSocket(wsUrl)
+    
+    return new Promise<void>((resolve, reject) => {
+      if (!ws.value) {
+        reject(new Error('WebSocket创建失败'))
+        return
+      }
+      
+      ws.value.onopen = () => {
+        // 连接成功后发送注册消息
+        ws.value?.send(JSON.stringify({
+          type: 'register',
+          userId: userId.value,
+          sessionId: sessionId.value
+        }))
+        isWebSocketConnected.value = true
+        console.log('WebSocket连接成功，sessionId:', sessionId.value)
+        resolve()
+      }
+      
+      ws.value.onerror = (error) => {
+        console.error('WebSocket连接错误:', error)
+        isWebSocketConnected.value = false
+        reject(new Error('WebSocket连接失败'))
+      }
+      
+      ws.value.onclose = () => {
+        console.log('WebSocket连接关闭')
+        isWebSocketConnected.value = false
+      }
+      
+      ws.value.onmessage = (event) => {
+        // 在匹配阶段可能收到的消息处理
+        console.log('收到WebSocket消息:', event.data)
+      }
+    })
+  } catch (error) {
+    console.error('获取sessionId失败:', error)
+    throw error
+  }
 }
 
 // 匹配流程
 const startMatchingProcess = () => {
-  if (matchingStepIndex < matchingSteps.length) {
-    const step = matchingSteps[matchingStepIndex]
+  // 根据对战类型选择不同的匹配步骤
+  const steps = selectedBattleType.value === 'AI辅助' ? matchingSteps : realBattleSteps
+  
+  if (matchingStepIndex < steps.length) {
+    const step = steps[matchingStepIndex]
     matchingStatus.value = step.status
     matchingTip.value = step.tip
     
     matchingTimer = setTimeout(() => {
       matchingStepIndex++
-      if (matchingStepIndex < matchingSteps.length) {
+      if (matchingStepIndex < steps.length) {
         startMatchingProcess()
       } else {
         // 匹配完成，跳转到对战界面
@@ -420,13 +514,34 @@ const startMatchingProcess = () => {
 // 进入对战
 const enterBattle = async () => {
   try {
-    // 将选择的参数传递给对战界面
-    const query = {
+    // 构建查询参数
+    const query: Record<string, string> = {
       battleType: selectedBattleType.value,
       difficulty: selectedDifficulty.value,
       duration: sessionDuration.value.toString(),
       voiceAnalysis: enableVoiceAnalysis.value.toString()
     }
+    
+    // 只有真人对战模式才添加WebSocket连接信息
+    if (selectedBattleType.value === '真人对战' && sessionId.value && userId.value) {
+      query.sessionId = sessionId.value
+      query.userId = userId.value
+      
+      // 将WebSocket连接存储到全局状态，供对战界面使用
+      if (ws.value && isWebSocketConnected.value) {
+        sessionStorage.setItem('websocket-info', JSON.stringify({
+          sessionId: sessionId.value,
+          userId: userId.value,
+          isConnected: isWebSocketConnected.value
+        }))
+      }
+    } else if (selectedBattleType.value === 'AI辅助') {
+      // AI模式：生成临时用户ID，但不需要sessionId
+      query.userId = userId.value
+      console.log('AI智能对战模式：不添加WebSocket连接信息，直接进入对战')
+    }
+    
+    console.log('准备跳转到对战界面，参数:', query)
     
     await router.push({
       path: '/versus',
@@ -466,6 +581,10 @@ onMounted(() => {
 onBeforeUnmount(() => {
   if (matchingTimer) {
     clearTimeout(matchingTimer)
+  }
+  // 清理WebSocket连接
+  if (ws.value) {
+    ws.value.close()
   }
 })
 </script>

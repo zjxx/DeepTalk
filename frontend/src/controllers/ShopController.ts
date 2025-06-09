@@ -1,7 +1,7 @@
 import { ref } from 'vue'
-import {ShopSearchAPI, ShopPurchaseAPI, ShopCheckStockAPI} from '../api/ShopAPI'
+import {ShopSearchAPI, ShopPurchaseAPI, ShopCheckStockAPI, ShopUseModelAPI} from '../api/ShopAPI'
 import type { Product, Order, SearchRequest, SearchResponse, CheckStockRequest, CheckStockResponse,
-    PurchaseRequest, PurchaseResponse } from '../interface/ShopInterface'
+    PurchaseRequest, PurchaseResponse, UseModelRequest } from '../interface/ShopInterface'
 
 export const useShopController = () => {
     const productList = ref<Product[]>([])
@@ -99,6 +99,27 @@ export const useShopController = () => {
             loading.value = false
         }
     }
+    // 使用模型
+    const useModel = async (productId: string) => {
+        loading.value = true
+        error.value = null
+        try {
+            const useReq: UseModelRequest = { productId }
+            const response = await ShopUseModelAPI(useReq)
+            if (response.success) {
+                return true
+            } else {
+                error.value = response.message
+                return false
+            }
+        } catch (e) {
+            error.value = e instanceof Error ? e.message : '使用模型失败，请稍后重试'
+            console.error('使用模型失败:', e)
+            return false
+        } finally {
+            loading.value = false
+        }
+    }
 
     return {
         productList,
@@ -108,7 +129,8 @@ export const useShopController = () => {
         loadShopData,
         searchProducts,
         purchaseProduct,
-        checkStock
+        checkStock,
+        useModel
     }
 }
 

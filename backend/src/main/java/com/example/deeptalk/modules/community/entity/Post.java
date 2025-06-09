@@ -3,6 +3,7 @@ package com.example.deeptalk.modules.community.entity;
 import javax.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
+import javax.persistence.Transient;
 
 @Data
 @Entity
@@ -12,16 +13,16 @@ public class Post {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, columnDefinition = "VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
+    @Column(nullable = false)
     private String title;
 
-    @Column(nullable = false, length = 1000, columnDefinition = "TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
+    @Column(nullable = false, length = 1000)
     private String content;
 
     @Column(name = "author_id", nullable = false)
     private String authorId;
 
-    @Column(name = "author_name", nullable = false, columnDefinition = "VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
+    @Column(name = "author_name", nullable = false)
     private String authorName;
 
     @Column(name = "author_avatar")
@@ -32,6 +33,9 @@ public class Post {
 
     @Column(name = "likes_count", nullable = false)
     private Integer likesCount = 0;
+
+    @Transient
+    private Author author;
 
     @PrePersist
     protected void onCreate() {

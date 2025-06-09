@@ -239,7 +239,7 @@ onMounted(() => {
 }
 
 .title-section {
-  background: linear-gradient(45deg, #1976d2, #2196f3);
+  background: linear-gradient(135deg, #e0ecff 0%, #f5faff 100%);
   color: white;
   padding: 16px 24px;
   border-radius: 12px 12px 0 0;

@@ -14,9 +14,9 @@
       </a-menu-item>
       
       <a-menu-item key="explore">
-        <router-link to="/explore">
+        <router-link to="/matching">
           <compass-outlined />
-          探索
+          匹配
         </router-link>
       </a-menu-item>
       <a-menu-item key="community">
@@ -34,7 +34,9 @@
     </a-menu>
     <a-dropdown>
       <div class="user-info">
-        <a-avatar :src="userAvatar" />
+        <v-avatar size="40" class="ml-2">
+          <v-img :src="userAvatar" alt="用户头像"></v-img>
+        </v-avatar>
         <span class="username">{{ username }}</span>
       </div>
       <template #overlay>
@@ -49,9 +51,8 @@
   </a-layout-header>
 </template>
 
-<script lang="ts">
-import { defineComponent, ref } from 'vue'
-import { useRouter } from 'vue-router'
+<script setup lang="ts">
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import {
   HomeOutlined,
   CompassOutlined,
@@ -59,44 +60,41 @@ import {
   ShopOutlined,
   LogoutOutlined
 } from '@ant-design/icons-vue'
-import { logout } from '../controllers/userController'
+import { logout, getUserAvatar } from '../controllers/userController'
 import userModel from '../models/user'
 
-export default defineComponent({
-  name: 'Navbar',
-  components: {
-    HomeOutlined,
-    CompassOutlined,
-    TeamOutlined,
-    ShopOutlined,
-    LogoutOutlined
-  },
-  setup() {
-    const router = useRouter()
-    const selectedKeys = ref<string[]>(['home'])
-    const userAvatar = ref('https://sns-avatar-qc.xhscdn.com/avatar/1040g2jo31b593h86ng005p4rmeo7531ts9tr1og?imageView2/2/w/540/format/webp|imageMogr2/strip2')
-    const username = ref(userModel.username)
+const userAvatar = ref(getUserAvatar())
+const username = ref(userModel.username)
+const selectedKeys = ref<string[]>(['home'])
 
-    const handleLogout = async () => {
-      try {
-        await logout()
-        router.push('/login')
-      } catch (error) {
-        console.error('登出失败:', error)
-        alert(error instanceof Error ? error.message : '登出失败，请重试')
-      }
+// 监听头像变化
+watch(() => getUserAvatar(), (newAvatar) => {
+  userAvatar.value = newAvatar
+}, { immediate: true })
 
-      // 登出成功后已经在 userController 中跳转到登录页，这里无需额外操作
-    }
+// 监听自定义头像更新事件
+const handleAvatarUpdate = (event: Event) => {
+  const customEvent = event as CustomEvent
+  userAvatar.value = customEvent.detail.avatar
+}
 
-    return {
-      selectedKeys,
-      userAvatar,
-      username,
-      handleLogout
-    }
-  }
+onMounted(() => {
+  window.addEventListener('avatar-updated', handleAvatarUpdate)
 })
+
+onUnmounted(() => {
+  window.removeEventListener('avatar-updated', handleAvatarUpdate)
+})
+
+const handleLogout = async () => {
+  try {
+    await logout()
+    // 登出成功后已经在 userController 中跳转到登录页，这里无需额外操作
+  } catch (error) {
+    console.error('登出失败:', error)
+    alert(error instanceof Error ? error.message : '登出失败，请重试')
+  }
+}
 </script>
 
 <style scoped>
@@ -107,7 +105,6 @@ export default defineComponent({
   background: #fff;
   box-shadow: none;
   width: 100%;
-
 }
 
 .logo {
@@ -152,7 +149,6 @@ export default defineComponent({
 .username {
   margin-left: 8px;
   color: rgba(0, 0, 0, 0.85);
-
 }
 
 :deep(.ant-dropdown-menu) {
@@ -168,6 +164,5 @@ export default defineComponent({
 
 :deep(.ant-dropdown-menu-item .anticon) {
   margin-right: 8px;
-
 }
 </style> 

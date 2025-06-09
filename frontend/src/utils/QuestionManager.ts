@@ -4,6 +4,9 @@ import { getRandomQuestion, type QuestionData, type QuestionRequest } from '../a
 export class QuestionManager {
   private currentQuestion: QuestionData | null = null
   private usedQuestionIds: string[] = []
+  private currentTopic: string = ''
+  private currentPrompts: string[] = []
+  private isServerTopic: boolean = false
 
   // 获取新的随机题目
   async loadNewQuestion(difficulty?: 'beginner' | 'intermediate' | 'advanced'): Promise<QuestionData | null> {
@@ -56,6 +59,12 @@ export class QuestionManager {
 
   // 获取当前题目的主题
   getCurrentTopic(): string {
+    // 优先使用服务器分配的主题
+    if (this.isServerTopic && this.currentTopic) {
+      return this.currentTopic
+    }
+    
+    // 如果没有服务器主题，使用本地题目的主题
     return this.currentQuestion?.topic || ''
   }
 
@@ -66,6 +75,12 @@ export class QuestionManager {
 
   // 获取当前题目的提示列表
   getCurrentPrompts(): string[] {
+    // 优先使用服务器分配的提示
+    if (this.isServerTopic && this.currentPrompts.length > 0) {
+      return this.currentPrompts
+    }
+    
+    // 如果没有服务器提示，使用本地题目的提示
     return this.currentQuestion?.prompts || []
   }
 
@@ -100,6 +115,9 @@ export class QuestionManager {
   // 重置当前题目
   reset(): void {
     this.currentQuestion = null
+    this.currentTopic = ''
+    this.currentPrompts = []
+    this.isServerTopic = false
   }
 
   // 获取题目统计信息
@@ -116,5 +134,28 @@ export class QuestionManager {
       estimatedTime: this.currentQuestion.estimatedTime,
       promptCount: this.currentQuestion.prompts.length
     }
+  }
+
+  // 设置服务器分配的主题和提示
+  setServerTopic(topic: string, prompts: string[]): void {
+    console.log('QuestionManager: 设置服务器主题:', {
+      topic,
+      prompts: prompts.length
+    })
+    
+    // 创建服务器主题对象
+    this.currentTopic = topic
+    this.currentPrompts = prompts || []
+    this.isServerTopic = true // 标记为服务器分配的主题
+    
+    console.log('QuestionManager: 服务器主题设置完成:', {
+      currentTopic: this.currentTopic,
+      promptCount: this.currentPrompts.length
+    })
+  }
+
+  // 检查是否使用服务器主题
+  isUsingServerTopic(): boolean {
+    return this.isServerTopic || false
   }
 }

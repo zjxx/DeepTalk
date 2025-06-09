@@ -3,14 +3,24 @@
     <div class="user">
       <div class="user-content-wrapper">
         <div class="avatar-section">
-          <div class="avatar-wrapper">
-            <v-avatar>
-              <v-img :src="userAvatar" alt="User Avatar"></v-img>
+          <div class="avatar-container" @click="triggerFileInput">
+            <v-avatar size="160" class="profile-avatar">
+              <v-img :src="userAvatar" alt="用户头像"></v-img>
             </v-avatar>
-            <div class="avatar-overlay" @click="editAvatar">
-              <v-icon>mdi-pencil</v-icon> <!-- 可添加编辑图标 -->
+            <div class="avatar-overlay">
+              <div class="overlay-content">
+                <v-icon color="white" size="large">mdi-camera</v-icon>
+                <span class="overlay-text">点击修改头像</span>
+              </div>
             </div>
           </div>
+          <input
+            type="file"
+            ref="fileInput"
+            accept="image/*"
+            style="display: none"
+            @change="handleFileChange"
+          >
         </div>
         <div class="info-section">
           <h2 class="text-h5 font-weight-bold">{{ username }}</h2>
@@ -77,7 +87,13 @@
       </div>
     </div>
 
-   
+    <v-snackbar
+      v-model="snackbar.show"
+      :color="snackbar.color"
+      :timeout="snackbar.timeout"
+    >
+      {{ snackbar.text }}
+    </v-snackbar>
 
   </div>
 </template>
@@ -85,20 +101,69 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import userModel from '../models/user'
+import { useSnackbar } from '../composables/useSnackbar'
+import { getUserAvatar, setUserAvatar } from '../controllers/userController'
 
-const userAvatar = ref('https://sns-avatar-qc.xhscdn.com/avatar/1040g2jo31b593h86ng005p4rmeo7531ts9tr1og?imageView2/2/w/540/format/webp|imageMogr2/strip2') // 使用提供图片中的头像URL
+const { snackbar, showSuccess, showError } = useSnackbar()
+const fileInput = ref<HTMLInputElement | null>(null)
+const userAvatar = ref(getUserAvatar())
 const username = ref(userModel.username)
-const xiaohongshuId = ref('9643589600')
+const xiaohongshuId = ref('1234')
 const followCount = ref(1)
 const fanCount = ref(2)
 const likesAndCollections = ref(0)
 
 const activeTab = ref('posts') // 默认激活"帖子"选项卡
 
-const editAvatar = () => {
-  alert('点击了头像，准备修改头像');
-  // TODO: 实现头像修改逻辑
-};
+// 触发文件选择
+const triggerFileInput = () => {
+  fileInput.value?.click()
+}
+
+// 处理文件选择
+const handleFileChange = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  
+  if (file) {
+    // 检查文件类型
+    if (!file.type.startsWith('image/')) {
+      showError('请选择图片文件')
+      return
+    }
+    
+    // 检查文件大小（限制为 5MB）
+    if (file.size > 5 * 1024 * 1024) {
+      showError('图片大小不能超过 5MB')
+      return
+    }
+    
+    // 创建文件预览
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const newAvatar = e.target?.result as string
+      // 更新 userController 中的头像
+      setUserAvatar(newAvatar)
+      // 更新本地状态
+      userAvatar.value = newAvatar
+      // 更新 localStorage 中的用户信息
+      const userInfo = localStorage.getItem('userInfo')
+      if (userInfo) {
+        const info = JSON.parse(userInfo)
+        info.avatar = newAvatar
+        localStorage.setItem('userInfo', JSON.stringify(info))
+      }
+      showSuccess('头像更新成功')
+    }
+    reader.readAsDataURL(file)
+  }
+}
+
+// 导出函数供模板使用
+defineExpose({
+  triggerFileInput,
+  handleFileChange
+})
 
 </script>
 
@@ -134,19 +199,16 @@ const editAvatar = () => {
   aspect-ratio: 1 / 1; /* 保持宽高比 */
 }
 
-.avatar-wrapper {
-  /* 让 wrapper 占满头像区域的宽度和高度 */
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center; /* 垂直居中头像 */
-  justify-content: center; /* 水平居中头像 */
-  position: relative; /* 使蒙层能够绝对定位在其内部 */
-  overflow: hidden; /* 隐藏超出部分的蒙层 */
-  border-radius: 50%; /* 使蒙层形状与圆形头像匹配 */
+.avatar-container {
+  position: relative;
+  cursor: pointer;
+  border-radius: 50%;
+  overflow: hidden;
+  width: 160px;
+  height: 160px;
 }
 
-.avatar-wrapper .v-avatar {
+.profile-avatar {
   width: 100%;
   height: 100%;
 }
@@ -155,20 +217,31 @@ const editAvatar = () => {
   position: absolute;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5); /* 半透明黑色蒙层 */
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0; /* 默认隐藏 */
-  transition: opacity 0.3s ease; /* 添加过渡效果 */
-  cursor: pointer; /* 鼠标样式为手型 */
-  color: #fff; /* 蒙层上的图标或文字颜色 */
+  opacity: 0;
+  transition: opacity 0.3s;
 }
 
-.avatar-section:hover .avatar-overlay {
-  opacity: 1; /* 鼠标悬停时显示 */
+.avatar-container:hover .avatar-overlay {
+  opacity: 1;
+}
+
+.overlay-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.overlay-text {
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .info-section {
