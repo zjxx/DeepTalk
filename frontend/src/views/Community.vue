@@ -11,10 +11,9 @@
 
             <!-- 搜索输入框 -->
             <v-text-field v-model="searchQuery" placeholder="搜索社区内容..." prepend-inner-icon="mdi-magnify"
-              variant="outlined" hide-details class="search-input" @update:model-value="handleSearch"
+              variant="outlined" hide-details class="search-input"
               @keyup.enter="handleSearch"></v-text-field>
 
-            <!-- 搜索按钮 -->
             <!-- 搜索按钮 -->
             <v-btn color="primary" variant="elevated" class="search-button" @click="handleSearch">
               搜索
@@ -119,7 +118,11 @@ const searchOptions = [
 
 // 处理搜索
 const handleSearch = async () => {
-  if (!searchQuery.value.trim()) return
+  if (!searchQuery.value.trim()) {
+    // 如果搜索框为空，重新加载所有数据
+    await loadCommunityData()
+    return
+  }
 
   if (searchType.value === 'posts') {
     await searchPosts(searchQuery.value)
@@ -130,6 +133,14 @@ const handleSearch = async () => {
 
 // 查看帖子详情
 const viewPost = (postId: string) => {
+  console.log('=== Community viewPost ===')
+  console.log('点击的帖子ID:', postId)
+  console.log('当前posts数组:', posts.value)
+  console.log('posts数组长度:', posts.value.length)
+  
+  const post = posts.value.find(p => p.id === postId)
+  console.log('找到的帖子:', post)
+  
   router.push(`/post/${postId}`)
 }
 

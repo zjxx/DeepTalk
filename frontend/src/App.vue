@@ -31,9 +31,9 @@ export default defineComponent({
   
 
     // 定义需要显示导航栏的路由
-    const navRoutes = ['/home', '/explore', '/community', '/shop', '/settings', '/security', '/privacy', '/profile','/repositories','/historical-scores','/matching', '/versus', '/evaluation']
+    const navRoutes = ['/home', '/explore', '/community', '/shop', '/shop/live2d/:id', '/settings', '/security', '/privacy', '/profile','/repositories','/historical-scores','/matching', '/versus', '/evaluation', '/post/:id', '/post/create']
     // 定义需要显示侧边栏的路由
-    const sidebarRoutes = ['/home', '/profile', '/', '/security', '/privacy',   '/repositories','/historical-scores']
+    const sidebarRoutes = ['/home', '/profile', '/', '/security', '/privacy',  '/repositories','/historical-scores']
 
 
     // 从 localStorage 恢复用户信息
@@ -47,9 +47,25 @@ export default defineComponent({
       }
     }
 
+    
+    // 检查是否应该显示导航栏
+    const shouldShowNavbar = (path: string) => {
+      // 精确匹配
+      if (navRoutes.includes(path)) {
+        return true
+      }
+      
+      // 动态路由匹配
+      if (path.startsWith('/post/') && path !== '/post/create') {
+        return true
+      }      
+
+      return false
+    }
+
     // 监听路由变化
     watch(() => route.path, (newPath) => {
-      showNavbar.value = navRoutes.includes(newPath)
+      showNavbar.value = shouldShowNavbar(newPath)
       showSidebar.value = sidebarRoutes.includes(newPath)
     }, { immediate: true })
 

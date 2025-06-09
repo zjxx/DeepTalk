@@ -1,92 +1,90 @@
 <template>
-    <v-app>
-        <v-main class="shop-live2d-main">
-            <div class="shop-live2d-container">
-                <!-- 返回按钮区域 -->
-                <div class="back-button-area">
-                    <v-btn variant="text" prepend-icon="mdi-arrow-left" class="back-button" @click="goBack">
-                        返回
-                    </v-btn>
-                </div>
-
-                <!-- 主要内容区域 - 左右布局 -->
-                <div class="main-content-area">
-                    <!-- 左侧Live2D展示区域 - 宽度0.8 -->
-                    <div class="live2d-display-area">
-                        <!-- 商品名称 -->
-                        <h1 v-if="currentProduct" class="product-title">{{ currentProduct.name }}</h1>
-
-                        <!-- 控制按钮 -->
-                        <div class="live2d-controls">
-                            <v-btn icon size="small" color="white" variant="elevated" class="control-btn"
-                                @click="resetModelTransform" title="重置大小和位置">
-                                <v-icon>mdi-refresh</v-icon>
-                            </v-btn>
-                        </div>
-
-                        <!-- Live2D模型展示 -->
-                        <div class="live2d-view-container" ref="pixiContainerRef">
-                            <!-- PIXI Canvas 将被动态添加到这里 -->
-                        </div>
-                    </div>
-
-                    <!-- 右侧信息区域 - 宽度0.2 -->
-                    <div class="right-info-area">
-                        <!-- 商品信息卡片 -->
-                        <v-card v-if="currentProduct" class="product-card" elevation="2">
-                            <v-card-text class="product-details">
-                                <!-- 商品描述 -->
-                                <div class="product-description">
-                                    <h3>商品描述</h3>
-                                    <p>{{ currentProduct.description }}</p>
-                                </div>
-
-                                <!-- 价格显示 -->
-                                <div class="price-section">
-                                    <h3>价格：</h3>
-                                    <div class="price-display">
-                                        <span class="price-symbol">¥</span>
-                                        <span class="price-amount">{{ currentProduct.price }}</span>
-                                    </div>
-                                </div>
-
-                                <!-- 购买按钮 -->
-                                <div class="purchase-section">
-                                    <v-btn color="primary" size="large" variant="elevated" class="purchase-button"
-                                        :loading="isPurchasing" @click="handlePurchase" block>
-                                        <v-icon left>mdi-cart</v-icon>
-                                        立即购买
-                                    </v-btn>
-                                </div>
-                            </v-card-text>
-                        </v-card>
-
-                        <!-- 加载状态 -->
-                        <div v-else-if="loading" class="loading-state">
-                            <v-progress-circular indeterminate></v-progress-circular>
-                            <p class="mt-4">加载商品信息中...</p>
-                        </div>
-
-                        <!-- 商品不存在 -->
-                        <div v-else class="empty-state">
-                            <v-icon size="64" color="grey-lighten-1">mdi-package-variant-closed</v-icon>
-                            <p class="mt-4 text-grey">商品不存在</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 购买成功提示 -->
-                <v-snackbar v-model="showSuccessMessage" color="success" timeout="3000" location="top">
-                    购买成功！
-                </v-snackbar>
-
-                <!-- 购买失败提示 -->
-                <v-snackbar v-model="showErrorMessage" color="error" timeout="3000" location="top">
-                    {{ errorMessage }}
-                </v-snackbar>
+    <v-main class="shop-live2d-main">
+        <div class="shop-live2d-container">
+            <!-- 返回按钮区域 -->
+            <div class="back-button-area">
+                <v-btn variant="text" prepend-icon="mdi-arrow-left" class="back-button" @click="goBack">
+                    返回
+                </v-btn>
             </div>
-        </v-main>
-    </v-app>
+
+            <!-- 主要内容区域 - 左右布局 -->
+            <div class="main-content-area">
+                <!-- 左侧Live2D展示区域 - 宽度0.8 -->
+                <div class="live2d-display-area">
+                    <!-- 商品名称 -->
+                    <h1 v-if="currentProduct" class="product-title">{{ currentProduct.name }}</h1>
+
+                    <!-- 控制按钮 -->
+                    <div class="live2d-controls">
+                        <v-btn icon size="small" color="white" variant="elevated" class="control-btn"
+                            @click="resetModelTransform" title="重置大小和位置">
+                            <v-icon>mdi-refresh</v-icon>
+                        </v-btn>
+                    </div>
+
+                    <!-- Live2D模型展示 -->
+                    <div class="live2d-view-container" ref="pixiContainerRef">
+                        <!-- PIXI Canvas 将被动态添加到这里 -->
+                    </div>
+                </div>
+
+                <!-- 右侧信息区域 - 宽度0.2 -->
+                <div class="right-info-area">
+                    <!-- 商品信息卡片 -->
+                    <v-card v-if="currentProduct" class="product-card" elevation="2">
+                        <v-card-text class="product-details">
+                            <!-- 商品描述 -->
+                            <div class="product-description">
+                                <h3>商品描述</h3>
+                                <p>{{ currentProduct.description }}</p>
+                            </div>
+
+                            <!-- 价格显示 -->
+                            <div class="price-section">
+                                <h3>价格：</h3>
+                                <div class="price-display">
+                                    <span class="price-symbol">¥</span>
+                                    <span class="price-amount">{{ currentProduct.price }}</span>
+                                </div>
+                            </div>
+
+                            <!-- 购买按钮 -->
+                            <div class="purchase-section">
+                                <v-btn color="primary" size="large" variant="elevated" class="purchase-button"
+                                    :loading="isPurchasing" @click="handlePurchase" block>
+                                    <v-icon left>mdi-cart</v-icon>
+                                    立即购买
+                                </v-btn>
+                            </div>
+                        </v-card-text>
+                    </v-card>
+
+                    <!-- 加载状态 -->
+                    <div v-else-if="loading" class="loading-state">
+                        <v-progress-circular indeterminate></v-progress-circular>
+                        <p class="mt-4">加载商品信息中...</p>
+                    </div>
+
+                    <!-- 商品不存在 -->
+                    <div v-else class="empty-state">
+                        <v-icon size="64" color="grey-lighten-1">mdi-package-variant-closed</v-icon>
+                        <p class="mt-4 text-grey">商品不存在</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 购买成功提示 -->
+            <v-snackbar v-model="showSuccessMessage" color="success" timeout="3000" location="top">
+                购买成功！
+            </v-snackbar>
+
+            <!-- 购买失败提示 -->
+            <v-snackbar v-model="showErrorMessage" color="error" timeout="3000" location="top">
+                {{ errorMessage }}
+            </v-snackbar>
+        </div>
+    </v-main>
 </template>
 
 <script setup lang="ts">

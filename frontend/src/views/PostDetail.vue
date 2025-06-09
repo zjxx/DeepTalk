@@ -1,102 +1,91 @@
 <template>
-  <v-app>
-    <v-app-bar app>
-      <Navbar />
-    </v-app-bar>
+  <v-container fluid class="fill-height pa-0">
+    <!-- 页面容器：左右各留空0.125（12.5%） -->
+    <div class="page-container">
+      <!-- 返回按钮 -->
+      <v-btn variant="text" prepend-icon="mdi-arrow-left" class="mb-4" @click="goBack" color="rgba(10, 100, 200, 0.8)">
+        返回
+      </v-btn>
 
-    <v-main>
-      <v-container fluid class="fill-height pa-0">
-        <!-- 页面容器：左右各留空0.125 -->
-        <div class="page-container">
-          <!-- 返回按钮 -->
-          <v-btn variant="text" prepend-icon="mdi-arrow-left" class="mb-4" @click="goBack"
-            color="rgba(10, 100, 200, 0.8)">
-            返回
-          </v-btn>
+      <!-- 加载状态 -->
+      <div v-if="loading" class="text-center pa-8">
+        <v-progress-circular indeterminate size="64"></v-progress-circular>
+        <p class="mt-4">加载中...</p>
+      </div>
 
-          <!-- 加载状态 -->
-          <div v-if="loading" class="text-center pa-8">
-            <v-progress-circular indeterminate size="64"></v-progress-circular>
-            <p class="mt-4">加载中...</p>
-          </div>
+      <!-- 主要内容布局：两栏布局 0.7 + 0.3 -->
+      <div v-else-if="currentPost" class="content-layout">
+        <!-- 左侧：帖子主要内容 -->
+        <v-card class="post-content-card" elevation="1">
+          <!-- 标题和点赞按钮 -->
+          <v-card-text class="post-header">
+            <h1 class="post-title">{{ currentPost.title }}</h1>
+            <v-btn :icon="isLiked ? 'mdi-heart' : 'mdi-heart-outline'" :color="isLiked ? 'red' : 'grey'" variant="text"
+              size="large" :loading="isProcessingLike" :disabled="isProcessingLike" @click="handleLike">
+            </v-btn>
+          </v-card-text>
 
-          <!-- 主要内容布局：两栏布局 0.7 + 0.3 -->
-          <div v-else-if="currentPost" class="content-layout">
-            <!-- 左侧：帖子主要内容 -->
-            <v-card class="post-content-card" elevation="1">
-              <!-- 标题和点赞按钮 -->
-              <v-card-text class="post-header">
-                <h1 class="post-title">{{ currentPost.title }}</h1>
-                <v-btn :icon="isLiked ? 'mdi-heart' : 'mdi-heart-outline'" :color="isLiked ? 'red' : 'grey'"
-                  variant="text" size="large" :loading="isProcessingLike" :disabled="isProcessingLike"
-                  @click="handleLike">
-                </v-btn>
-              </v-card-text>
+          <!-- 时间行 -->
+          <v-card-text class="post-time-section">
+            <span class="post-time">{{ formatTime(currentPost.createdAt) }}</span>
+            <span class="post-likes">
+              <v-icon size="16" color="red">mdi-heart</v-icon>
+              {{ currentPost.likesCount }} 点赞
+            </span>
+          </v-card-text>
 
-              <!-- 时间行 -->
-              <v-card-text class="post-time-section">
-                <span class="post-time">{{ formatTime(currentPost.time) }}</span>
-                <span class="post-likes">
-                  <v-icon size="16" color="red">mdi-heart</v-icon>
-                  {{ currentPost.likes }} 点赞
-                </span>
-              </v-card-text>
+          <v-divider></v-divider>
 
-              <v-divider></v-divider>
+          <!-- 正文内容 -->
+          <v-card-text class="post-body-section">
+            <div class="post-body">{{ currentPost.content }}</div>
+          </v-card-text>
+        </v-card>
 
-              <!-- 正文内容 -->
-              <v-card-text class="post-body-section">
-                <div class="post-body">{{ currentPost.content }}</div>
-              </v-card-text>
-            </v-card>
+        <!-- 右侧：作者信息 -->
+        <v-card class="author-info-card" elevation="1">
+          <v-card-text class="author-profile">
+            <!-- 作者头像和名称 -->
+            <div class="author-basic-info">
+              <v-avatar size="80" class="mb-3">
+                <v-img :src="currentPost.author.avatar || '/default-avatar.png'" />
+              </v-avatar>
+              <h2 class="author-name">{{ currentPost.author.username }}</h2>
+            </div>
 
-            <!-- 右侧：作者信息 -->
-            <v-card class="author-info-card" elevation="1">
-              <v-card-text class="author-profile">
-                <!-- 作者头像和名称 -->
-                <div class="author-basic-info">
-                  <v-avatar size="80" class="mb-3">
-                    <v-img :src="currentPost.author.avatar || '/default-avatar.png'" />
-                  </v-avatar>
-                  <h2 class="author-name">{{ currentPost.author.username }}</h2>
-                </div>
+            <!-- 作者统计信息 -->
+            <div class="author-stats">
+              <div class="stat-item">
+                <span class="stat-number">{{ currentPost.author.authorPosts }}</span>
+                <span class="stat-label">帖子</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-number">{{ currentPost.author.authorLikes }}</span>
+                <span class="stat-label">获赞</span>
+              </div>
+            </div>
 
-                <!-- 作者统计信息 -->
-                <div class="author-stats">
-                  <div class="stat-item">
-                    <span class="stat-number">{{ currentPost.author.posts }}</span>
-                    <span class="stat-label">帖子</span>
-                  </div>
-                  <div class="stat-item">
-                    <span class="stat-number">{{ currentPost.author.likes }}</span>
-                    <span class="stat-label">获赞</span>
-                  </div>
-                </div>
+            <!-- 预留扩展空间 -->
+            <div class="extension-area">
+              <!-- 这里预留给未来功能扩展 -->
+            </div>
+          </v-card-text>
+        </v-card>
+      </div>
 
-                <!-- 预留扩展空间 -->
-                <div class="extension-area">
-                  <!-- 这里预留给未来功能扩展 -->
-                </div>
-              </v-card-text>
-            </v-card>
-          </div>
-
-          <!-- 帖子不存在 -->
-          <div v-else class="empty-state text-center pa-8">
-            <v-icon size="64" color="grey-lighten-1">mdi-file-document-remove</v-icon>
-            <p class="mt-4 text-grey">帖子不存在</p>
-            <v-btn color="primary" @click="goBack" class="mt-4">返回社区</v-btn>
-          </div>
-        </div>
-      </v-container>
-    </v-main>
-  </v-app>
+      <!-- 帖子不存在 -->
+      <div v-else class="empty-state text-center pa-8">
+        <v-icon size="64" color="grey-lighten-1">mdi-file-document-remove</v-icon>
+        <p class="mt-4 text-grey">帖子不存在</p>
+        <v-btn color="primary" @click="goBack" class="mt-4">返回社区</v-btn>
+      </div>
+    </div>
+  </v-container>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import Navbar from '../components/Navbar.vue'
 import { useCommunityController } from '../controllers/CommunityController'
 import type { Post } from '../interface/CommunityInterface'
 
@@ -116,9 +105,16 @@ const isProcessingLike = ref(false)
 
 const postId = computed(() => route.params.id as string)
 
-// 格式化时间
+// 格式化时间 - 适配后端时间格式
 const formatTime = (time: string) => {
+  // 处理后端时间格式：2025-06-08T20:57:39.744338
   const date = new Date(time)
+
+  // 检查日期是否有效
+  if (isNaN(date.getTime())) {
+    return '时间格式错误'
+  }
+
   const now = new Date()
   const diff = now.getTime() - date.getTime()
 
@@ -126,23 +122,48 @@ const formatTime = (time: string) => {
   const hours = Math.floor(diff / (1000 * 60 * 60))
   const days = Math.floor(diff / (1000 * 60 * 60 * 24))
 
+  if (minutes < 1) return '刚刚'
   if (minutes < 60) return `${minutes}分钟前`
   if (hours < 24) return `${hours}小时前`
   if (days < 30) return `${days}天前`
 
-  return date.toLocaleDateString()
+  // 超过30天显示具体日期
+  return date.toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  })
 }
 
 // 加载帖子详情
 const loadPostDetail = async () => {
+  console.log('=== PostDetail loadPostDetail 开始 ===')
+  console.log('当前postId:', postId.value)
+  console.log('postId类型:', typeof postId.value)
+  console.log('posts数组长度:', posts.value.length)
+  console.log('posts数组内容:', posts.value)
+
   if (posts.value.length === 0) {
+    console.log('posts为空，开始加载社区数据...')
     await loadCommunityData()
+    console.log('加载完成，posts数组长度:', posts.value.length)
+    console.log('加载完成，posts数组内容:', posts.value)
   }
 
-  const post = posts.value.find(p => p.id === postId.value)
+  const post = posts.value.find(p => {
+    console.log(`比较: ${p.id} (${typeof p.id}) === ${postId.value} (${typeof postId.value})`)
+    return p.id === postId.value
+  })
+  console.log('查找到的帖子:', post)
+
   if (post) {
     currentPost.value = post
+    console.log('设置currentPost成功')
+  } else {
+    console.log('未找到对应帖子!')
+    console.log('所有可用的帖子ID:', posts.value.map(p => p.id))
   }
+  console.log('=== PostDetail loadPostDetail 结束 ===')
 }
 
 // 处理点赞
@@ -161,7 +182,7 @@ const handleLike = async () => {
 
     // 只有成功时才更新UI
     isLiked.value = !isLiked.value
-    currentPost.value.likes = result.likes
+    currentPost.value.likesCount = result.likes
   } catch (error) {
     console.error('点赞失败:', error)
 
@@ -183,9 +204,12 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* 页面容器：左右各留空0.125 */
+/* 页面容器：左右各留空0.125（12.5%） */
 .page-container {
-  margin: 0 12.5%;
+  margin: 0 auto;
+  max-width: 1200px;
+  width: 75%;
+  /* 使用75%宽度，等同于左右各留空12.5% */
   padding: 20px 0;
   min-height: calc(100vh - 64px);
   display: flex;

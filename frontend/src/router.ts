@@ -65,6 +65,12 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/post/:id',
+    name: 'PostDetail',
+    component: PostDetail,
+    meta: { requiresAuth: true }
+  },
+  {
   path: '/post/create',
   name: 'PostAdding',
   component: PostAdding,
@@ -86,12 +92,6 @@ const routes = [
     path: '/versus',
     name: 'Versus',
     component: Versus,
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/post/:id',
-    name: 'PostDetail',
-    component: PostDetail,
     meta: { requiresAuth: true }
   },
   {
