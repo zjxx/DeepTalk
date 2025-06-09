@@ -342,7 +342,8 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { connectWebSocketApi } from '../api/versusAPI'
-import type { ConnectRequest } from '../interface/versus'
+import type { ConnectRequest, ConnectResponse } from '../interface/versus'
+import userModel from '../models/user'
 
 const router = useRouter()
 
@@ -358,8 +359,9 @@ const matchingStatus = ref('')
 const matchingTip = ref('')
 
 // WebSocket相关状态
-const userId = ref<string>(`user_${Math.random().toString(36).substr(2, 9)}`)
+const userId = ref<string>(userModel.userId)
 const sessionId = ref<string>('')
+const opponentId = ref<string>('')
 const ws = ref<WebSocket | null>(null)
 const isWebSocketConnected = ref(false)
 
@@ -438,12 +440,14 @@ const handleStartMatching = async () => {
 // 建立WebSocket连接
 const connectWebSocket = async () => {
   try {
-    // 调用API获取sessionId
+    // 调用API获取sessionId和opponentId
     const request: ConnectRequest = {
       userId: userId.value
     }
-    const data = await connectWebSocketApi(request)
+    const data: ConnectResponse = await connectWebSocketApi(request)
     sessionId.value = data.sessionId
+    opponentId.value = data.opponentId
+    console.log('获取到sessionId:', sessionId.value, 'opponentId:', opponentId.value)
     
     // 建立WebSocket连接
     const wsUrl = `ws://115.175.45.173:8080/api/speech/ws`
@@ -526,6 +530,12 @@ const enterBattle = async () => {
     if (selectedBattleType.value === '真人对战' && sessionId.value && userId.value) {
       query.sessionId = sessionId.value
       query.userId = userId.value
+      
+      // 传递对手ID
+      if (opponentId.value) {
+        query.opponentId = opponentId.value
+        console.log('传递对手ID到对战界面:', opponentId.value)
+      }
       
       // 将WebSocket连接存储到全局状态，供对战界面使用
       if (ws.value && isWebSocketConnected.value) {
