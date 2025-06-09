@@ -121,8 +121,9 @@ public class AuthController {
             String token = authHeader.replace("Bearer ", "");
             
             // 解析token获取过期时间
-            Claims claims = Jwts.parser()
+            Claims claims = Jwts.parserBuilder()
                     .setSigningKey(jwtSecretKey)
+                    .build()
                     .parseClaimsJws(token)
                     .getBody();
             
@@ -131,9 +132,17 @@ public class AuthController {
             // 将token加入黑名单
             tokenBlacklistService.addToBlacklist(token, expiration.getTime());
             
-            return ResponseEntity.ok("登出成功");
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "登出成功");
+            
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("登出失败：" + e.getMessage());
+            logger.error("登出失败", e);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "登出失败：" + e.getMessage());
+            return ResponseEntity.badRequest().body(response);
         }
     }
 
