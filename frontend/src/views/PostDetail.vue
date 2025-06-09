@@ -9,9 +9,12 @@
         <!-- 页面容器：左右各留空0.125 -->
         <div class="page-container">
           <!-- 返回按钮 -->
-          <v-btn variant="text" prepend-icon="mdi-arrow-left" class="mb-4" @click="goBack"
-            color="rgba(10, 100, 200, 0.8)">
-            返回
+          <v-btn variant="text" 
+          prepend-icon="mdi-arrow-left" 
+          class="mb-4" 
+          @click="goBack"
+          color="rgba(10, 100, 200, 0.8)">
+          返回
           </v-btn>
 
           <!-- 加载状态 -->
@@ -35,10 +38,10 @@
 
               <!-- 时间行 -->
               <v-card-text class="post-time-section">
-                <span class="post-time">{{ formatTime(currentPost.time) }}</span>
+                <span class="post-time">{{ formatTime(currentPost.createdAt) }}</span>
                 <span class="post-likes">
                   <v-icon size="16" color="red">mdi-heart</v-icon>
-                  {{ currentPost.likes }} 点赞
+                  {{ currentPost.likesCount }} 点赞
                 </span>
               </v-card-text>
 
@@ -64,11 +67,11 @@
                 <!-- 作者统计信息 -->
                 <div class="author-stats">
                   <div class="stat-item">
-                    <span class="stat-number">{{ currentPost.author.posts }}</span>
+                    <span class="stat-number">{{ currentPost.author.authorPosts }}</span>
                     <span class="stat-label">帖子</span>
                   </div>
                   <div class="stat-item">
-                    <span class="stat-number">{{ currentPost.author.likes }}</span>
+                    <span class="stat-number">{{ currentPost.author.authorLikes }}</span>
                     <span class="stat-label">获赞</span>
                   </div>
                 </div>
@@ -116,33 +119,65 @@ const isProcessingLike = ref(false)
 
 const postId = computed(() => route.params.id as string)
 
-// 格式化时间
+// 格式化时间 - 适配后端时间格式
 const formatTime = (time: string) => {
+  // 处理后端时间格式：2025-06-08T20:57:39.744338
   const date = new Date(time)
+  
+  // 检查日期是否有效
+  if (isNaN(date.getTime())) {
+    return '时间格式错误'
+  }
+  
   const now = new Date()
   const diff = now.getTime() - date.getTime()
-
+  
   const minutes = Math.floor(diff / (1000 * 60))
   const hours = Math.floor(diff / (1000 * 60 * 60))
   const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-
+  
+  if (minutes < 1) return '刚刚'
   if (minutes < 60) return `${minutes}分钟前`
   if (hours < 24) return `${hours}小时前`
   if (days < 30) return `${days}天前`
-
-  return date.toLocaleDateString()
+  
+  // 超过30天显示具体日期
+  return date.toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  })
 }
 
 // 加载帖子详情
 const loadPostDetail = async () => {
+  console.log('=== PostDetail loadPostDetail 开始 ===')
+  console.log('当前postId:', postId.value)
+  console.log('postId类型:', typeof postId.value)
+  console.log('posts数组长度:', posts.value.length)
+  console.log('posts数组内容:', posts.value)
+
   if (posts.value.length === 0) {
+    console.log('posts为空，开始加载社区数据...')
     await loadCommunityData()
+    console.log('加载完成，posts数组长度:', posts.value.length)
+    console.log('加载完成，posts数组内容:', posts.value)
   }
 
-  const post = posts.value.find(p => p.id === postId.value)
+  const post = posts.value.find(p => {
+    console.log(`比较: ${p.id} (${typeof p.id}) === ${postId.value} (${typeof postId.value})`)
+    return p.id === postId.value
+  })
+  console.log('查找到的帖子:', post)
+  
   if (post) {
     currentPost.value = post
+    console.log('设置currentPost成功')
+  } else {
+    console.log('未找到对应帖子!')
+    console.log('所有可用的帖子ID:', posts.value.map(p => p.id))
   }
+  console.log('=== PostDetail loadPostDetail 结束 ===')
 }
 
 // 处理点赞
@@ -161,7 +196,7 @@ const handleLike = async () => {
 
     // 只有成功时才更新UI
     isLiked.value = !isLiked.value
-    currentPost.value.likes = result.likes
+    currentPost.value.likesCount = result.likes
   } catch (error) {
     console.error('点赞失败:', error)
 
@@ -183,9 +218,11 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* 页面容器：左右各留空0.125 */
+/* 页面容器：左右各留空0.125（12.5%） */
 .page-container {
-  margin: 0 12.5%;
+  margin: 0 auto;
+  max-width: 1200px;
+  width: 75%;  /* 使用75%宽度，等同于左右各留空12.5% */
   padding: 20px 0;
   min-height: calc(100vh - 64px);
   display: flex;

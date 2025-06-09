@@ -16,11 +16,11 @@
       <div class="post-footer">
         <div class="post-meta">
           <span class="author-name">{{ post.author.username }}</span>
-          <span class="post-time">{{ formatTime(post.time) }}</span>
+          <span class="post-time">{{ formatTime(post.createdAt) }}</span>
         </div>
         <div class="post-likes">
           <v-icon size="16" color="red">mdi-heart</v-icon>
-          <span>{{ post.likes }}</span>
+          <span>{{ post.likesCount }}</span>
         </div>
       </div>
     </v-card-text>
@@ -49,9 +49,16 @@ const formatContent = (content: string) => {
   }
 }
 
-// 格式化时间
+// 格式化时间 - 适配后端时间格式
 const formatTime = (time: string) => {
+  // 处理后端时间格式：2025-06-08T20:57:39.744338
   const date = new Date(time)
+  
+  // 检查日期是否有效
+  if (isNaN(date.getTime())) {
+    return '时间格式错误'
+  }
+  
   const now = new Date()
   const diff = now.getTime() - date.getTime()
   
@@ -59,11 +66,17 @@ const formatTime = (time: string) => {
   const hours = Math.floor(diff / (1000 * 60 * 60))
   const days = Math.floor(diff / (1000 * 60 * 60 * 24))
   
+  if (minutes < 1) return '刚刚'
   if (minutes < 60) return `${minutes}分钟前`
   if (hours < 24) return `${hours}小时前`
   if (days < 30) return `${days}天前`
   
-  return date.toLocaleDateString()
+  // 超过30天显示具体日期
+  return date.toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  })
 }
 </script>
 

@@ -9,49 +9,49 @@ export const useCommunityController = () => {
     const error = ref<string | null>(null)
 
     // 样品数据
-  const samplePosts: Post[] = [
-    {
-      id: '1',
-      title: '欢迎来到 DeepTalkz 社区！',
-      content: '这是一个测试帖子，用于展示社区功能。在这里你可以分享你的想法、经验和见解。我们希望这个社区能够成为一个知识分享和交流的平台，让每个人都能从中受益。',
-      author: {
-        id: 'user1',
-        username: '张三',
-        avatar: '',
-        posts: 5,
-        likes: 120
-      },
-      time: '2024-01-15T10:30:00Z',
-      likes: 25
-    },
-    {
-      id: '2',
-      title: '关于前端开发的一些思考',
-      content: '前端开发正在快速发展，新的框架和工具层出不穷。作为开发者，我们需要保持学习的态度，同时也要选择适合项目的技术栈。Vue3 和 TypeScript 的组合为我们提供了很好的开发体验。前端开发正在快速发展，新的框架和工具层出不穷。作为开发者，我们需要保持学习的态度，同时也要选择适合项目的技术栈。Vue3 和 TypeScript 的组合为我们提供了很好的开发体验。前端开发正在快速发展，新的框架和工具层出不穷。作为开发者，我们需要保持学习的态度，同时也要选择适合项目的技术栈。Vue3 和 TypeScript 的组合为我们提供了很好的开发体验。',
-      author: {
-        id: 'user2',
-        username: '李四',
-        avatar: '',
-        posts: 12,
-        likes: 89
-      },
-      time: '2024-01-14T15:45:00Z',
-      likes: 18
-    },
-  ]
+//   const samplePosts: Post[] = [
+//     {
+//       id: '1',
+//       title: '欢迎来到 DeepTalkz 社区！',
+//       content: '这是一个测试帖子，用于展示社区功能。在这里你可以分享你的想法、经验和见解。我们希望这个社区能够成为一个知识分享和交流的平台，让每个人都能从中受益。',
+//       author: {
+//         id: 'user1',
+//         username: '张三',
+//         avatar: '',
+//         posts: 5,
+//         likes: 120
+//       },
+//       time: '2024-01-15T10:30:00Z',
+//       likes: 25
+//     },
+//     {
+//       id: '2',
+//       title: '关于前端开发的一些思考',
+//       content: '前端开发正在快速发展，新的框架和工具层出不穷。作为开发者，我们需要保持学习的态度，同时也要选择适合项目的技术栈。Vue3 和 TypeScript 的组合为我们提供了很好的开发体验。前端开发正在快速发展，新的框架和工具层出不穷。作为开发者，我们需要保持学习的态度，同时也要选择适合项目的技术栈。Vue3 和 TypeScript 的组合为我们提供了很好的开发体验。前端开发正在快速发展，新的框架和工具层出不穷。作为开发者，我们需要保持学习的态度，同时也要选择适合项目的技术栈。Vue3 和 TypeScript 的组合为我们提供了很好的开发体验。',
+//       author: {
+//         id: 'user2',
+//         username: '李四',
+//         avatar: '',
+//         posts: 12,
+//         likes: 89
+//       },
+//       time: '2024-01-14T15:45:00Z',
+//       likes: 18
+//     },
+//   ]
 
     // 加载社区启动数据：发送空搜索分别拉取帖子和作者列表
     const loadCommunityData = async () => {
         loading.value = true
         error.value = null
         try {
-            // 空搜索拉取帖子
-            // const postReq: SearchRequest = { query: '', type: 'posts' }
-            // const postRes: SearchResult = await CommunitySearchAPI(postReq)
-            // posts.value = postRes.posts ?? []
-            // 模拟API调用延迟
-            await new Promise(resolve => setTimeout(resolve, 1000))
-            posts.value = samplePosts
+            //空搜索拉取帖子
+            const postReq: SearchRequest = { query: '', type: 'posts' }
+            const postRes: SearchResult = await CommunitySearchAPI(postReq)
+            posts.value = postRes.posts ?? []
+            // // 模拟API调用延迟
+            // await new Promise(resolve => setTimeout(resolve, 1000))
+            // posts.value = samplePosts
 
         } catch (e) {
             error.value = '加载失败，请稍后重试'
@@ -125,7 +125,7 @@ export const useCommunityController = () => {
         } catch (e) {
             error.value = '获取作者信息失败，请稍后重试'
             console.error('获取作者信息失败:', e)
-            return { author: { id: '', username: '', avatar: '', likes: 0, posts: 0 } }
+            return { author: { id: '', username: '', avatar: '', authorLikes: 0, authorPosts: 0 } }
         } finally {
             loading.value = false
         }
