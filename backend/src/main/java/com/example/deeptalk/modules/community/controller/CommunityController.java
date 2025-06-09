@@ -42,7 +42,7 @@ public class CommunityController {
         // 从嵌套的 author 对象中获取信息并设置到 post 中
         post.setAuthorId(authorId);
         post.setAuthorName(post.getAuthor().getUsername());
-        post.setAuthorAvatar(post.getAuthor().getAvatar());
+        post.setAuthorAvatar("https://sns-avatar-qc.xhscdn.com/avatar/1040g2jo31b593h86ng005p4rmeo7531ts9tr1og?imageView2/2/w/540/format/webp|imageMogr2/strip2");
         post.setLikesCount(0);
         post.setCreatedAt(LocalDateTime.now());
         
