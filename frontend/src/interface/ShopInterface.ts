@@ -40,3 +40,14 @@ export interface PurchaseResponse {
     status: 'pending' | 'completed' | 'failed';
 }
 
+// 使用模型请求
+export interface UseModelRequest {
+    productId: string;
+}
+
+// 使用模型响应
+export interface UseModelResponse {
+    success: boolean;
+    message: string;
+}
+

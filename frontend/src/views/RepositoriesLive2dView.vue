@@ -106,7 +106,8 @@ const router = useRouter()
 const {
   productList,
   loading,
-  loadShopData
+  loadShopData,
+  useModel
 } = useShopController()
 
 // 页面状态
@@ -411,16 +412,10 @@ const handleUse = async () => {
   if (!currentProduct.value || isUsing.value) return
 
   isUsing.value = true
-  try {
-    // TODO: 实现使用模型的逻辑
-    showSuccessMessage.value = true
-  } catch (error) {
-    console.error('使用模型失败:', error)
-    errorMessage.value = '使用模型失败，请稍后重试'
-    showErrorMessage.value = true
-  } finally {
-    isUsing.value = false
-  }
+  const success = await useModel(currentProduct.value.id)
+  showSuccessMessage.value = success
+  showErrorMessage.value = !success
+  isUsing.value = false
 }
 
 // 返回仓库
