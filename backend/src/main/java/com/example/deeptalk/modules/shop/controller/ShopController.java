@@ -12,6 +12,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 
 @RestController
@@ -94,8 +95,21 @@ public class ShopController {
     }
 
     @PostMapping(value = "/product/getused", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
-    public ResponseEntity<List<UserModel>> getUserModels(@RequestBody GetUsedRequest request) {
+    public ResponseEntity<HashMap<String, Object>> getUserModels(@RequestBody GetUsedRequest request) {
         List<UserModel> userModels = userModelRepository.findByUserId(request.getUserId());
-        return ResponseEntity.ok(userModels);
+        HashMap<String, Object> response = new HashMap<>();
+        
+        if (!userModels.isEmpty()) {
+            System.out.println("getProductId " + userModels.get(0).getModelId());
+            response.put("success", true);
+            response.put("message", "获取成功");
+            response.put("productId", userModels.get(0).getModelId());
+        } else {
+            response.put("success", true);
+            response.put("message", "用户暂无使用记录");
+            // productId字段不设置，前端会收到undefined
+        }
+        
+        return ResponseEntity.ok().body(response);
     }
 }
