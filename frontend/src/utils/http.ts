@@ -17,7 +17,9 @@ httpClient.interceptors.request.use(
     if (config.url?.includes('/api/auth/login') || 
         config.url?.includes('/api/auth/register') || 
         config.url?.includes('/api/auth/send-verification-code') ||
-        config.url?.includes('/api/auth/forgot-password')) {
+        config.url?.includes('/api/auth/forgot-password') ||
+        config.url?.includes('/api/shop/search') ||
+        config.url?.includes('/api/shop/check-stock')) {
       console.log('发送请求(无需token):', {
         url: config.url,
         method: config.method,

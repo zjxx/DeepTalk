@@ -104,7 +104,15 @@ export const useShopController = () => {
         loading.value = true
         error.value = null
         try {
-            const useReq: UseModelRequest = { productId }
+            const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+            if (!token) {
+                error.value = '请先登录'
+                return false
+            }
+            const useReq: UseModelRequest = { 
+                productId,
+                token
+            }
             const response = await ShopUseModelAPI(useReq)
             if (response.success) {
                 return true
