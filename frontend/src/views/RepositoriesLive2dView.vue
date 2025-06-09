@@ -95,6 +95,7 @@ import { useRoute, useRouter } from 'vue-router'
 import * as PIXI from 'pixi.js'
 import { Live2DModel } from 'pixi-live2d-display'
 import { useShopController } from '../controllers/ShopController'
+import { getModelPath } from '../utils/live2d'
 
 // 配置Live2D
 window.PIXI = PIXI
@@ -135,16 +136,6 @@ const productId = computed(() => route.params.id as string)
 const currentProduct = computed(() =>
   productList.value.find(p => p.id === productId.value)
 )
-
-// 根据产品ID获取对应的模型路径
-const getModelPath = (productId: string): string => {
-  const modelPaths: Record<string, string> = {
-    '1': '/live2d/Mahiro_GG/Mahiro_V1.model3.json',  // 真寻
-    '2': '/live2d/miku/runtime/miku.model3.json',     // miku
-    '3': '/live2d/Nahida_1080/Nahida_1080.model3.json' // 纳西妲
-  }
-  return modelPaths[productId] || '/live2d/miku/runtime/miku.model3.json'
-}
 
 // 获取相对于容器的鼠标位置
 const getRelativeMousePos = (event: MouseEvent) => {
@@ -412,10 +403,25 @@ const handleUse = async () => {
   if (!currentProduct.value || isUsing.value) return
 
   isUsing.value = true
-  const success = await useModel(currentProduct.value.id)
-  showSuccessMessage.value = success
-  showErrorMessage.value = !success
-  isUsing.value = false
+  try {
+    const response = await useModel(currentProduct.value.id)
+    console.log('使用模型响应:', response)
+    if (response.status === 200) {
+      showSuccessMessage.value = true
+      showErrorMessage.value = false
+    } else {
+      showSuccessMessage.value = false
+      showErrorMessage.value = true
+      errorMessage.value = response.data || '使用失败，请稍后重试'
+    }
+  } catch (error: unknown) {
+    console.error('使用模型时发生错误:', error)
+    showSuccessMessage.value = false
+    showErrorMessage.value = true
+    errorMessage.value = '使用失败，请稍后重试'
+  } finally {
+    isUsing.value = false
+  }
 }
 
 // 返回仓库

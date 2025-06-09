@@ -39,7 +39,6 @@ spring:
             required: true
 
 jwt:
-  secret: deeptalk_jwt_secret_key_2024_secure_and_long_enough_for_signing
   expiration:
     normal: 86400000  # 24小时
     remember-me: 2592000000  # 30天

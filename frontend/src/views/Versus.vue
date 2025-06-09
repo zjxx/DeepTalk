@@ -79,7 +79,7 @@
             ref="userModelRef" 
             :app="pixiAppInstance as PIXI.Application"
             type="user"
-            modelPath="/live2d/Nahida_1080/Nahida_1080.model3.json"
+            :modelPath="userModelPath"
             :initialX="state.canvasWidth * 0.1" 
             :initialY="state.canvasHeight * 0.15"
             :scale="0.2" 
@@ -91,7 +91,7 @@
             ref="partnerModelRef"
             :app="pixiAppInstance as PIXI.Application"
             type="partner"
-            modelPath="/live2d/Mahiro_GG/Mahiro_V1.model3.json" 
+            :modelPath="opponentModelPath" 
             :initialX="state.canvasWidth * 0.6" 
             :initialY="state.canvasHeight * 0.15"
             :scale="0.1"
@@ -480,6 +480,9 @@ import { useRouter, useRoute } from 'vue-router'
 import Live2DModel from '../components/Live2DModel.vue'
 import * as PIXI from 'pixi.js'
 import { VersusController } from '../controllers/VersusController'
+import userModel from '../models/user'
+import { ShopGetModelIdAPI } from '../api/ShopAPI'
+import { getModelPath } from '../utils/live2d'
 
 // 解决 import.meta.env 类型报错
 
@@ -501,6 +504,11 @@ const userId = ref<string>('')
 const sessionId = ref<string>('')
 const ws = ref<WebSocket | null>(null)
 const isWebSocketConnected = ref(false)
+
+// 模型ID相关状态
+const userModelId = ref<string>('')
+const opponentModelId = ref<string>('')
+const opponentId = ref<string>('')
 
 // 音频相关状态
 const audioContext = ref<AudioContext | null>(null)
@@ -535,8 +543,48 @@ const voiceAnalysisEnabled = computed(() => {
   return matchingParams.value.voiceAnalysis
 })
 
-// 用户模型数据
-const userModel = computed(() => ({ email: 'test@example.com' }))
+// 动态模型路径
+const userModelPath = computed(() => {
+  return getModelPath(userModelId.value)
+})
+
+const opponentModelPath = computed(() => {
+  return getModelPath(opponentModelId.value)
+})
+
+// 获取用户正在使用的模型ID
+const getUserModelId = async (userId: string): Promise<string> => {
+  try {
+    const response = await ShopGetModelIdAPI({ userId })
+    if (response.success && response.productId) {
+      console.log('获取到用户模型ID:', response.productId)
+      return response.productId
+    } else {
+      console.log('用户没有正在使用的模型，使用默认模型')
+      return '2' // 默认使用 miku 模型
+    }
+  } catch (error) {
+    console.error('获取用户模型ID失败:', error)
+    return '2' // 出错时使用默认模型
+  }
+}
+
+// 获取对手正在使用的模型ID
+const getOpponentModelId = async (opponentId: string): Promise<string> => {
+  try {
+    const response = await ShopGetModelIdAPI({ userId: opponentId })
+    if (response.success && response.productId) {
+      console.log('获取到对手模型ID:', response.productId)
+      return response.productId
+    } else {
+      console.log('对手没有正在使用的模型，使用默认模型')
+      return '1' // 默认使用 真寻 模型
+    }
+  } catch (error) {
+    console.error('获取对手模型ID失败:', error)
+    return '1' // 出错时使用默认模型
+  }
+}
 
 // 发送结束对战通知（单向通知，不等待确认）
 const sendEndBattleNotification = () => {
@@ -565,7 +613,7 @@ const handleEndMatch = async () => {
   })
   
   // 统一处理：直接结束对战并跳转到评分界面
-  if (confirm('确定要结束当前对战吗？')) {
+  if (confirm('确定要结束当前对战吗？这将结束当前对战。')) {
     try {
       console.log('用户确认结束对战，开始清理资源并跳转到评分界面...')
       
@@ -1135,6 +1183,49 @@ onMounted(async () => {
   }
   if (route.query.duration) {
     state.remainingTime = parseInt(route.query.duration as string) * 60
+  }
+  
+  // 获取用户ID
+  if (userModel.userId) {
+    userId.value = userModel.userId
+    console.log('从userModel获取用户ID:', userId.value)
+  } else if (route.query.userId) {
+    userId.value = route.query.userId as string
+    console.log('从路由参数获取用户ID:', userId.value)
+  } else {
+    // 如果没有用户ID，生成一个临时ID
+    userId.value = `user_${Math.random().toString(36).substr(2, 9)}`
+    console.log('生成临时用户ID:', userId.value)
+  }
+  
+  // 获取对手ID
+  if (route.query.opponentId) {
+    opponentId.value = route.query.opponentId as string
+    console.log('获取到对手ID:', opponentId.value)
+  }
+  
+  // 获取用户正在使用的模型ID
+  try {
+    userModelId.value = await getUserModelId(userId.value)
+    console.log('用户模型ID已设置:', userModelId.value)
+  } catch (error) {
+    console.error('获取用户模型ID失败:', error)
+    userModelId.value = '2' // 默认使用 miku 模型
+  }
+  
+  // 获取对手正在使用的模型ID
+  if (opponentId.value) {
+    try {
+      opponentModelId.value = await getOpponentModelId(opponentId.value)
+      console.log('对手模型ID已设置:', opponentModelId.value)
+    } catch (error) {
+      console.error('获取对手模型ID失败:', error)
+      opponentModelId.value = '1' // 默认使用 真寻 模型
+    }
+  } else {
+    // 如果没有对手ID（AI模式），使用默认模型
+    opponentModelId.value = '1' // 默认使用 真寻 模型
+    console.log('AI模式：使用默认对手模型')
   }
   
   // 获取WebSocket连接信息并自动连接（仅真人对战模式）

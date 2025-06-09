@@ -43,11 +43,25 @@ export interface PurchaseResponse {
 // 使用模型请求
 export interface UseModelRequest {
     productId: string;
+    userId: string;
 }
 
 // 使用模型响应
 export interface UseModelResponse {
+
+    status: number;
+    data: string;
+}
+
+// 获取用户正在使用的模型ID请求
+export interface GetModelIdRequest {
+    userId: string;
+}
+
+// 获取用户正在使用的模型ID响应
+export interface GetModelIdResponse {
     success: boolean;
     message: string;
+    productId?: string; // 如果用户正在使用模型，返回productId；否则为undefined
 }
 
