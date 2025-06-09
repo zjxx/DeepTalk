@@ -5,7 +5,6 @@ import com.example.deeptalk.modules.shop.entity.Order;
 import com.example.deeptalk.modules.shop.entity.Product;
 import com.example.deeptalk.modules.shop.repository.OrderRepository;
 import com.example.deeptalk.modules.shop.repository.ProductRepository;
-import com.example.deeptalk.security.JwtTokenProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -23,9 +22,6 @@ public class ShopController {
     
     @Autowired
     private OrderRepository orderRepository;
-
-    @Autowired
-    private JwtTokenProvider jwtTokenProvider;
 
     @PostMapping(value = "/search", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
     public ResponseEntity<SearchResponse> searchShop(@RequestBody SearchRequest request) {
@@ -63,41 +59,6 @@ public class ShopController {
         response.setProduct(order.getProduct());
         response.setStatus("completed"); // 这里可以根据实际业务逻辑设置状态
         
-        return ResponseEntity.ok(response);
-    }
-
-    @PostMapping(value = "/product/use", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
-    public ResponseEntity<UseProductResponse> useProduct(@RequestBody UseProductRequest request) {
-        // 从token中获取用户ID
-        String userId = jwtTokenProvider.getUserIdFromToken(request.getToken());
-        if (userId == null) {
-            UseProductResponse response = new UseProductResponse();
-            response.setSuccess(false);
-            response.setMessage("无效的token");
-            return ResponseEntity.badRequest().body(response);
-        }
-
-        // 创建新的订单记录
-        Order order = new Order();
-        order.setProductId(request.getProductId());
-        order.setUserId(userId);
-        orderRepository.save(order);
-        
-        UseProductResponse response = new UseProductResponse();
-        response.setSuccess(true);
-        response.setMessage("产品使用记录已添加");
-        return ResponseEntity.ok(response);
-    }
-
-    @GetMapping(value = "/product/user/{userId}", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
-    public ResponseEntity<GetUserProductResponse> getUserProduct(@PathVariable String userId) {
-        List<Order> orders = orderRepository.findByUserId(userId);
-        List<Product> products = orders.stream()
-                .map(Order::getProduct)
-                .toList();
-        
-        GetUserProductResponse response = new GetUserProductResponse();
-        response.setProducts(products);
         return ResponseEntity.ok(response);
     }
 }
