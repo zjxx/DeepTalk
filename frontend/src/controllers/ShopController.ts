@@ -2,6 +2,7 @@ import { ref } from 'vue'
 import {ShopSearchAPI, ShopPurchaseAPI, ShopCheckStockAPI, ShopUseModelAPI} from '../api/ShopAPI'
 import type { Product, Order, SearchRequest, SearchResponse, CheckStockRequest, CheckStockResponse,
     PurchaseRequest, PurchaseResponse, UseModelRequest } from '../interface/ShopInterface'
+import userModel from '../models/user'
 
 export const useShopController = () => {
     const productList = ref<Product[]>([])
@@ -104,7 +105,10 @@ export const useShopController = () => {
         loading.value = true
         error.value = null
         try {
-            const useReq: UseModelRequest = { productId }
+            const useReq: UseModelRequest = { 
+                userId: userModel.userId,
+                productId: productId
+            }
             const response = await ShopUseModelAPI(useReq)
             if (response.success) {
                 return true

@@ -43,6 +43,7 @@ export interface PurchaseResponse {
 // 使用模型请求
 export interface UseModelRequest {
     productId: string;
+    userId: string;
 }
 
 // 使用模型响应
