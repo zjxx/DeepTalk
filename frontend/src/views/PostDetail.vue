@@ -9,9 +9,12 @@
         <!-- 页面容器：左右各留空0.125 -->
         <div class="page-container">
           <!-- 返回按钮 -->
-          <v-btn variant="text" prepend-icon="mdi-arrow-left" class="mb-4" @click="goBack"
-            color="rgba(10, 100, 200, 0.8)">
-            返回
+          <v-btn variant="text" 
+          prepend-icon="mdi-arrow-left" 
+          class="mb-4" 
+          @click="goBack"
+          color="rgba(10, 100, 200, 0.8)">
+          返回
           </v-btn>
 
           <!-- 加载状态 -->
@@ -148,14 +151,33 @@ const formatTime = (time: string) => {
 
 // 加载帖子详情
 const loadPostDetail = async () => {
+  console.log('=== PostDetail loadPostDetail 开始 ===')
+  console.log('当前postId:', postId.value)
+  console.log('postId类型:', typeof postId.value)
+  console.log('posts数组长度:', posts.value.length)
+  console.log('posts数组内容:', posts.value)
+
   if (posts.value.length === 0) {
+    console.log('posts为空，开始加载社区数据...')
     await loadCommunityData()
+    console.log('加载完成，posts数组长度:', posts.value.length)
+    console.log('加载完成，posts数组内容:', posts.value)
   }
 
-  const post = posts.value.find(p => p.id === postId.value)
+  const post = posts.value.find(p => {
+    console.log(`比较: ${p.id} (${typeof p.id}) === ${postId.value} (${typeof postId.value})`)
+    return p.id === postId.value
+  })
+  console.log('查找到的帖子:', post)
+  
   if (post) {
     currentPost.value = post
+    console.log('设置currentPost成功')
+  } else {
+    console.log('未找到对应帖子!')
+    console.log('所有可用的帖子ID:', posts.value.map(p => p.id))
   }
+  console.log('=== PostDetail loadPostDetail 结束 ===')
 }
 
 // 处理点赞
@@ -196,9 +218,11 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* 页面容器：左右各留空0.125 */
+/* 页面容器：左右各留空0.125（12.5%） */
 .page-container {
-  margin: 0 12.5%;
+  margin: 0 auto;
+  max-width: 1200px;
+  width: 75%;  /* 使用75%宽度，等同于左右各留空12.5% */
   padding: 20px 0;
   min-height: calc(100vh - 64px);
   display: flex;

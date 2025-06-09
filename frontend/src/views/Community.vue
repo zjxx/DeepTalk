@@ -133,6 +133,14 @@ const handleSearch = async () => {
 
 // 查看帖子详情
 const viewPost = (postId: string) => {
+  console.log('=== Community viewPost ===')
+  console.log('点击的帖子ID:', postId)
+  console.log('当前posts数组:', posts.value)
+  console.log('posts数组长度:', posts.value.length)
+  
+  const post = posts.value.find(p => p.id === postId)
+  console.log('找到的帖子:', post)
+  
   router.push(`/post/${postId}`)
 }
 
