@@ -21,14 +21,20 @@ public class WebConfig implements WebMvcConfigurer {
                 .allowedOrigins("*")
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
-                .maxAge(3600);
+                .allowCredentials(false);
     }
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(new JwtAuthenticationInterceptor())
-                .addPathPatterns("/api/**")
-                .excludePathPatterns("/api/auth/login", "/api/auth/register/**");
+        registry.addInterceptor(jwtAuthenticationInterceptor)
+                .addPathPatterns("/**")
+                .excludePathPatterns(
+                    "/api/**",
+                    "/api/auth/register/**",
+                    "/api/auth/forgot-password/**",
+                    "/api/verification/**",
+                    "/api/speech/**"
+                );
     }
 
     // Config for max WebSocket message buffer size
