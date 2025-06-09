@@ -107,6 +107,7 @@ public class AuthController {
         Map<String, Object> response = new HashMap<>();
         response.put("token", token);
         response.put("username", user.getUsername());
+        response.put("userId", user.getId());
         response.put("email", user.getEmail());
         response.put("expiration", new Date(System.currentTimeMillis() + expiration));
 

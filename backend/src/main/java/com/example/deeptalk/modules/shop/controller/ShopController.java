@@ -3,8 +3,10 @@ package com.example.deeptalk.modules.shop.controller;
 import com.example.deeptalk.modules.shop.dto.*;
 import com.example.deeptalk.modules.shop.entity.Order;
 import com.example.deeptalk.modules.shop.entity.Product;
+import com.example.deeptalk.modules.shop.entity.UserModel;
 import com.example.deeptalk.modules.shop.repository.OrderRepository;
 import com.example.deeptalk.modules.shop.repository.ProductRepository;
+import com.example.deeptalk.modules.shop.repository.UserModelRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -22,9 +24,13 @@ public class ShopController {
     
     @Autowired
     private OrderRepository orderRepository;
+    
+    @Autowired
+    private UserModelRepository userModelRepository;
 
     @PostMapping(value = "/search", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
     public ResponseEntity<SearchResponse> searchShop(@RequestBody SearchRequest request) {
+
         List<Product> products;
         if (request.getQuery() == null || request.getQuery().trim().isEmpty()) {
             products = productRepository.findAll();
@@ -60,5 +66,36 @@ public class ShopController {
         response.setStatus("completed"); // 这里可以根据实际业务逻辑设置状态
         
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping(value = "/product/use", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
+    public ResponseEntity<String> useProduct(@RequestBody UseRequest request) {
+        System.out.println("useProduct: " + request);
+        System.out.println("useProduct: " + request.getUserId());
+        System.out.println("useProduct: " + request.getProductId());
+        // 查找是否已存在该用户的记录
+        List<UserModel> existingModels = userModelRepository.findByUserId(request.getUserId());
+        
+        UserModel userModel;
+        if (!existingModels.isEmpty()) {
+            // 如果已存在，更新第一条记录的modelId
+            userModel = existingModels.get(0);
+            userModel.setModelId(request.getProductId());
+        } else {
+            // 如果不存在，创建新记录
+            userModel = new UserModel();
+            userModel.setUserId(request.getUserId());
+            userModel.setModelId(request.getProductId());
+        }
+        
+        userModelRepository.save(userModel);
+        
+        return ResponseEntity.ok("ok");
+    }
+
+    @PostMapping(value = "/product/getused", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
+    public ResponseEntity<List<UserModel>> getUserModels(@RequestBody GetUsedRequest request) {
+        List<UserModel> userModels = userModelRepository.findByUserId(request.getUserId());
+        return ResponseEntity.ok(userModels);
     }
 }
