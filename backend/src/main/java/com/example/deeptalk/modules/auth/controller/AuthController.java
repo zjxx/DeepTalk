@@ -107,6 +107,7 @@ public class AuthController {
         Map<String, Object> response = new HashMap<>();
         response.put("token", token);
         response.put("username", user.getUsername());
+        response.put("userId", user.getId());
         response.put("email", user.getEmail());
         response.put("expiration", new Date(System.currentTimeMillis() + expiration));
 
@@ -121,9 +122,8 @@ public class AuthController {
             String token = authHeader.replace("Bearer ", "");
             
             // 解析token获取过期时间
-            Claims claims = Jwts.parserBuilder()
+            Claims claims = Jwts.parser()
                     .setSigningKey(jwtSecretKey)
-                    .build()
                     .parseClaimsJws(token)
                     .getBody();
             
@@ -132,17 +132,9 @@ public class AuthController {
             // 将token加入黑名单
             tokenBlacklistService.addToBlacklist(token, expiration.getTime());
             
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "登出成功");
-            
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok("登出成功");
         } catch (Exception e) {
-            logger.error("登出失败", e);
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("message", "登出失败：" + e.getMessage());
-            return ResponseEntity.badRequest().body(response);
+            return ResponseEntity.badRequest().body("登出失败：" + e.getMessage());
         }
     }
 
