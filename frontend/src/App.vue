@@ -4,9 +4,7 @@
       <Navbar />
     </v-app-bar>
 
-
     <Sidebar v-if="showSidebar" />
-    <ExploreSidebar v-if="showExploreSidebar" />
     <v-main>
       <router-view></router-view>
     </v-main>
@@ -18,28 +16,25 @@ import { defineComponent, ref, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import Navbar from './components/Navbar.vue'
 import Sidebar from './components/Sidebar.vue'
-import ExploreSidebar from './components/ExploreSidebar.vue'
 import UserModel from './models/user'
 
 export default defineComponent({
   name: 'App',
   components: {
     Navbar,
-    Sidebar,
-    ExploreSidebar
+    Sidebar
   },
   setup() {
     const route = useRoute()
     const showNavbar = ref(false)
     const showSidebar = ref(false)
-    const showExploreSidebar = ref(false)
+  
 
     // 定义需要显示导航栏的路由
-    const navRoutes = ['/home', '/explore', '/community', '/shop', '/settings', '/security', '/privacy', '/profile','/repositories','/historical-scores']
+    const navRoutes = ['/home', '/explore', '/community', '/shop', '/settings', '/security', '/privacy', '/profile','/repositories','/historical-scores','/matching', '/versus', '/evaluation']
     // 定义需要显示侧边栏的路由
     const sidebarRoutes = ['/home', '/profile', '/', '/security', '/privacy',   '/repositories','/historical-scores']
-    // 定义需要显示探索侧边栏的路由
-    const exploreSidebarRoutes = ['/matching', '/versus', '/evaluation']
+
 
     // 从 localStorage 恢复用户信息
     const restoreUserInfo = () => {
@@ -56,7 +51,6 @@ export default defineComponent({
     watch(() => route.path, (newPath) => {
       showNavbar.value = navRoutes.includes(newPath)
       showSidebar.value = sidebarRoutes.includes(newPath)
-      showExploreSidebar.value = exploreSidebarRoutes.includes(newPath)
     }, { immediate: true })
 
     // 组件挂载时检查路由和恢复用户信息
@@ -64,7 +58,7 @@ export default defineComponent({
       const currentPath = route.path
       showNavbar.value = navRoutes.includes(currentPath)
       showSidebar.value = sidebarRoutes.includes(currentPath)
-      showExploreSidebar.value = exploreSidebarRoutes.includes(currentPath)
+  
       
       // 恢复用户信息
       restoreUserInfo()
@@ -72,8 +66,7 @@ export default defineComponent({
 
     return {
       showNavbar,
-      showSidebar,
-      showExploreSidebar
+      showSidebar
     }
   }
 })
