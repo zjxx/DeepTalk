@@ -95,6 +95,7 @@ import { useRoute, useRouter } from 'vue-router'
 import * as PIXI from 'pixi.js'
 import { Live2DModel } from 'pixi-live2d-display'
 import { useShopController } from '../controllers/ShopController'
+import { getModelPath } from '../utils/live2d'
 
 // 配置Live2D
 window.PIXI = PIXI
@@ -135,16 +136,6 @@ const productId = computed(() => route.params.id as string)
 const currentProduct = computed(() =>
   productList.value.find(p => p.id === productId.value)
 )
-
-// 根据产品ID获取对应的模型路径
-const getModelPath = (productId: string): string => {
-  const modelPaths: Record<string, string> = {
-    '1': '/live2d/Mahiro_GG/Mahiro_V1.model3.json',  // 真寻
-    '2': '/live2d/miku/runtime/miku.model3.json',     // miku
-    '3': '/live2d/Nahida_1080/Nahida_1080.model3.json' // 纳西妲
-  }
-  return modelPaths[productId] || '/live2d/miku/runtime/miku.model3.json'
-}
 
 // 获取相对于容器的鼠标位置
 const getRelativeMousePos = (event: MouseEvent) => {

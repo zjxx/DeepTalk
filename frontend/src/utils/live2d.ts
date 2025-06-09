@@ -4,6 +4,21 @@ import type { Live2DModel as Live2DModelType } from 'pixi-live2d-display'
 
 Live2DModel.registerTicker(PIXI.Ticker);
 
+// Live2D 模型路径映射
+export const MODEL_PATHS: Record<string, string> = {
+  '1': '/live2d/Mahiro_GG/Mahiro_V1.model3.json',  // 真寻
+  '2': '/live2d/miku/runtime/miku.model3.json',     // miku
+  '3': '/live2d/Nahida_1080/Nahida_1080.model3.json' // 纳西妲
+}
+
+// 默认模型路径
+export const DEFAULT_MODEL_PATH = '/live2d/miku/runtime/miku.model3.json'
+
+// 根据产品ID获取对应的模型路径
+export const getModelPath = (productId: string): string => {
+  return MODEL_PATHS[productId] || DEFAULT_MODEL_PATH
+}
+
 interface ExtendedRenderer extends PIXI.Renderer {
   events?: PIXI.InteractionManager
 }
