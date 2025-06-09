@@ -14,6 +14,7 @@
               <span class="score-info">难度: {{ score.difficulty }}</span>
               <span class="score-info">CET等级: {{ score.cetLevel }}</span>
               <span class="score-value">评分: <b>{{ score.score }}</b></span>
+              <span class="score-info">时间: {{ score.time }}</span>
             </div>
           </v-card-text>
         </v-card>
@@ -26,11 +27,9 @@
 import { ref } from 'vue'
 
 const scores = ref([
-  { type: 'AI智能对战', difficulty: '初级', cetLevel: 'CET-4', score: 85 },
-  { type: '真人对战', difficulty: '中级', cetLevel: 'CET-6', score: 92 },
-  { type: 'AI智能对战', difficulty: '高级', cetLevel: 'CET-4', score: 78 },
-  { type: '真人对战', difficulty: '初级', cetLevel: 'CET-6', score: 88 },
-  { type: 'AI智能对战', difficulty: '中级', cetLevel: 'CET-4', score: 90 },
+  { type: 'AI智能对战', difficulty: '初级', cetLevel: 'CET-4', score: 85, time: '2025-6-09 10:00' },
+  { type: '真人对战', difficulty: '中级', cetLevel: 'CET-6', score: 92, time: '2025-6-08 14:30' },
+  { type: 'AI智能对战', difficulty: '高级', cetLevel: 'CET-4', score: 78, time: '2025-6-08 09:15' },
 ])
 </script>
 
