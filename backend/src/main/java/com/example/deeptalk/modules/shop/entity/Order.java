@@ -1,33 +1,23 @@
 package com.example.deeptalk.modules.shop.entity;
 
-import lombok.Getter;
-import lombok.Setter;
 import javax.persistence.*;
-import java.time.LocalDateTime;
-import org.hibernate.annotations.GenericGenerator;
+import lombok.Data;
 
-@Getter
-@Setter
+@Data
 @Entity
 @Table(name = "orders")
 public class Order {
     @Id
-    @GeneratedValue(generator = "uuid")
-    @GenericGenerator(name = "uuid", strategy = "uuid2")
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    @Column(name = "user_id", nullable = false)
+    @Column(name = "user_id")
     private String userId;
 
+    @Column(name = "product_id")
+    private String productId;
+
     @ManyToOne
-    @JoinColumn(name = "product_id", nullable = false)
+    @JoinColumn(name = "product_id", insertable = false, updatable = false)
     private Product product;
-
-    @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
-
-    @PrePersist
-    protected void onCreate() {
-        createdAt = LocalDateTime.now();
-    }
 } 
