@@ -99,6 +99,70 @@ public class AuthControllerTest {
         public void setEmail(String email) { this.email = email; }
     }
 
+    private static class RegisterWithVerificationRequest {
+        private String username;
+        private String password;
+        private String email;
+        private String verificationCode;
+
+        public RegisterWithVerificationRequest(String username, String password, String email, String verificationCode) {
+            this.username = username;
+            this.password = password;
+            this.email = email;
+            this.verificationCode = verificationCode;
+        }
+
+        public String getUsername() { return username; }
+        public void setUsername(String username) { this.username = username; }
+        public String getPassword() { return password; }
+        public void setPassword(String password) { this.password = password; }
+        public String getEmail() { return email; }
+        public void setEmail(String email) { this.email = email; }
+        public String getVerificationCode() { return verificationCode; }
+        public void setVerificationCode(String verificationCode) { this.verificationCode = verificationCode; }
+    }
+
+    private static class ForgotPasswordRequest {
+        private String email;
+
+        public ForgotPasswordRequest(String email) {
+            this.email = email;
+        }
+
+        public String getEmail() { return email; }
+        public void setEmail(String email) { this.email = email; }
+    }
+
+    private static class VerifyResetCodeRequest {
+        private String email;
+        private String verificationCode;
+
+        public VerifyResetCodeRequest(String email, String verificationCode) {
+            this.email = email;
+            this.verificationCode = verificationCode;
+        }
+
+        public String getEmail() { return email; }
+        public void setEmail(String email) { this.email = email; }
+        public String getVerificationCode() { return verificationCode; }
+        public void setVerificationCode(String verificationCode) { this.verificationCode = verificationCode; }
+    }
+
+    private static class ResetPasswordWithTokenRequest {
+        private String resetToken;
+        private String newPassword;
+
+        public ResetPasswordWithTokenRequest(String resetToken, String newPassword) {
+            this.resetToken = resetToken;
+            this.newPassword = newPassword;
+        }
+
+        public String getResetToken() { return resetToken; }
+        public void setResetToken(String resetToken) { this.resetToken = resetToken; }
+        public String getNewPassword() { return newPassword; }
+        public void setNewPassword(String newPassword) { this.newPassword = newPassword; }
+    }
+
     @BeforeEach
     void setUp() {
         testUser = new User();
@@ -174,6 +238,7 @@ public class AuthControllerTest {
     void registerCheckSuccess() throws Exception {
         when(userRepository.existsByUsername("newuser")).thenReturn(false);
         when(userRepository.existsByEmail("new@example.com")).thenReturn(false);
+        doNothing().when(verificationCodeService).sendVerificationCode(anyString());
 
         String registerRequest = objectMapper.writeValueAsString(new RegisterRequest("newuser", "password123", "new@example.com"));
 
@@ -225,5 +290,142 @@ public class AuthControllerTest {
                 .header("Authorization", "Bearer " + validToken))
                 .andExpect(status().isOk())
                 .andExpect(content().string("登出成功"));
+    }
+
+    @Test
+    void registerWithVerificationSuccess() throws Exception {
+        when(userRepository.existsByUsername("newuser")).thenReturn(false);
+        when(userRepository.existsByEmail("new@example.com")).thenReturn(false);
+        when(verificationCodeService.verifyCode(anyString(), anyString())).thenReturn(true);
+        when(passwordEncoder.encode(anyString())).thenReturn("encodedPassword");
+        when(userRepository.save(any(User.class))).thenReturn(testUser);
+
+        String registerRequest = objectMapper.writeValueAsString(
+            new RegisterWithVerificationRequest("newuser", "password123", "new@example.com", "123456")
+        );
+
+        mockMvc.perform(post("/api/auth/register/verify")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(registerRequest))
+                .andExpect(status().isOk())
+                .andExpect(content().string("注册成功"));
+    }
+
+    @Test
+    void registerWithVerificationFailureInvalidCode() throws Exception {
+        when(userRepository.existsByUsername("newuser")).thenReturn(false);
+        when(userRepository.existsByEmail("new@example.com")).thenReturn(false);
+        when(verificationCodeService.verifyCode(anyString(), anyString())).thenReturn(false);
+
+        String registerRequest = objectMapper.writeValueAsString(
+            new RegisterWithVerificationRequest("newuser", "password123", "new@example.com", "wrongcode")
+        );
+
+        mockMvc.perform(post("/api/auth/register/verify")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(registerRequest))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string("验证码错误或已过期"));
+    }
+
+    @Test
+    void sendResetCodeSuccess() throws Exception {
+        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
+        doNothing().when(verificationCodeService).sendVerificationCode(anyString());
+
+        String forgotPasswordRequest = objectMapper.writeValueAsString(
+            new ForgotPasswordRequest("test@example.com")
+        );
+
+        mockMvc.perform(post("/api/auth/forgot-password/send-code")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(forgotPasswordRequest))
+                .andExpect(status().isOk())
+                .andExpect(content().string("验证码已发送"));
+    }
+
+    @Test
+    void sendResetCodeFailureUserNotFound() throws Exception {
+        when(userRepository.findByEmail("nonexistent@example.com")).thenReturn(Optional.empty());
+
+        String forgotPasswordRequest = objectMapper.writeValueAsString(
+            new ForgotPasswordRequest("nonexistent@example.com")
+        );
+
+        mockMvc.perform(post("/api/auth/forgot-password/send-code")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(forgotPasswordRequest))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string("该邮箱未注册"));
+    }
+
+    @Test
+    void verifyResetCodeSuccess() throws Exception {
+        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
+        when(verificationCodeService.verifyCode(anyString(), anyString())).thenReturn(true);
+        when(jwtSecretKey.getAlgorithm()).thenReturn("HmacSHA256");
+        when(jwtSecretKey.getEncoded()).thenReturn(testKey.getEncoded());
+        when(jwtSecretKey.getFormat()).thenReturn("RAW");
+
+        String verifyRequest = objectMapper.writeValueAsString(
+            new VerifyResetCodeRequest("test@example.com", "123456")
+        );
+
+        mockMvc.perform(post("/api/auth/forgot-password/verify-code")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(verifyRequest))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resetToken").exists());
+    }
+
+    @Test
+    void verifyResetCodeFailureInvalidCode() throws Exception {
+        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
+        when(verificationCodeService.verifyCode(anyString(), anyString())).thenReturn(false);
+
+        String verifyRequest = objectMapper.writeValueAsString(
+            new VerifyResetCodeRequest("test@example.com", "wrongcode")
+        );
+
+        mockMvc.perform(post("/api/auth/forgot-password/verify-code")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(verifyRequest))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string("验证码错误或已过期"));
+    }
+
+    @Test
+    void resetPasswordSuccess() throws Exception {
+        when(jwtSecretKey.getAlgorithm()).thenReturn("HmacSHA256");
+        when(jwtSecretKey.getEncoded()).thenReturn(testKey.getEncoded());
+        when(jwtSecretKey.getFormat()).thenReturn("RAW");
+        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
+        when(passwordEncoder.encode(anyString())).thenReturn("newEncodedPassword");
+        when(userRepository.save(any(User.class))).thenReturn(testUser);
+
+        String resetRequest = objectMapper.writeValueAsString(
+            new ResetPasswordWithTokenRequest(validToken, "newPassword123")
+        );
+
+        mockMvc.perform(post("/api/auth/forgot-password/reset")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(resetRequest))
+                .andExpect(status().isOk())
+                .andExpect(content().string("密码重置成功"));
+    }
+
+    @Test
+    void resetPasswordFailureInvalidToken() throws Exception {
+        String invalidToken = "invalid.token.here";
+
+        String resetRequest = objectMapper.writeValueAsString(
+            new ResetPasswordWithTokenRequest(invalidToken, "newPassword123")
+        );
+
+        mockMvc.perform(post("/api/auth/forgot-password/reset")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(resetRequest))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(org.hamcrest.Matchers.startsWith("重置密码失败：")));
     }
 } 
