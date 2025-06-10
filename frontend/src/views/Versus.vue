@@ -20,8 +20,6 @@
               难度：<span class="font-weight-bold">{{ displayDifficulty }}</span>
               <v-divider vertical class="mx-2" />
               时长：<span class="font-weight-bold">{{ displayDuration }}分钟</span>
-              <v-divider vertical class="mx-2" />
-              语音分析：<span class="font-weight-bold">{{ displayVoiceAnalysis }}</span>
             </div>
             <div class="text-body-1" v-if="controller.currentTopic">
               当前主题: <span class="font-weight-bold text-primary">{{ controller.currentTopic }}</span>
@@ -33,15 +31,6 @@
               >
                 <v-icon start size="12">mdi-check-circle</v-icon>
                 已同步
-              </v-chip>
-              <v-chip 
-                v-else 
-                color="warning" 
-                size="x-small" 
-                class="ml-2"
-              >
-                <v-icon start size="12">mdi-alert</v-icon>
-                本地
               </v-chip>
             </div>
             <div class="text-body-1" v-else>
@@ -55,15 +44,6 @@
               <v-chip color="success" class="mr-2">
                 <v-icon start>mdi-play</v-icon>
                 对战进行中
-              </v-chip>
-              <!-- WebSocket连接状态 -->
-              <v-chip 
-                :color="isWebSocketConnected ? 'success' : 'warning'" 
-                class="ml-2"
-                size="small"
-              >
-                <v-icon start>{{ isWebSocketConnected ? 'mdi-check-circle' : 'mdi-wifi-off' }}</v-icon>
-                {{ isWebSocketConnected ? '已连接' : '未连接' }}
               </v-chip>
             </div>
           </v-card-text>
@@ -80,8 +60,8 @@
             :app="pixiAppInstance as PIXI.Application"
             type="user"
             :modelPath="userModelPath"
-            :initialX="state.canvasWidth * 0.1" 
-            :initialY="state.canvasHeight * 0.15"
+            :initialX="state.canvasWidth * 0.2" 
+            :initialY="state.canvasHeight * 0.23"
             :scale="0.2" 
           />
           
@@ -102,27 +82,18 @@
             v-if="displayBattleType === 'AI辅助'" 
             class="ai-avatar"
             :style="{
-              left: `${state.canvasWidth * 0.68}px`,
+              left: `${state.canvasWidth * 0.7}px`,
               top: `${state.canvasHeight * 0.4}px`
             }"
           >
-            <v-avatar size="200" color="primary">
+            <v-avatar 
+              size="200" 
+              :color="state.isPartnerSpeaking ? 'success' : 'primary'"
+              :class="{ 'ai-speaking': state.isPartnerSpeaking }"
+            >
               <v-icon size="90" color="white">mdi-robot</v-icon>
             </v-avatar>
-            <div class="ai-status-indicator" :class="{ 'speaking': state.isPartnerSpeaking || state.isPartnerThinking }">
-              <v-chip 
-                :color="(state.isPartnerSpeaking || state.isPartnerThinking) ? 'success' : 'grey'" 
-                size="small"
-                class="mt-2"
-                v-if="!state.isRecording"
-              >
-                {{ 
-                  state.isPartnerThinking ? 'AI思考中...' : 
-                  (state.isPartnerSpeaking ? 'AI正在回应...' : 'AI待命')
-                }}
-              </v-chip>
-              <!-- 用户录音时不显示任何AI状态 -->
-            </div>
+            <!-- AI状态指示芯片已删除 -->
           </div>
         </div>
       </v-col>
@@ -224,9 +195,7 @@
                   'AI思考中...' : 
                   (state.isPartnerSpeaking ? 
                     (displayBattleType === 'AI辅助' ? 'AI正在回应' : '对方正在说话') : 
-                    (state.speakingTurn === 'partner' ? 
-                      (displayBattleType === 'AI辅助' ? 'AI待命' : '对方正在思考') : 
-                      '等待轮换'))
+                    (displayBattleType === 'AI辅助' ? 'AI待命' : '对方待命'))
               }}
             </v-chip>
             <!-- 用户录音时不显示AI状态芯片 -->
@@ -296,13 +265,7 @@
                 </v-tooltip>
               </v-btn>
               
-              <v-btn 
-                prepend-icon="mdi-skip-next" 
-                @click="handleNextTopic"
-                color="primary"
-              >
-                下一话题
-              </v-btn>
+              <!-- 下一话题按钮已删除 -->
             </v-btn-group>
 
             <!-- 匹配信息显示 -->
@@ -320,11 +283,6 @@
               <v-chip color="info" class="mr-2" size="large">
                 <v-icon start>mdi-clock-outline</v-icon>
                 {{ Math.floor(state.remainingTime / 60) }}分钟
-              </v-chip>
-              
-              <v-chip v-if="voiceAnalysisEnabled" color="success" size="large">
-                <v-icon start>mdi-microphone</v-icon>
-                语音分析
               </v-chip>
             </div>
 
@@ -455,30 +413,7 @@
         </v-card>
       </v-col> -->
 
-      <!-- 实时转写面板 -->
-      <v-col cols="12" v-if="state.matchStarted" class="py-1">
-        <v-card>
-          <v-card-title class="d-flex justify-space-between">
-            <span>实时转写</span>
-            <v-chip color="info" size="small">Beta</v-chip>
-          </v-card-title>
-          <v-card-text>
-            <div class="transcript-container">
-              <div v-for="(message, index) in state.transcriptMessages" :key="index" 
-                   class="transcript-message" :class="{'user-message': message.isUser}">
-                <strong>{{ 
-                  message.isUser ? '您' : 
-                  (displayBattleType === '真人对战' ? '对方用户' : 'AI助手') 
-                }}:</strong>
-                {{ message.text }}
-              </div>
-              <div v-if="state.transcriptMessages.length === 0" class="text-center text-grey">
-                开始对话后，语音将在此处显示...
-              </div>
-            </div>
-          </v-card-text>
-        </v-card>
-      </v-col>
+      <!-- 实时转写面板已删除 -->
     </v-row>
   </v-container>
 </template>
@@ -533,24 +468,10 @@ const controller = new VersusController()
 const state = reactive(controller.getState())
 const isLoadingPlayback = ref(false)
 
-// 匹配参数状态
-const matchingParams = ref({
-  battleType: '',
-  difficulty: '',
-  duration: 5,
-  voiceAnalysis: false
-})
-
 // 匹配参数展示
 const displayBattleType = computed(() => route.query.battleType || state.matchType || 'AI辅助')
 const displayDifficulty = computed(() => route.query.difficulty || state.difficultyLevel || '中级')
 const displayDuration = computed(() => route.query.duration || Math.floor((state.remainingTime || 300) / 60))
-const displayVoiceAnalysis = computed(() => route.query.voiceAnalysis === 'true' ? '已启用' : '未启用')
-
-// 计算属性
-const voiceAnalysisEnabled = computed(() => {
-  return matchingParams.value.voiceAnalysis
-})
 
 // 动态模型路径
 const userModelPath = computed(() => {
@@ -794,10 +715,6 @@ const handleTogglePlayback = () => {
 
 const handleDeleteRecording = () => {
   controller.deleteRecording()
-}
-
-const handleNextTopic = () => {
-  controller.nextTopic()
 }
 
 const handleBackToMatching = async () => {
@@ -1641,32 +1558,6 @@ const handlePartnerLeftBattle = (data: { message?: string; [key: string]: unknow
   min-width: 120px;
 }
 
-.transcript-container {
-  max-height: 150px;
-  overflow-y: auto;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 12px;
-  background-color: #fafafa;
-}
-
-.transcript-message {
-  padding: 6px 0;
-  border-bottom: 1px solid #eee;
-  font-size: 14px;
-}
-
-.transcript-message:last-child {
-  border-bottom: none;
-}
-
-.user-message {
-  background-color: #e3f2fd;
-  margin: 2px 0;
-  padding: 6px;
-  border-radius: 8px;
-}
-
 .model-column:not(.model-column-overlay) {
   display: none !important;
 }
@@ -1746,27 +1637,27 @@ const handlePartnerLeftBattle = (data: { message?: string; [key: string]: unknow
   pointer-events: none;
 }
 
-.ai-status-indicator {
-  margin-top: 8px;
+.ai-avatar .v-avatar {
   transition: all 0.3s ease;
 }
 
-.ai-status-indicator.speaking {
-  animation: ai-pulse 1.5s infinite;
+.ai-avatar .v-avatar.ai-speaking {
+  animation: ai-speaking-pulse 1.5s infinite;
+  box-shadow: 0 0 20px rgba(76, 175, 80, 0.6);
 }
 
-@keyframes ai-pulse {
+@keyframes ai-speaking-pulse {
   0% {
     transform: scale(1);
-    opacity: 1;
+    box-shadow: 0 0 20px rgba(76, 175, 80, 0.6);
   }
   50% {
     transform: scale(1.05);
-    opacity: 0.8;
+    box-shadow: 0 0 30px rgba(76, 175, 80, 0.8);
   }
   100% {
     transform: scale(1);
-    opacity: 1;
+    box-shadow: 0 0 20px rgba(76, 175, 80, 0.6);
   }
 }
 
