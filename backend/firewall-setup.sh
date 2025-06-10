@@ -6,6 +6,8 @@ sleep 10
 # 添加防火墙规则
 nft add rule inet firewalld filter_IN_public_allow tcp dport 443 ct state { new, untracked } accept
 nft add rule inet firewalld filter_IN_public_allow tcp dport 8765 ct state { new, untracked } accept
+
+nft add rule inet firewalld filter_IN_public_allow tcp dport 5172 ct state { new, untracked } accept
 nft add rule inet firewalld filter_IN_public_allow tcp dport 8080 ct state { new, untracked } accept
 # 记录执行状态
 if [ $? -eq 0 ]; then

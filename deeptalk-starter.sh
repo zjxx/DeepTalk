@@ -16,3 +16,4 @@ nft add rule inet firewalld filter_IN_public_allow tcp dport 443 ct state { new,
 
 nft add rule inet firewalld filter_IN_public_allow tcp dport 60000-60035 ct state { new, untracked } accept
 nft add rule inet firewalld filter_IN_public_allow udp dport 60000-60035 ct state { new, untracked } accept
+nft add rule inet firewalld filter_IN_public_allow tcp dport 5172 ct state { new, untracked } accept
