@@ -364,21 +364,6 @@ export class VersusController {
     }
   }
 
-  nextTopic(): void {
-    const state = this.model.getState()
-    
-    // 只有在对话已开始时才加载新题目
-    if (state.matchStarted) {
-      this.questionManager.loadQuestionByLevel(state.difficultyLevel).then(() => {
-        this.notifyStateChange()
-      })
-    }
-    
-    // 同时执行原有的逻辑作为备用
-    this.model.nextTopic()
-    this.notifyStateChange()
-  }
-
   changeMatchType(matchType: '真人对战' | 'AI辅助'): void {
     this.model.updateMatchState({ matchType })
     this.model.clearTranscriptMessages()
