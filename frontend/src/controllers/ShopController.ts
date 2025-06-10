@@ -31,7 +31,21 @@ export const useShopController = () => {
             description: '草神Live2d',
             price: 128,
             imageUrl: '../public/live2d/Nahida_1080/icon.jpg'
-        }
+        },
+        {
+            id: '4',
+            name: '安哲拉',
+            description: '安哲拉Live2d',
+            price: 198,
+            imageUrl: '../public/live2d/anzhela/anzhela.jpg'
+        },
+        {
+            id: '5',
+            name: '芙莉莲',
+            description: '芙莉莲Live2d',
+            price: 268,
+            imageUrl: '../public/live2d/test1/fulilian.jpg'
+        },
     ]
     // 加载商店启动数据：发送空搜索拉取商品列表
     const loadShopData = async () => {
@@ -42,7 +56,7 @@ export const useShopController = () => {
             // const searchReq: SearchRequest = { query: '' }
             // const searchRes: SearchResponse = await ShopSearchAPI(searchReq)
             // productList.value = searchRes.products ?? []
-            // 模拟API调用延迟
+            // 模拟调用
             await new Promise(resolve => setTimeout(resolve, 1000))
             productList.value = sampleProducts
 
