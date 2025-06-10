@@ -19,6 +19,7 @@ export interface VersusState {
   userMuted: boolean
   isUserSpeaking: boolean
   isPartnerSpeaking: boolean
+  isPartnerThinking: boolean  // 新增：AI思考状态
   
   // 录音状态
   isRecording: boolean
@@ -59,6 +60,7 @@ export class VersusModel {
       userMuted: false,
       isUserSpeaking: false,
       isPartnerSpeaking: false,
+      isPartnerThinking: false,  // 新增：AI思考状态初始化
       isRecording: false,
       audioLevel: 0,
       lastRecordedAudio: null,
