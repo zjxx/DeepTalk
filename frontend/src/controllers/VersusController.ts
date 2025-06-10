@@ -56,8 +56,8 @@ export class VersusController {
         // AI模式：使用固定的英语对话主题
         this.setAIModeTopic()
       } else {
-        // 真人对战模式：加载题库中的题目
-        await this.questionManager.loadQuestionByLevel(this.model.getState().difficultyLevel)
+        // 真人对战模式：使用固定主题
+        this.setHumanBattleTopic()
       }
       
       this.notifyStateChange()
@@ -364,21 +364,6 @@ export class VersusController {
     }
   }
 
-  nextTopic(): void {
-    const state = this.model.getState()
-    
-    // 只有在对话已开始时才加载新题目
-    if (state.matchStarted) {
-      this.questionManager.loadQuestionByLevel(state.difficultyLevel).then(() => {
-        this.notifyStateChange()
-      })
-    }
-    
-    // 同时执行原有的逻辑作为备用
-    this.model.nextTopic()
-    this.notifyStateChange()
-  }
-
   changeMatchType(matchType: '真人对战' | 'AI辅助'): void {
     this.model.updateMatchState({ matchType })
     this.model.clearTranscriptMessages()
@@ -387,13 +372,13 @@ export class VersusController {
       isUserSpeaking: false
     })
     
-    // 如果切换到AI模式，立即设置AI专用主题
+    // 根据对战模式设置不同的主题
     if (matchType === 'AI辅助') {
       console.log('切换到AI模式，设置AI专用主题')
       this.setAIModeTopic()
     } else {
-      console.log('切换到真人对战模式，重置题库状态')
-      this.questionManager.reset()
+      console.log('切换到真人对战模式，设置真人对战专用主题')
+      this.setHumanBattleTopic()
     }
     
     this.notifyStateChange()
@@ -598,11 +583,28 @@ export class VersusController {
     const audioIndex = (this.aiResponseIndex % this.maxAiResponses) + 1
     const audioPath = `/audios/${audioIndex}.mp3`
     
-    console.log(`播放AI回应音频 ${audioIndex}.mp3`)
+    // AI思考时间序列：3, 6, 5, 2, 2, 3 秒
+    const thinkingTimes = [3, 6, 5, 2, 2, 3]
+    const thinkingTime = thinkingTimes[this.aiResponseIndex % thinkingTimes.length] * 1000 // 转换为毫秒
     
-    // 设置AI正在回应状态
-    this.model.updateMatchState({ isPartnerSpeaking: true })
+    console.log(`AI开始思考，思考时间：${thinkingTime / 1000}秒，然后播放 ${audioIndex}.mp3`)
+    
+    // 设置AI正在思考状态（不是回应状态）
+    this.model.updateMatchState({ 
+      isPartnerThinking: true,
+      isPartnerSpeaking: false  // 确保思考时不是回应状态
+    })
     this.notifyStateChange()
+    
+    // 等待思考时间后再播放音频
+    setTimeout(() => {
+      this.playAiAudio(audioPath, audioIndex)
+    }, thinkingTime)
+  }
+
+  // 播放AI音频的具体实现
+  private playAiAudio(audioPath: string, audioIndex: number): void {
+    console.log(`AI思考完成，开始播放音频 ${audioIndex}.mp3`)
     
     // 创建新的音频元素
     this.aiAudioElement = new Audio(audioPath)
@@ -617,15 +619,21 @@ export class VersusController {
     
     this.aiAudioElement.onplay = () => {
       console.log(`AI音频 ${audioIndex}.mp3 开始播放`)
-      // 确保状态显示AI正在回应
-      this.model.updateMatchState({ isPartnerSpeaking: true })
+      // 从思考状态切换到回应状态
+      this.model.updateMatchState({ 
+        isPartnerThinking: false,
+        isPartnerSpeaking: true 
+      })
       this.notifyStateChange()
     }
     
     this.aiAudioElement.onended = () => {
       console.log(`AI音频 ${audioIndex}.mp3 播放完成`)
-      // 重置AI状态
-      this.model.updateMatchState({ isPartnerSpeaking: false })
+      // 重置AI所有状态
+      this.model.updateMatchState({ 
+        isPartnerSpeaking: false,
+        isPartnerThinking: false
+      })
       this.notifyStateChange()
       
       // 增加响应计数
@@ -639,8 +647,11 @@ export class VersusController {
     
     this.aiAudioElement.onerror = (error) => {
       console.error(`播放AI音频 ${audioIndex}.mp3 失败:`, error)
-      // 重置状态
-      this.model.updateMatchState({ isPartnerSpeaking: false })
+      // 重置AI所有状态
+      this.model.updateMatchState({ 
+        isPartnerSpeaking: false,
+        isPartnerThinking: false
+      })
       this.notifyStateChange()
       
       // 仍然增加计数，避免卡住
@@ -674,5 +685,23 @@ export class VersusController {
     
     console.log('AI模式主题已设置:', aiTopic)
     console.log('AI模式提示已设置:', aiPrompts)
+  }
+
+  // 设置真人对战模式的专用主题
+  private setHumanBattleTopic(): void {
+    const humanTopic = "How to Spend Your Summer Vacation?"
+    const humanPrompts = [
+      "What are your summer vacation plans?",
+      "Where would you like to travel this summer?",
+      "What activities do you enjoy during summer?",
+      "How do you usually spend your free time in summer?",
+      "What's your ideal summer vacation?"
+    ]
+    
+    // 直接设置真人对战模式的主题和提示
+    this.questionManager.setServerTopic(humanTopic, humanPrompts)
+    
+    console.log('真人对战模式主题已设置:', humanTopic)
+    console.log('真人对战模式提示已设置:', humanPrompts)
   }
 }

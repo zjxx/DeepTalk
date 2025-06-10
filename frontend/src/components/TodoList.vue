@@ -112,25 +112,25 @@ const newTodo = ref<Omit<Todo, 'id' | 'completed'>>({
 const mockTodos: Todo[] = [
   {
     id: 1,
-    title: '完成口语对战功能开发',
+    title: '进行口语练习',
     completed: false,
     time: '09:00'
   },
   {
     id: 2,
-    title: '实现评分系统',
+    title: '完成英语阅读',
     completed: true,
     time: '11:30'
   },
   {
     id: 3,
-    title: '优化用户界面',
+    title: '背单词',
     completed: false,
     time: '14:00'
   },
   {
     id: 4,
-    title: '代码审查',
+    title: '复习今日所学内容',
     completed: false,
     time: '16:30'
   }
@@ -239,7 +239,7 @@ onMounted(() => {
 }
 
 .title-section {
-  background: linear-gradient(135deg, #e0ecff 0%, #f5faff 100%);
+  background: linear-gradient(135deg, #4f8cff 0%, #7fd8ff 100%);
   color: white;
   padding: 16px 24px;
   border-radius: 12px 12px 0 0;
