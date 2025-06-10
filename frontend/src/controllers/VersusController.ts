@@ -15,39 +15,7 @@ export class VersusController {
   private webSocketService: WebSocketService
   
   // AI对话模拟相关
-   // 设置AI模式的专用主题
-  private setAIModeTopic(): void {
-    const aiTopic = "You will talk with your partner about your favorite book. Your discussion may include:"
-    const aiPrompts = [
-      "What is the book?",
-      "Who wrote the book?", 
-      "What is it about?"
-    ]
-    
-    // 直接设置AI模式的主题和提示
-    this.questionManager.setServerTopic(aiTopic, aiPrompts)
-    
-    console.log('AI模式主题已设置:', aiTopic)
-    console.log('AI模式提示已设置:', aiPrompts)
-  }
-
-  // 设置真人对战模式的专用主题
-  private setHumanBattleTopic(): void {
-    const humanTopic = "How to Spend Your Summer Vacation?"
-    const humanPrompts = [
-      "What are your summer vacation plans?",
-      "Where would you like to travel this summer?",
-      "What activities do you enjoy during summer?",
-      "How do you usually spend your free time in summer?",
-      "What's your ideal summer vacation?"
-    ]
-    
-    // 直接设置真人对战模式的主题和提示
-    this.questionManager.setServerTopic(humanTopic, humanPrompts)
-    
-    console.log('真人对战模式主题已设置:', humanTopic)
-    console.log('真人对战模式提示已设置:', humanPrompts)
-  }onseIndex: number = 0
+  private aiResponseIndex: number = 0
   private readonly maxAiResponses: number = 6
   private aiAudioElement: HTMLAudioElement | null = null
   
@@ -717,5 +685,23 @@ export class VersusController {
     
     console.log('AI模式主题已设置:', aiTopic)
     console.log('AI模式提示已设置:', aiPrompts)
+  }
+
+  // 设置真人对战模式的专用主题
+  private setHumanBattleTopic(): void {
+    const humanTopic = "How to Spend Your Summer Vacation?"
+    const humanPrompts = [
+      "What are your summer vacation plans?",
+      "Where would you like to travel this summer?",
+      "What activities do you enjoy during summer?",
+      "How do you usually spend your free time in summer?",
+      "What's your ideal summer vacation?"
+    ]
+    
+    // 直接设置真人对战模式的主题和提示
+    this.questionManager.setServerTopic(humanTopic, humanPrompts)
+    
+    console.log('真人对战模式主题已设置:', humanTopic)
+    console.log('真人对战模式提示已设置:', humanPrompts)
   }
 }
