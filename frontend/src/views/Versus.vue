@@ -32,15 +32,6 @@
                 <v-icon start size="12">mdi-check-circle</v-icon>
                 已同步
               </v-chip>
-              <v-chip 
-                v-else 
-                color="warning" 
-                size="x-small" 
-                class="ml-2"
-              >
-                <v-icon start size="12">mdi-alert</v-icon>
-                本地
-              </v-chip>
             </div>
             <div class="text-body-1" v-else>
               <span class="text-grey-5">正在加载题目...</span>
@@ -69,8 +60,8 @@
             :app="pixiAppInstance as PIXI.Application"
             type="user"
             :modelPath="userModelPath"
-            :initialX="state.canvasWidth * 0.1" 
-            :initialY="state.canvasHeight * 0.15"
+            :initialX="state.canvasWidth * 0.2" 
+            :initialY="state.canvasHeight * 0.23"
             :scale="0.2" 
           />
           
@@ -91,7 +82,7 @@
             v-if="displayBattleType === 'AI辅助'" 
             class="ai-avatar"
             :style="{
-              left: `${state.canvasWidth * 0.68}px`,
+              left: `${state.canvasWidth * 0.7}px`,
               top: `${state.canvasHeight * 0.4}px`
             }"
           >
@@ -422,30 +413,7 @@
         </v-card>
       </v-col> -->
 
-      <!-- 实时转写面板 -->
-      <v-col cols="12" v-if="state.matchStarted" class="py-1">
-        <v-card>
-          <v-card-title class="d-flex justify-space-between">
-            <span>实时转写</span>
-            <v-chip color="info" size="small">Beta</v-chip>
-          </v-card-title>
-          <v-card-text>
-            <div class="transcript-container">
-              <div v-for="(message, index) in state.transcriptMessages" :key="index" 
-                   class="transcript-message" :class="{'user-message': message.isUser}">
-                <strong>{{ 
-                  message.isUser ? '您' : 
-                  (displayBattleType === '真人对战' ? '对方用户' : 'AI助手') 
-                }}:</strong>
-                {{ message.text }}
-              </div>
-              <div v-if="state.transcriptMessages.length === 0" class="text-center text-grey">
-                开始对话后，语音将在此处显示...
-              </div>
-            </div>
-          </v-card-text>
-        </v-card>
-      </v-col>
+      <!-- 实时转写面板已删除 -->
     </v-row>
   </v-container>
 </template>
@@ -1588,32 +1556,6 @@ const handlePartnerLeftBattle = (data: { message?: string; [key: string]: unknow
 
 .match-type-select, .difficulty-select {
   min-width: 120px;
-}
-
-.transcript-container {
-  max-height: 150px;
-  overflow-y: auto;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 12px;
-  background-color: #fafafa;
-}
-
-.transcript-message {
-  padding: 6px 0;
-  border-bottom: 1px solid #eee;
-  font-size: 14px;
-}
-
-.transcript-message:last-child {
-  border-bottom: none;
-}
-
-.user-message {
-  background-color: #e3f2fd;
-  margin: 2px 0;
-  padding: 6px;
-  border-radius: 8px;
 }
 
 .model-column:not(.model-column-overlay) {
