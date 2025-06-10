@@ -15,7 +15,39 @@ export class VersusController {
   private webSocketService: WebSocketService
   
   // AI对话模拟相关
-  private aiResponseIndex: number = 0
+   // 设置AI模式的专用主题
+  private setAIModeTopic(): void {
+    const aiTopic = "You will talk with your partner about your favorite book. Your discussion may include:"
+    const aiPrompts = [
+      "What is the book?",
+      "Who wrote the book?", 
+      "What is it about?"
+    ]
+    
+    // 直接设置AI模式的主题和提示
+    this.questionManager.setServerTopic(aiTopic, aiPrompts)
+    
+    console.log('AI模式主题已设置:', aiTopic)
+    console.log('AI模式提示已设置:', aiPrompts)
+  }
+
+  // 设置真人对战模式的专用主题
+  private setHumanBattleTopic(): void {
+    const humanTopic = "How to Spend Your Summer Vacation?"
+    const humanPrompts = [
+      "What are your summer vacation plans?",
+      "Where would you like to travel this summer?",
+      "What activities do you enjoy during summer?",
+      "How do you usually spend your free time in summer?",
+      "What's your ideal summer vacation?"
+    ]
+    
+    // 直接设置真人对战模式的主题和提示
+    this.questionManager.setServerTopic(humanTopic, humanPrompts)
+    
+    console.log('真人对战模式主题已设置:', humanTopic)
+    console.log('真人对战模式提示已设置:', humanPrompts)
+  }onseIndex: number = 0
   private readonly maxAiResponses: number = 6
   private aiAudioElement: HTMLAudioElement | null = null
   
@@ -56,8 +88,8 @@ export class VersusController {
         // AI模式：使用固定的英语对话主题
         this.setAIModeTopic()
       } else {
-        // 真人对战模式：加载题库中的题目
-        await this.questionManager.loadQuestionByLevel(this.model.getState().difficultyLevel)
+        // 真人对战模式：使用固定主题
+        this.setHumanBattleTopic()
       }
       
       this.notifyStateChange()
@@ -372,13 +404,13 @@ export class VersusController {
       isUserSpeaking: false
     })
     
-    // 如果切换到AI模式，立即设置AI专用主题
+    // 根据对战模式设置不同的主题
     if (matchType === 'AI辅助') {
       console.log('切换到AI模式，设置AI专用主题')
       this.setAIModeTopic()
     } else {
-      console.log('切换到真人对战模式，重置题库状态')
-      this.questionManager.reset()
+      console.log('切换到真人对战模式，设置真人对战专用主题')
+      this.setHumanBattleTopic()
     }
     
     this.notifyStateChange()
