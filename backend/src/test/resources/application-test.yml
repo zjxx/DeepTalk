@@ -1,0 +1,16 @@
+spring:
+  profiles: test
+  main:
+    allow-bean-definition-overriding: true
+
+server:
+  port: 0  # 使用随机端口
+
+# 测试环境特定配置
+test:
+  wsl:
+    bash: wsl bash
+  scripts:
+    dir: test/speech  # 相对于项目根目录的路径
+  timeout:
+    seconds: 30 
