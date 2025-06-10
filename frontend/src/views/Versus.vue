@@ -109,14 +109,19 @@
             <v-avatar size="200" color="primary">
               <v-icon size="90" color="white">mdi-robot</v-icon>
             </v-avatar>
-            <div class="ai-status-indicator" :class="{ 'speaking': state.isPartnerSpeaking }">
+            <div class="ai-status-indicator" :class="{ 'speaking': state.isPartnerSpeaking || state.isPartnerThinking }">
               <v-chip 
-                :color="state.isPartnerSpeaking ? 'success' : 'grey'" 
+                :color="(state.isPartnerSpeaking || state.isPartnerThinking) ? 'success' : 'grey'" 
                 size="small"
                 class="mt-2"
+                v-if="!state.isRecording"
               >
-                {{ state.isPartnerSpeaking ? 'AI思考中...' : 'AI待命' }}
+                {{ 
+                  state.isPartnerThinking ? 'AI思考中...' : 
+                  (state.isPartnerSpeaking ? 'AI正在回应...' : 'AI待命')
+                }}
               </v-chip>
+              <!-- 用户录音时不显示任何AI状态 -->
             </div>
           </div>
         </div>
@@ -210,17 +215,21 @@
           </v-card-title>
           <v-card-actions class="d-flex justify-center py-2">
             <v-chip 
-              :color="state.isPartnerSpeaking ? 'success' : (state.speakingTurn === 'partner' ? 'warning' : 'grey')" 
+              :color="(state.isPartnerSpeaking || state.isPartnerThinking) ? 'success' : (state.speakingTurn === 'partner' ? 'warning' : 'grey')" 
               class="mr-2"
+              v-if="!state.isRecording"
             >
               {{ 
-                state.isPartnerSpeaking ? 
-                  (displayBattleType === 'AI辅助' ? 'AI正在回应' : '对方正在说话') : 
-                  (state.speakingTurn === 'partner' ? 
-                    (displayBattleType === 'AI辅助' ? 'AI正在思考' : '对方正在思考') : 
-                    '等待轮换')
+                state.isPartnerThinking ? 
+                  'AI思考中...' : 
+                  (state.isPartnerSpeaking ? 
+                    (displayBattleType === 'AI辅助' ? 'AI正在回应' : '对方正在说话') : 
+                    (state.speakingTurn === 'partner' ? 
+                      (displayBattleType === 'AI辅助' ? 'AI待命' : '对方正在思考') : 
+                      '等待轮换'))
               }}
             </v-chip>
+            <!-- 用户录音时不显示AI状态芯片 -->
             
             <!-- 对方发言时的跳过按钮已删除 -->
             
