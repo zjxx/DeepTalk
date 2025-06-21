@@ -27,6 +27,13 @@ export interface VersusState {
   lastRecordedAudio: Blob | null
   isPlayingAudio: boolean
   
+  // 语音识别状态
+  speechText: string
+  interimSpeechText: string
+  speechConfidence: number
+  isSpeechRecognitionActive: boolean
+  speechRecognitionError: string
+  
   // 全程录音状态
   fullRecordingAvailable: boolean
   fullRecordingDuration: number
@@ -65,6 +72,11 @@ export class VersusModel {
       audioLevel: 0,
       lastRecordedAudio: null,
       isPlayingAudio: false,
+      speechText: '',
+      interimSpeechText: '',
+      speechConfidence: 0,
+      isSpeechRecognitionActive: false,
+      speechRecognitionError: '',
       fullRecordingAvailable: false,
       fullRecordingDuration: 0,
       playbackProgress: 0,

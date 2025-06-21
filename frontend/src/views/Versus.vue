@@ -168,6 +168,98 @@
               </v-tooltip>
             </v-btn>
           </v-card-actions>
+          
+          <!-- 语音识别显示区域 -->
+          <v-card-text v-if="controller.isSpeechRecognitionSupported()" class="pt-2">
+            <div class="speech-recognition-section">
+              <div class="d-flex justify-space-between align-center mb-2">
+                <v-chip 
+                  :color="state.isSpeechRecognitionActive ? 'success' : 'grey'"
+                  size="small"
+                  :prepend-icon="state.isSpeechRecognitionActive ? 'mdi-microphone' : 'mdi-microphone-off'"
+                >
+                  {{ state.isSpeechRecognitionActive ? '实时语音识别中' : '语音识别待命' }}
+                </v-chip>
+                
+                <div class="speech-controls">
+                  <v-chip
+                    v-if="state.isRecording"
+                    color="info"
+                    size="small"
+                    prepend-icon="mdi-sync"
+                  >
+                    录音时自动识别
+                  </v-chip>
+                  
+                  <v-btn
+                    v-if="state.speechText"
+                    @click="clearSpeechText"
+                    color="warning"
+                    size="small"
+                    variant="text"
+                    icon="mdi-delete"
+                    class="ml-1"
+                  >
+                    <v-tooltip activator="parent" location="top">
+                      清空文本
+                    </v-tooltip>
+                  </v-btn>
+                </div>
+              </div>
+              
+              <!-- 错误信息显示 -->
+              <v-alert
+                v-if="state.speechRecognitionError"
+                type="error"
+                density="compact"
+                class="mb-2"
+                closable
+                @click:close="clearSpeechError"
+              >
+                {{ state.speechRecognitionError }}
+              </v-alert>
+              
+              <!-- 语音识别文本显示区域 -->
+              <div class="speech-text-display">
+                <v-textarea
+                  v-model="displaySpeechText"
+                  label="实时语音转文字"
+                  readonly
+                  rows="3"
+                  variant="outlined"
+                  density="compact"
+                  class="speech-textarea"
+                  :placeholder="state.isSpeechRecognitionActive ? '正在监听语音...' : '点击录音按钮开始录音，语音识别将自动启动'"
+                  hide-details
+                >
+                  <template #append-inner>
+                    <v-icon 
+                      v-if="state.isSpeechRecognitionActive" 
+                      color="success" 
+                      class="pulse-animation"
+                    >
+                      mdi-pulse
+                    </v-icon>
+                  </template>
+                </v-textarea>
+                
+                <!-- 置信度显示 -->
+                <div v-if="state.speechConfidence > 0" class="confidence-display mt-1">
+                  <v-chip size="x-small" color="info">
+                    识别置信度: {{ Math.round(state.speechConfidence * 100) }}%
+                  </v-chip>
+                </div>
+              </div>
+            </div>
+          </v-card-text>
+          
+          <!-- 不支持语音识别的提示 -->
+          <v-card-text v-else class="pt-2">
+            <v-alert type="warning" density="compact">
+              <v-icon start>mdi-information</v-icon>
+              当前浏览器不支持语音识别功能，录音功能仍可正常使用。建议使用Chrome、Edge等现代浏览器以获得最佳体验
+            </v-alert>
+          </v-card-text>
         </v-card>
       </v-col>
 
@@ -473,6 +565,35 @@ const displayBattleType = computed(() => route.query.battleType || state.matchTy
 const displayDifficulty = computed(() => route.query.difficulty || state.difficultyLevel || '中级')
 const displayDuration = computed(() => route.query.duration || Math.floor((state.remainingTime || 300) / 60))
 
+// 语音识别相关计算属性
+const displaySpeechText = computed(() => {
+  if (state.interimSpeechText && state.isSpeechRecognitionActive) {
+    return state.speechText + state.interimSpeechText
+  }
+  return state.speechText
+})
+
+// 语音识别相关方法
+const startSpeechRecognition = () => {
+  const success = controller.startSpeechRecognition()
+  if (!success) {
+    console.warn('启动语音识别失败')
+  }
+}
+
+const stopSpeechRecognition = () => {
+  controller.stopSpeechRecognition()
+}
+
+const clearSpeechText = () => {
+  controller.clearSpeechText()
+}
+
+const clearSpeechError = () => {
+  // 清空错误信息
+  state.speechRecognitionError = ''
+}
+
 // 动态模型路径
 const userModelPath = computed(() => {
   return getModelPath(userModelId.value)
@@ -613,6 +734,12 @@ const handleToggleRecording = async () => {
       console.log('准备停止录音...')
       await controller.toggleRecording()
       
+      // 同时停止语音识别
+      if (controller.isSpeechRecognitionSupported() && state.isSpeechRecognitionActive) {
+        console.log('停止语音识别...')
+        stopSpeechRecognition()
+      }
+      
       // 等待一小段时间确保录音数据已保存
       await new Promise(resolve => setTimeout(resolve, 100))
       
@@ -686,6 +813,12 @@ const handleToggleRecording = async () => {
       // 开始录音
       console.log(`开始${displayBattleType.value}模式录音...`)
       await controller.toggleRecording()
+      
+      // 同时启动语音识别
+      if (controller.isSpeechRecognitionSupported() && !state.isSpeechRecognitionActive) {
+        console.log('启动语音识别...')
+        startSpeechRecognition()
+      }
     }
     
     // 更新模型表情
@@ -1566,12 +1699,60 @@ const handlePartnerLeftBattle = (data: { message?: string; [key: string]: unknow
   padding: 8px !important;
 }
 
-.v-card-title {
-  padding: 8px !important;
+/* 语音识别相关样式 */
+.speech-recognition-section {
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
 }
 
-.v-card-actions {
-  padding: 4px !important;
+.speech-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.speech-text-display {
+  margin-top: 8px;
+}
+
+.speech-textarea .v-field__input {
+  color: white !important;
+}
+
+.speech-textarea .v-field__outline {
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.speech-textarea .v-field--focused .v-field__outline {
+  border-color: rgba(25, 118, 210, 0.8) !important;
+}
+
+.confidence-display {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* 脉搏动画 */
+.pulse-animation {
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 /* 录音按钮动画 */
