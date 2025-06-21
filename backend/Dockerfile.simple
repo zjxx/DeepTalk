@@ -1,0 +1,31 @@
+# 简化版后端Dockerfile
+FROM maven:3.8.6-openjdk-17-slim AS builder
+
+# 安装git
+RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
+
+# 克隆代码
+WORKDIR /build
+RUN git clone https://github.com/zjxx/DeepTalk.git
+WORKDIR /build/DeepTalk/backend
+
+# 构建应用
+RUN mvn clean package -DskipTests -B
+
+# 运行阶段
+FROM openjdk:17-jre-slim
+
+# 安装curl
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+# 复制jar文件（使用通配符）
+COPY --from=builder /build/DeepTalk/backend/target/*.jar /app/app.jar
+
+# 设置工作目录
+WORKDIR /app
+
+# 暴露端口
+EXPOSE 8080
+
+# 启动应用
+CMD ["java", "-jar", "app.jar"] 
