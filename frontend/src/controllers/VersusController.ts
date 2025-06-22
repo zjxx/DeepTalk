@@ -5,6 +5,8 @@ import { TimerService } from '../services/TimerService'
 import { AIService } from '../services/AIService'
 import { QuestionManager } from '../utils/QuestionManager'
 import { WebSocketService } from '../services/WebSocketService'
+import { SpeechRecognitionService, type SpeechRecognitionResult } from '../services/SpeechRecognitionService'
+import { type ConversationContext } from '../services/HuggingFaceService'
 
 export class VersusController {
   private model: VersusModel
@@ -13,11 +15,16 @@ export class VersusController {
   private aiService: AIService
   private questionManager: QuestionManager
   private webSocketService: WebSocketService
+  private speechRecognitionService: SpeechRecognitionService
   
   // AI对话模拟相关
   private aiResponseIndex: number = 0
   private readonly maxAiResponses: number = 6
   private aiAudioElement: HTMLAudioElement | null = null
+  
+  // 语音识别相关
+  private speechText: string = ''
+  private isSpeechRecognitionActive: boolean = false
   
   // 回调函数，用于通知 View 层状态变化
   private onStateChange?: () => void
@@ -29,8 +36,14 @@ export class VersusController {
     this.aiService = new AIService()
     this.questionManager = new QuestionManager()
     this.webSocketService = new WebSocketService('ws://115.175.45.173:8765')
+    this.speechRecognitionService = new SpeechRecognitionService({
+      continuous: true,
+      interimResults: true,
+      lang: 'zh-CN'
+    })
     
     this.setupEventListeners()
+    this.setupSpeechRecognition()
     
     // 自动启动对战状态和计时
     this.autoStartMatch()
@@ -116,9 +129,23 @@ export class VersusController {
       this.notifyStateChange()
     }
 
-    this.aiService.onResponseGenerated = (response) => {
-      this.model.addTranscriptMessage({ isUser: false, text: response })
+    this.aiService.onThinkingStateChange = (isThinking) => {
+      this.model.updateMatchState({ isPartnerThinking: isThinking })
       this.notifyStateChange()
+    }
+
+    this.aiService.onResponseGenerated = (response) => {
+      this.model.addTranscriptMessage({ 
+        isUser: false, 
+        text: response,
+        timestamp: Date.now()
+      })
+      this.notifyStateChange()
+    }
+
+    this.aiService.onErrorOccurred = (error) => {
+      console.error('AI服务错误:', error)
+      // 可以在这里添加错误处理逻辑
     }
 
     // WebSocket 服务事件监听
@@ -152,6 +179,12 @@ export class VersusController {
   // 获取当前状态
   getState() {
     return this.model.getState()
+  }
+
+  // 添加对话消息
+  addTranscriptMessage(message: TranscriptMessage): void {
+    this.model.addTranscriptMessage(message)
+    this.notifyStateChange()
   }
 
   // 计算属性的 getter 方法
@@ -418,6 +451,8 @@ export class VersusController {
     this.timerService.stopAllTimers()
     this.audioService.cleanup()
     this.aiService.cleanup()
+    this.speechRecognitionService.destroy()
+    this.webSocketService.disconnect()
     
     // 清理AI音频播放
     if (this.aiAudioElement) {
@@ -703,5 +738,170 @@ export class VersusController {
     
     console.log('真人对战模式主题已设置:', humanTopic)
     console.log('真人对战模式提示已设置:', humanPrompts)
+  }
+
+  // 设置语音识别功能
+  private setupSpeechRecognition(): void {
+    // 设置语音识别结果回调
+    this.speechRecognitionService.onResult((result: SpeechRecognitionResult) => {
+      if (result.isFinal) {
+        // 最终结果，追加到语音文本
+        this.speechText += result.transcript + ' '
+        
+        // 在AI模式下，当获得最终结果时，添加到对话记录并触发AI回复
+        if (this.model.getState().matchType === 'AI辅助' && result.transcript.trim()) {
+          // 添加用户消息到对话记录
+          this.model.addTranscriptMessage({ 
+            isUser: true, 
+            text: result.transcript.trim(),
+            timestamp: Date.now()
+          })
+          
+          // 触发AI回复
+          this.handleAIResponse(result.transcript.trim())
+        }
+      } else {
+        // 临时结果，用于实时显示
+        this.model.updateMatchState({ 
+          speechText: this.speechText + result.transcript,
+          interimSpeechText: result.transcript
+        })
+      }
+      
+      // 更新最终文本
+      this.model.updateMatchState({ 
+        speechText: this.speechText.trim(),
+        speechConfidence: result.confidence
+      })
+      
+      this.notifyStateChange()
+    })
+
+    // 设置错误回调
+    this.speechRecognitionService.onError((error: string) => {
+      console.error('语音识别错误:', error)
+      this.model.updateMatchState({ 
+        speechRecognitionError: error,
+        isSpeechRecognitionActive: false
+      })
+      this.isSpeechRecognitionActive = false
+      this.notifyStateChange()
+    })
+
+    // 设置开始回调
+    this.speechRecognitionService.onStart(() => {
+      console.log('语音识别已开始')
+      this.isSpeechRecognitionActive = true
+      this.model.updateMatchState({ 
+        isSpeechRecognitionActive: true,
+        speechRecognitionError: ''
+      })
+      this.notifyStateChange()
+    })
+
+    // 设置结束回调
+    this.speechRecognitionService.onEnd(() => {
+      console.log('语音识别已结束')
+      this.isSpeechRecognitionActive = false
+      this.model.updateMatchState({ 
+        isSpeechRecognitionActive: false
+      })
+      this.notifyStateChange()
+    })
+  }
+
+  /**
+   * 处理AI回复
+   */
+  private async handleAIResponse(userMessage: string): Promise<void> {
+    if (!userMessage.trim()) return
+    
+    try {
+      // 设置AI对话上下文
+      this.aiService.setConversationContext({
+        topic: this.currentTopic,
+        difficulty: this.model.getState().difficultyLevel,
+        language: 'en-US' // 根据需要可以动态设置
+      })
+      
+      // 生成AI回复
+      await this.aiService.generateResponseFromSpeech(userMessage)
+      
+    } catch (error) {
+      console.error('AI回复处理失败:', error)
+    }
+  }
+
+  // 语音识别相关方法
+  /**
+   * 开始语音识别
+   */
+  startSpeechRecognition(): boolean {
+    if (!this.speechRecognitionService.getIsSupported()) {
+      console.warn('当前浏览器不支持语音识别功能')
+      return false
+    }
+
+    const success = this.speechRecognitionService.start()
+    if (success) {
+      console.log('语音识别已启动')
+    }
+    return success
+  }
+
+  /**
+   * 停止语音识别
+   */
+  stopSpeechRecognition(): void {
+    this.speechRecognitionService.stop()
+    console.log('语音识别已停止')
+  }
+
+  /**
+   * 获取语音识别是否支持
+   */
+  isSpeechRecognitionSupported(): boolean {
+    return this.speechRecognitionService.getIsSupported()
+  }
+
+  /**
+   * 获取语音识别是否正在进行
+   */
+  isSpeechRecognitionListening(): boolean {
+    return this.speechRecognitionService.getIsListening()
+  }
+
+  /**
+   * 清空语音识别文本
+   */
+  clearSpeechText(): void {
+    this.speechText = ''
+    this.model.updateMatchState({ 
+      speechText: '',
+      interimSpeechText: '',
+      speechRecognitionError: ''
+    })
+    this.notifyStateChange()
+  }
+
+  /**
+   * 获取当前语音识别文本
+   */
+  getSpeechText(): string {
+    return this.speechText
+  }
+
+  /**
+   * 设置AI对话上下文
+   */
+  async setConversationContext(context: Partial<ConversationContext>): Promise<void> {
+    this.aiService.setConversationContext(context)
+  }
+
+  /**
+   * 生成AI回复
+   */
+  async generateAIResponse(userMessage: string): Promise<void> {
+    await this.aiService.generateResponseFromSpeech(userMessage)
   }
 }
