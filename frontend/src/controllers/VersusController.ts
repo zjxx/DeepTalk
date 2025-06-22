@@ -6,6 +6,7 @@ import { AIService } from '../services/AIService'
 import { QuestionManager } from '../utils/QuestionManager'
 import { WebSocketService } from '../services/WebSocketService'
 import { SpeechRecognitionService, type SpeechRecognitionResult } from '../services/SpeechRecognitionService'
+import { type ConversationContext } from '../services/HuggingFaceService'
 
 export class VersusController {
   private model: VersusModel
@@ -128,9 +129,23 @@ export class VersusController {
       this.notifyStateChange()
     }
 
-    this.aiService.onResponseGenerated = (response) => {
-      this.model.addTranscriptMessage({ isUser: false, text: response })
+    this.aiService.onThinkingStateChange = (isThinking) => {
+      this.model.updateMatchState({ isPartnerThinking: isThinking })
       this.notifyStateChange()
+    }
+
+    this.aiService.onResponseGenerated = (response) => {
+      this.model.addTranscriptMessage({ 
+        isUser: false, 
+        text: response,
+        timestamp: Date.now()
+      })
+      this.notifyStateChange()
+    }
+
+    this.aiService.onErrorOccurred = (error) => {
+      console.error('AI服务错误:', error)
+      // 可以在这里添加错误处理逻辑
     }
 
     // WebSocket 服务事件监听
@@ -164,6 +179,12 @@ export class VersusController {
   // 获取当前状态
   getState() {
     return this.model.getState()
+  }
+
+  // 添加对话消息
+  addTranscriptMessage(message: TranscriptMessage): void {
+    this.model.addTranscriptMessage(message)
+    this.notifyStateChange()
   }
 
   // 计算属性的 getter 方法
@@ -726,6 +747,19 @@ export class VersusController {
       if (result.isFinal) {
         // 最终结果，追加到语音文本
         this.speechText += result.transcript + ' '
+        
+        // 在AI模式下，当获得最终结果时，添加到对话记录并触发AI回复
+        if (this.model.getState().matchType === 'AI辅助' && result.transcript.trim()) {
+          // 添加用户消息到对话记录
+          this.model.addTranscriptMessage({ 
+            isUser: true, 
+            text: result.transcript.trim(),
+            timestamp: Date.now()
+          })
+          
+          // 触发AI回复
+          this.handleAIResponse(result.transcript.trim())
+        }
       } else {
         // 临时结果，用于实时显示
         this.model.updateMatchState({ 
@@ -774,6 +808,28 @@ export class VersusController {
       })
       this.notifyStateChange()
     })
+  }
+
+  /**
+   * 处理AI回复
+   */
+  private async handleAIResponse(userMessage: string): Promise<void> {
+    if (!userMessage.trim()) return
+    
+    try {
+      // 设置AI对话上下文
+      this.aiService.setConversationContext({
+        topic: this.currentTopic,
+        difficulty: this.model.getState().difficultyLevel,
+        language: 'en-US' // 根据需要可以动态设置
+      })
+      
+      // 生成AI回复
+      await this.aiService.generateResponseFromSpeech(userMessage)
+      
+    } catch (error) {
+      console.error('AI回复处理失败:', error)
+    }
   }
 
   // 语音识别相关方法
@@ -833,5 +889,19 @@ export class VersusController {
    */
   getSpeechText(): string {
     return this.speechText
+  }
+
+  /**
+   * 设置AI对话上下文
+   */
+  async setConversationContext(context: Partial<ConversationContext>): Promise<void> {
+    this.aiService.setConversationContext(context)
+  }
+
+  /**
+   * 生成AI回复
+   */
+  async generateAIResponse(userMessage: string): Promise<void> {
+    await this.aiService.generateResponseFromSpeech(userMessage)
   }
 }

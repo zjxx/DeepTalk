@@ -2,6 +2,7 @@
 export interface TranscriptMessage {
   isUser: boolean
   text: string
+  timestamp?: number
 }
 
 export interface VersusState {
