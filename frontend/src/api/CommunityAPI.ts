@@ -1,5 +1,5 @@
 //import axios from 'axios'
-import type { Post, CheckAuthorRequest, CheckAuthorResponse, SearchRequest, SearchResult, LikeRequest, LikeResponse, AddPostRequest } from '../interface/CommunityInterface'
+import type { Post, CheckAuthorRequest, CheckAuthorResponse, SearchRequest, SearchResult, LikeRequest, LikeResponse, AddPostRequest, GetRepliesResponse } from '../interface/CommunityInterface'
 import { API_ENDPOINTS } from '../config/api'
 import { http } from '../utils/http'
 
@@ -28,4 +28,10 @@ export function CommunityCheckAuthorAPI(request: CheckAuthorRequest): Promise<Ch
 export function CommunityAddPostAPI(request: AddPostRequest): Promise<Post> {
     console.log('发送的发帖请求:', JSON.stringify(request))
     return http.post<Post, AddPostRequest>(API_ENDPOINTS.COMMUNITY.POSTS.ADD, request)
+}
+
+//获取帖子回复
+export function CommunityGetRepliesAPI(postId: string): Promise<GetRepliesResponse> {
+    console.log('获取回复，帖子ID:', postId)
+    return http.get<GetRepliesResponse>(`${API_ENDPOINTS.COMMUNITY.POSTS.REPLIES}/${postId}/replies`)
 } 

@@ -26,6 +26,21 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 
+# 本地配置文件（包含敏感信息）
+backend/src/main/resources/application-local.yml
+backend/src/main/resources/application-dev.yml
+
+# API密钥和测试文件（包含敏感信息）
+test-openrouter-api.ps1
+test-openrouter-direct.ps1
+test-gemini-api.ps1
+quick-test-api.ps1
+api_test.py
+test-api*.py
+*api*test*.ps1
+frontend/public/test-openrouter.html
+frontend/public/test-api*.html
+
 # Logs
 logs/
 *.log

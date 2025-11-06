@@ -40,6 +40,69 @@
           <v-card-text class="post-body-section">
             <div class="post-body">{{ currentPost.content }}</div>
           </v-card-text>
+
+          <v-divider class="my-4"></v-divider>
+
+          <!-- 回复区域 -->
+          <v-card-text class="replies-section">
+            <div class="replies-header">
+              <h3 class="replies-title">
+                <v-icon size="20" class="mr-2">mdi-comment-multiple-outline</v-icon>
+                回复 ({{ replies.length }})
+              </h3>
+              <v-btn 
+                v-if="!loadingReplies && replies.length > 0" 
+                variant="text" 
+                size="small"
+                @click="loadReplies"
+                prepend-icon="mdi-refresh"
+              >
+                刷新
+              </v-btn>
+            </div>
+
+            <!-- 加载中状态 -->
+            <div v-if="loadingReplies" class="text-center pa-4">
+              <v-progress-circular indeterminate size="32" color="primary"></v-progress-circular>
+              <p class="mt-2 text-grey">加载回复中...</p>
+            </div>
+
+            <!-- 回复列表 -->
+            <div v-else-if="replies.length > 0" class="replies-list">
+              <div v-for="reply in replies" :key="reply.id" class="reply-item">
+                <div class="reply-header">
+                  <v-avatar size="40" class="mr-3">
+                    <v-img :src="reply.authorAvatar || '/default-avatar.png'" />
+                  </v-avatar>
+                  <div class="reply-author-info">
+                    <div class="reply-author-name-row">
+                      <span class="reply-author-name">{{ reply.authorName }}</span>
+                      <!-- AI生成标识 -->
+                      <v-chip 
+                        v-if="reply.isAiGenerated" 
+                        size="x-small" 
+                        color="primary" 
+                        variant="flat"
+                        class="ml-2 ai-badge"
+                      >
+                        <v-icon size="12" start>mdi-robot</v-icon>
+                        AI
+                      </v-chip>
+                    </div>
+                    <span class="reply-time">{{ formatTime(reply.createdAt) }}</span>
+                  </div>
+                </div>
+                <div class="reply-content">{{ reply.content }}</div>
+              </div>
+            </div>
+
+            <!-- 空状态 -->
+            <div v-else class="empty-replies text-center pa-4">
+              <v-icon size="48" color="grey-lighten-2">mdi-comment-off-outline</v-icon>
+              <p class="mt-2 text-grey">暂无回复</p>
+              <p class="text-caption text-grey-lighten-1">发布新帖子时，AI会自动生成第一条回复</p>
+            </div>
+          </v-card-text>
         </v-card>
 
         <!-- 右侧：作者信息 -->
@@ -87,7 +150,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useCommunityController } from '../controllers/CommunityController'
-import type { Post } from '../interface/CommunityInterface'
+import type { Post, Reply } from '../interface/CommunityInterface'
 
 const route = useRoute()
 const router = useRouter()
@@ -96,12 +159,15 @@ const {
   posts,
   loading,
   loadCommunityData,
-  likePost
+  likePost,
+  getReplies
 } = useCommunityController()
 
 const currentPost = ref<Post | null>(null)
 const isLiked = ref(false)
 const isProcessingLike = ref(false)
+const replies = ref<Reply[]>([])
+const loadingReplies = ref(false)
 
 const postId = computed(() => route.params.id as string)
 
@@ -159,11 +225,33 @@ const loadPostDetail = async () => {
   if (post) {
     currentPost.value = post
     console.log('设置currentPost成功')
+    
+    // 加载帖子的回复
+    await loadReplies()
   } else {
     console.log('未找到对应帖子!')
     console.log('所有可用的帖子ID:', posts.value.map(p => p.id))
   }
   console.log('=== PostDetail loadPostDetail 结束 ===')
+}
+
+// 加载回复
+const loadReplies = async () => {
+  if (!postId.value) return
+  
+  loadingReplies.value = true
+  try {
+    console.log('开始加载回复，postId:', postId.value)
+    const response = await getReplies(postId.value)
+    replies.value = response.replies || []
+    console.log('回复加载成功，数量:', replies.value.length)
+    console.log('回复内容:', replies.value)
+  } catch (error) {
+    console.error('加载回复失败:', error)
+    replies.value = []
+  } finally {
+    loadingReplies.value = false
+  }
 }
 
 // 处理点赞
@@ -352,6 +440,114 @@ onMounted(() => {
 
 .extension-area::before {
   content: "预留扩展区域";
+}
+
+/* 回复区域 */
+.replies-section {
+  padding: 24px;
+  padding-top: 0;
+}
+
+.replies-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.replies-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+  display: flex;
+  align-items: center;
+}
+
+.replies-list {
+  max-height: 600px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+/* 美化滚动条 */
+.replies-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.replies-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.replies-list::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.replies-list::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+.reply-item {
+  padding: 16px;
+  margin-bottom: 12px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border-left: 3px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.reply-item:hover {
+  background: #f0f2f5;
+  border-left-color: #1976d2;
+}
+
+.reply-header {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.reply-author-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.reply-author-name-row {
+  display: flex;
+  align-items: center;
+}
+
+.reply-author-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #333;
+}
+
+.ai-badge {
+  font-size: 11px;
+  height: 20px;
+  padding: 0 8px;
+}
+
+.reply-time {
+  font-size: 12px;
+  color: #999;
+}
+
+.reply-content {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #555;
+  margin-left: 52px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.empty-replies {
+  padding: 40px 20px;
 }
 
 .empty-state {

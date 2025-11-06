@@ -168,98 +168,6 @@
               </v-tooltip>
             </v-btn>
           </v-card-actions>
-          
-          <!-- 语音识别显示区域 -->
-          <v-card-text v-if="controller.isSpeechRecognitionSupported()" class="pt-2">
-            <div class="speech-recognition-section">
-              <div class="d-flex justify-space-between align-center mb-2">
-                <v-chip 
-                  :color="state.isSpeechRecognitionActive ? 'success' : 'grey'"
-                  size="small"
-                  :prepend-icon="state.isSpeechRecognitionActive ? 'mdi-microphone' : 'mdi-microphone-off'"
-                >
-                  {{ state.isSpeechRecognitionActive ? '实时语音识别中' : '语音识别待命' }}
-                </v-chip>
-                
-                <div class="speech-controls">
-                  <v-chip
-                    v-if="state.isRecording"
-                    color="info"
-                    size="small"
-                    prepend-icon="mdi-sync"
-                  >
-                    录音时自动识别
-                  </v-chip>
-                  
-                  <v-btn
-                    v-if="state.speechText"
-                    @click="clearSpeechText"
-                    color="warning"
-                    size="small"
-                    variant="text"
-                    icon="mdi-delete"
-                    class="ml-1"
-                  >
-                    <v-tooltip activator="parent" location="top">
-                      清空文本
-                    </v-tooltip>
-                  </v-btn>
-                </div>
-              </div>
-              
-              <!-- 错误信息显示 -->
-              <v-alert
-                v-if="state.speechRecognitionError"
-                type="error"
-                density="compact"
-                class="mb-2"
-                closable
-                @click:close="clearSpeechError"
-              >
-                {{ state.speechRecognitionError }}
-              </v-alert>
-              
-              <!-- 语音识别文本显示区域 -->
-              <div class="speech-text-display">
-                <v-textarea
-                  v-model="displaySpeechText"
-                  label="实时语音转文字"
-                  readonly
-                  rows="3"
-                  variant="outlined"
-                  density="compact"
-                  class="speech-textarea"
-                  :placeholder="state.isSpeechRecognitionActive ? '正在监听语音...' : '点击录音按钮开始录音，语音识别将自动启动'"
-                  hide-details
-                >
-                  <template #append-inner>
-                    <v-icon 
-                      v-if="state.isSpeechRecognitionActive" 
-                      color="success" 
-                      class="pulse-animation"
-                    >
-                      mdi-pulse
-                    </v-icon>
-                  </template>
-                </v-textarea>
-                
-                <!-- 置信度显示 -->
-                <div v-if="state.speechConfidence > 0" class="confidence-display mt-1">
-                  <v-chip size="x-small" color="info">
-                    识别置信度: {{ Math.round(state.speechConfidence * 100) }}%
-                  </v-chip>
-                </div>
-              </div>
-            </div>
-          </v-card-text>
-          
-          <!-- 不支持语音识别的提示 -->
-          <v-card-text v-else class="pt-2">
-            <v-alert type="warning" density="compact">
-              <v-icon start>mdi-information</v-icon>
-              当前浏览器不支持语音识别功能，录音功能仍可正常使用。建议使用Chrome、Edge等现代浏览器以获得最佳体验
-            </v-alert>
-          </v-card-text>
         </v-card>
       </v-col>
 
@@ -338,7 +246,7 @@
       </v-col>
 
       <!-- AI对话历史区域 -->
-      <v-col v-if="displayBattleType === 'AI辅助' && state.transcriptMessages && state.transcriptMessages.length > 0" cols="12" class="py-1">
+      <v-col v-if="displayBattleType === 'AI辅助'" cols="12" class="py-1">
         <v-card class="conversation-card">
           <v-card-title class="d-flex justify-space-between align-center">
             <div>
@@ -346,12 +254,22 @@
               AI对话记录
             </div>
             <v-chip size="small" color="info">
-              {{ state.transcriptMessages.length }} 条消息
+              {{ state.transcriptMessages?.length || 0 }} 条消息
             </v-chip>
           </v-card-title>
           
-          <v-card-text class="conversation-content">
-            <div class="conversation-messages">
+          <v-card-text ref="conversationContentRef" class="conversation-content" style="max-height: 400px; overflow-y: auto; padding: 16px;">
+            <!-- 空状态提示 -->
+            <div v-if="!state.transcriptMessages || state.transcriptMessages.length === 0" class="empty-state text-center py-8">
+              <v-icon size="64" color="grey-lighten-2">mdi-chat-outline</v-icon>
+              <div class="text-h6 text-grey mt-4">还没有对话记录</div>
+              <div class="text-body-2 text-grey-darken-1 mt-2">
+                点击"开始对话"按钮开始录音，AI将会回复您
+              </div>
+            </div>
+            
+            <!-- 对话消息列表 -->
+            <div v-else class="conversation-messages">
               <div 
                 v-for="(message, index) in state.transcriptMessages" 
                 :key="index"
@@ -588,7 +506,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, nextTick, reactive } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, reactive, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import Live2DModel from '../components/Live2DModel.vue'
 import * as PIXI from 'pixi.js'
@@ -637,18 +555,13 @@ const controller = new VersusController()
 const state = reactive(controller.getState())
 const isLoadingPlayback = ref(false)
 
+// 对话容器引用（用于自动滚动）
+const conversationContentRef = ref<HTMLElement | null>(null)
+
 // 匹配参数展示
 const displayBattleType = computed(() => route.query.battleType || state.matchType || 'AI辅助')
 const displayDifficulty = computed(() => route.query.difficulty || state.difficultyLevel || '中级')
 const displayDuration = computed(() => route.query.duration || Math.floor((state.remainingTime || 300) / 60))
-
-// 语音识别相关计算属性
-const displaySpeechText = computed(() => {
-  if (state.interimSpeechText && state.isSpeechRecognitionActive) {
-    return state.speechText + state.interimSpeechText
-  }
-  return state.speechText
-})
 
 // 语音识别相关方法
 const startSpeechRecognition = () => {
@@ -660,15 +573,6 @@ const startSpeechRecognition = () => {
 
 const stopSpeechRecognition = () => {
   controller.stopSpeechRecognition()
-}
-
-const clearSpeechText = () => {
-  controller.clearSpeechText()
-}
-
-const clearSpeechError = () => {
-  // 清空错误信息
-  state.speechRecognitionError = ''
 }
 
 // AI对话相关方法
@@ -689,6 +593,20 @@ const clearConversationHistory = () => {
   controller.clearSpeechText()
   console.log('对话历史已清空')
 }
+
+// 自动滚动到对话底部
+const scrollToBottom = () => {
+  nextTick(() => {
+    if (conversationContentRef.value) {
+      conversationContentRef.value.scrollTop = conversationContentRef.value.scrollHeight
+    }
+  })
+}
+
+// 监听消息变化，自动滚动到底部
+watch(() => state.transcriptMessages.length, () => {
+  scrollToBottom()
+})
 
 // 动态模型路径
 const userModelPath = computed(() => {
@@ -880,64 +798,23 @@ const handleToggleRecording = async () => {
           type: state.lastRecordedAudio.type
         })
         
-        // 获取语音识别的文本
-        const speechText = state.speechText.trim()
+        // 注意：用户消息和AI回复都已经在 VersusController 中自动处理
+        // 语音识别的 onResult 回调会：
+        // 1. 添加用户消息到对话记录
+        // 2. 自动触发 AI 回复
+        // 所以这里不需要做任何操作！
         
-        if (speechText) {
-          console.log('语音识别文本:', speechText)
-          
-          // 添加用户消息到对话记录
-          controller.addTranscriptMessage({
-            isUser: true,
-            text: speechText,
-            timestamp: Date.now()
-          })
-          
-          // 显示AI处理状态
-          const aiToast = document.createElement('div')
-          aiToast.textContent = '🤖 AI正在分析您的语音...'
-          aiToast.style.cssText = 'position:fixed;top:20px;right:20px;background:#FF9800;color:white;padding:12px;border-radius:8px;z-index:9999;font-family:monospace'
-          document.body.appendChild(aiToast)
-          
-          // 触发AI回复
-          try {
-            // 设置AI对话上下文
-            await controller.setConversationContext({
-              topic: controller.currentTopic,
-              difficulty: state.difficultyLevel,
-              language: 'en-US'
-            })
-            
-            // 生成AI回复
-            await controller.generateAIResponse(speechText)
-            
-            aiToast.textContent = '✅ AI回复完成!'
-            aiToast.style.background = '#4CAF50'
-          } catch (error) {
-            console.error('AI回复生成失败:', error)
-            aiToast.textContent = '❌ AI回复失败'
-            aiToast.style.background = '#F44336'
+        // 只显示录音完成提示
+        const aiToast = document.createElement('div')
+        aiToast.textContent = '✅ 录音完成，等待AI回复...'
+        aiToast.style.cssText = 'position:fixed;top:20px;right:20px;background:#4CAF50;color:white;padding:12px;border-radius:8px;z-index:9999;font-family:monospace'
+        document.body.appendChild(aiToast)
+        
+        setTimeout(() => {
+          if (document.body.contains(aiToast)) {
+            document.body.removeChild(aiToast)
           }
-          
-          setTimeout(() => {
-            if (document.body.contains(aiToast)) {
-              document.body.removeChild(aiToast)
-            }
-          }, 2000)
-        } else {
-          console.warn('没有检测到语音内容')
-          // 显示提示
-          const noSpeechToast = document.createElement('div')
-          noSpeechToast.textContent = '⚠️ 没有检测到语音内容'
-          noSpeechToast.style.cssText = 'position:fixed;top:20px;right:20px;background:#FF9800;color:white;padding:12px;border-radius:8px;z-index:9999;font-family:monospace'
-          document.body.appendChild(noSpeechToast)
-          
-          setTimeout(() => {
-            if (document.body.contains(noSpeechToast)) {
-              document.body.removeChild(noSpeechToast)
-            }
-          }, 3000)
-        }
+        }, 2000)
       } else if (displayBattleType.value === '真人对战') {
         console.warn('真人对战模式：录音数据为空或WebSocket连接异常:', {
           hasAudio: !!state.lastRecordedAudio,

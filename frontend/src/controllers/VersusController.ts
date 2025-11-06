@@ -6,6 +6,7 @@ import { AIService } from '../services/AIService'
 import { QuestionManager } from '../utils/QuestionManager'
 import { WebSocketService } from '../services/WebSocketService'
 import { SpeechRecognitionService, type SpeechRecognitionResult } from '../services/SpeechRecognitionService'
+import { TTSService } from '../services/TTSService'
 import { type ConversationContext } from '../services/HuggingFaceService'
 
 export class VersusController {
@@ -13,14 +14,13 @@ export class VersusController {
   private audioService: AudioService
   private timerService: TimerService
   private aiService: AIService
+  private ttsService: TTSService
   private questionManager: QuestionManager
   private webSocketService: WebSocketService
   private speechRecognitionService: SpeechRecognitionService
   
-  // AI对话模拟相关
+  // AI对话相关
   private aiResponseIndex: number = 0
-  private readonly maxAiResponses: number = 6
-  private aiAudioElement: HTMLAudioElement | null = null
   
   // 语音识别相关
   private speechText: string = ''
@@ -33,7 +33,8 @@ export class VersusController {
     this.model = new VersusModel()
     this.audioService = new AudioService()
     this.timerService = new TimerService()
-    this.aiService = new AIService()
+    this.aiService = new AIService() // 默认使用Gemini
+    this.ttsService = new TTSService()
     this.questionManager = new QuestionManager()
     this.webSocketService = new WebSocketService('ws://115.175.45.173:8765')
     this.speechRecognitionService = new SpeechRecognitionService({
@@ -135,17 +136,52 @@ export class VersusController {
     }
 
     this.aiService.onResponseGenerated = (response) => {
+      console.log('AI回复已生成，添加到对话历史:', response)
+      
+      // 立即添加到对话记录显示
       this.model.addTranscriptMessage({ 
         isUser: false, 
         text: response,
         timestamp: Date.now()
       })
       this.notifyStateChange()
+      
+      // 如果是AI辅助模式，使用TTS朗读
+      const state = this.model.getState()
+      if (state.matchType === 'AI辅助') {
+        console.log('开始TTS朗读AI回复')
+        this.ttsService.speak(response, 'en-US', 1.0, 1.0)
+      }
     }
 
     this.aiService.onErrorOccurred = (error) => {
       console.error('AI服务错误:', error)
       // 可以在这里添加错误处理逻辑
+    }
+
+    // TTS 服务事件监听
+    this.ttsService.onSpeakingStart = () => {
+      console.log('TTS开始朗读')
+      this.model.updateMatchState({ isPartnerSpeaking: true })
+      this.notifyStateChange()
+    }
+
+    this.ttsService.onSpeakingEnd = () => {
+      console.log('TTS朗读完成')
+      this.model.updateMatchState({ 
+        isPartnerSpeaking: false,
+        isPartnerThinking: false
+      })
+      this.notifyStateChange()
+    }
+
+    this.ttsService.onError = (error) => {
+      console.error('TTS错误:', error)
+      this.model.updateMatchState({ 
+        isPartnerSpeaking: false,
+        isPartnerThinking: false
+      })
+      this.notifyStateChange()
     }
 
     // WebSocket 服务事件监听
@@ -431,15 +467,22 @@ export class VersusController {
     try {
       console.log('发送音频到语音识别服务...', audioBlob)
       
-      // 模拟语音识别
-      setTimeout(() => {
-        const simulatedText = "这是模拟的语音识别结果"
-        this.model.addTranscriptMessage({
-          isUser: true,
-          text: simulatedText
-        })
-        this.notifyStateChange()
-      }, 1000)
+      // 注意：
+      // 1. AI辅助模式：使用实时语音识别（Web Speech API），不需要这里处理
+      // 2. 真人对战模式：音频通过WebSocket发送给对方，不需要本地识别
+      // 
+      // 因此这个方法现在只是记录日志，不再添加模拟文本
+      
+      // 如果将来需要后端语音识别服务，可以在这里调用API
+      // const response = await fetch('/api/speech-to-text', {
+      //   method: 'POST',
+      //   body: audioBlob
+      // })
+      // const result = await response.json()
+      // this.model.addTranscriptMessage({
+      //   isUser: true,
+      //   text: result.text
+      // })
       
     } catch (error) {
       console.error('语音识别失败:', error)
@@ -451,14 +494,9 @@ export class VersusController {
     this.timerService.stopAllTimers()
     this.audioService.cleanup()
     this.aiService.cleanup()
+    this.ttsService.stop() // 停止TTS
     this.speechRecognitionService.destroy()
     this.webSocketService.disconnect()
-    
-    // 清理AI音频播放
-    if (this.aiAudioElement) {
-      this.aiAudioElement.pause()
-      this.aiAudioElement = null
-    }
   }
 
   // 格式化时间的工具方法
@@ -607,104 +645,57 @@ export class VersusController {
     return this.questionManager.isUsingServerTopic()
   }
 
-  // AI智能对话：播放下一个AI回应音频
-  private playNextAiResponse(): void {
-    if (this.aiResponseIndex >= this.maxAiResponses) {
-      console.log('AI回应已达到最大次数，不再播放')
-      return
-    }
-
-    // 计算当前应该播放的音频文件编号
-    const audioIndex = (this.aiResponseIndex % this.maxAiResponses) + 1
-    const audioPath = `/audios/${audioIndex}.mp3`
+  // AI智能对话：使用OpenRouter API + TTS朗读
+  private async playNextAiResponse(): Promise<void> {
+    console.log('AI开始思考并生成回复...')
     
-    // AI思考时间序列：3, 6, 5, 2, 2, 3 秒
-    const thinkingTimes = [3, 6, 5, 2, 2, 3]
-    const thinkingTime = thinkingTimes[this.aiResponseIndex % thinkingTimes.length] * 1000 // 转换为毫秒
-    
-    console.log(`AI开始思考，思考时间：${thinkingTime / 1000}秒，然后播放 ${audioIndex}.mp3`)
-    
-    // 设置AI正在思考状态（不是回应状态）
-    this.model.updateMatchState({ 
-      isPartnerThinking: true,
-      isPartnerSpeaking: false  // 确保思考时不是回应状态
-    })
-    this.notifyStateChange()
-    
-    // 等待思考时间后再播放音频
-    setTimeout(() => {
-      this.playAiAudio(audioPath, audioIndex)
-    }, thinkingTime)
-  }
-
-  // 播放AI音频的具体实现
-  private playAiAudio(audioPath: string, audioIndex: number): void {
-    console.log(`AI思考完成，开始播放音频 ${audioIndex}.mp3`)
-    
-    // 创建新的音频元素
-    this.aiAudioElement = new Audio(audioPath)
-    
-    this.aiAudioElement.onloadstart = () => {
-      console.log(`开始加载AI音频 ${audioIndex}.mp3`)
-    }
-    
-    this.aiAudioElement.oncanplay = () => {
-      console.log(`AI音频 ${audioIndex}.mp3 可以开始播放`)
-    }
-    
-    this.aiAudioElement.onplay = () => {
-      console.log(`AI音频 ${audioIndex}.mp3 开始播放`)
-      // 从思考状态切换到回应状态
-      this.model.updateMatchState({ 
-        isPartnerThinking: false,
-        isPartnerSpeaking: true 
+    try {
+      // 获取用户最后的发言
+      const state = this.model.getState()
+      const messages = state.transcriptMessages
+      const lastUserMessage = messages.filter((m: TranscriptMessage) => m.isUser).pop()
+      const userText = lastUserMessage?.text || 'Hello'
+      
+      console.log('用户说:', userText)
+      
+      // 设置AI对话上下文
+      this.aiService.setConversationContext({
+        topic: this.currentTopic,
+        difficulty: state.difficultyLevel,
+        language: 'en-US' // AI模式使用英语
       })
-      this.notifyStateChange()
-    }
-    
-    this.aiAudioElement.onended = () => {
-      console.log(`AI音频 ${audioIndex}.mp3 播放完成`)
-      // 重置AI所有状态
-      this.model.updateMatchState({ 
-        isPartnerSpeaking: false,
-        isPartnerThinking: false
-      })
-      this.notifyStateChange()
+      
+      // 使用AIService生成回复
+      // onResponseGenerated回调会自动处理显示和TTS
+      await this.aiService.generateResponseFromSpeech(userText)
       
       // 增加响应计数
       this.aiResponseIndex++
       
-      // 清理音频元素
-      if (this.aiAudioElement) {
-        this.aiAudioElement = null
-      }
-    }
-    
-    this.aiAudioElement.onerror = (error) => {
-      console.error(`播放AI音频 ${audioIndex}.mp3 失败:`, error)
-      // 重置AI所有状态
+    } catch (error) {
+      console.error('AI回复生成失败:', error)
+      
+      // 错误时重置状态
       this.model.updateMatchState({ 
-        isPartnerSpeaking: false,
-        isPartnerThinking: false
+        isPartnerThinking: false,
+        isPartnerSpeaking: false
       })
       this.notifyStateChange()
       
-      // 仍然增加计数，避免卡住
-      this.aiResponseIndex++
-      
-      if (this.aiAudioElement) {
-        this.aiAudioElement = null
-      }
-    }
-    
-    // 开始播放
-    this.aiAudioElement.play().catch(error => {
-      console.error(`播放AI音频 ${audioIndex}.mp3 失败:`, error)
-      this.model.updateMatchState({ isPartnerSpeaking: false })
+      // 使用备用回复
+      const fallbackText = 'Sorry, I encountered some issues. Please try again later.'
+      this.model.addTranscriptMessage({
+        isUser: false,
+        text: fallbackText,
+        timestamp: Date.now()
+      })
       this.notifyStateChange()
-      this.aiResponseIndex++
-    })
+      
+      this.ttsService.speak(fallbackText, 'en-US', 1.0, 1.0)
+    }
   }
+
+  // 旧的音频播放方法已移除，使用新的TTS方式
 
   // 设置AI模式的专用主题
   private setAIModeTopic(): void {
