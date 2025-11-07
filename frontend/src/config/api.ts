@@ -1,5 +1,8 @@
 // API 基础配置
-export const API_BASE_URL = 'https://115.175.45.173'
+// 本地开发环境使用 localhost，生产环境使用实际服务器地址
+export const API_BASE_URL = import.meta.env.PROD 
+  ? 'https://115.175.45.173:8080' 
+  : 'http://localhost:8080'
 
 // API 端点配置
 export const API_ENDPOINTS = {
@@ -23,7 +26,8 @@ export const API_ENDPOINTS = {
     POSTS: {
       LIKE: '/api/community/posts/like',
       ADD: '/api/community/posts/add',
-      CHECK_AUTHOR: '/api/community/posts/check-author'
+      CHECK_AUTHOR: '/api/community/posts/check-author',
+      REPLIES: '/api/community/posts'  // GET /api/community/posts/{postId}/replies
     },
   },
   //商店相关

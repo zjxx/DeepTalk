@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  # PostgreSQL数据库
+  database:
+    image: postgres:15-alpine
+    container_name: deeptalk-db
+    environment:
+      POSTGRES_DB: deeptalk
+      POSTGRES_USER: deeptalk
+      POSTGRES_PASSWORD: deeptalk123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - deeptalk-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U deeptalk -d deeptalk"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 后端服务
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: deeptalk-backend
+    environment:
+      # 数据库配置
+      SPRING_DATASOURCE_URL: jdbc:postgresql://database:5432/deeptalk
+      SPRING_DATASOURCE_USERNAME: deeptalk
+      SPRING_DATASOURCE_PASSWORD: deeptalk123
+      # JPA配置
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_SHOW_SQL: false
+      # 应用配置
+      SERVER_PORT: 8080
+      LOGGING_LEVEL_ROOT: INFO
+    ports:
+      - "8080:8080"
+    networks:
+      - deeptalk-network
+    depends_on:
+      database:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # 前端服务
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: deeptalk-frontend
+    ports:
+      - "80:80"
+    networks:
+      - deeptalk-network
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  deeptalk-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local 

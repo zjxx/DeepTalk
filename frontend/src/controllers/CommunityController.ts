@@ -1,6 +1,6 @@
 import { ref } from 'vue'
-import { CommunitySearchAPI, CommunityLikeAPI, CommunityCheckAuthorAPI, CommunityAddPostAPI } from '../api/CommunityAPI'
-import type { Post, SearchRequest, SearchResult, LikeRequest, LikeResponse, CheckAuthorRequest, CheckAuthorResponse, AddPostRequest, AddPostResponse } from '../interface/CommunityInterface'
+import { CommunitySearchAPI, CommunityLikeAPI, CommunityCheckAuthorAPI, CommunityAddPostAPI, CommunityGetRepliesAPI } from '../api/CommunityAPI'
+import type { Post, SearchRequest, SearchResult, LikeRequest, LikeResponse, CheckAuthorRequest, CheckAuthorResponse, AddPostRequest, AddPostResponse, GetRepliesResponse } from '../interface/CommunityInterface'
 
 export const useCommunityController = () => {
     const posts = ref<Post[]>([]) 
@@ -170,6 +170,19 @@ const addPost = async (crrpost: AddPostRequest): Promise<AddPostResponse | null>
     }
 }
 
+    // 获取帖子回复
+    const getReplies = async (postId: string): Promise<GetRepliesResponse> => {
+        try {
+            console.log('Controller: 获取帖子回复，postId:', postId)
+            const response = await CommunityGetRepliesAPI(postId)
+            console.log('Controller: 回复获取成功，数量:', response.count)
+            return response
+        } catch (e) {
+            console.error('Controller: 获取回复失败:', e)
+            throw e
+        }
+    }
+
     return {
         posts,
         loading,
@@ -180,5 +193,6 @@ const addPost = async (crrpost: AddPostRequest): Promise<AddPostResponse | null>
         likePost,
         addPost,
         checkAuthor,
+        getReplies,
     }
 }

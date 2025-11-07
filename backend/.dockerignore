@@ -1,0 +1,14 @@
+target/
+!target/*.jar
+.git
+.gitignore
+README.md
+.env
+.vscode
+.idea
+*.log
+.mvn/wrapper/maven-wrapper.jar
+mvnw
+mvnw.cmd
+.DS_Store
+Thumbs.db 

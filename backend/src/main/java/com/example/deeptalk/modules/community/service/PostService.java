@@ -17,10 +17,11 @@ import java.util.stream.Collectors;
 @Service
 public class PostService {
     @Autowired
-    private PostRepository postRepository;
-
-    @Autowired
+    private PostRepository postRepository;    @Autowired
     private PostLikeRepository postLikeRepository;
+    
+    @Autowired
+    private AsyncReplyService asyncReplyService;
 
     public List<Post> searchPosts(String keyword, String type) {
         List<Post> posts;
@@ -45,11 +46,14 @@ public class PostService {
             post.setAuthor(author);
             return post;
         }).collect(Collectors.toList());
-    }
-
-    @Transactional
+    }    @Transactional
     public Post addPost(Post post) {
-        return postRepository.save(post);
+        Post savedPost = postRepository.save(post);
+        
+        // 异步生成AI回复（通过独立的Service确保异步生效）
+        asyncReplyService.generateAIReplyAsync(savedPost);
+        
+        return savedPost;
     }
 
     @Transactional

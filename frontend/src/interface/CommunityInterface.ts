@@ -59,3 +59,21 @@ export interface AddPostResponse {
   message: string;
   post: Post | null;
 }
+
+//回复
+export interface Reply {
+  id: string;
+  postId: string;
+  authorId: string;
+  authorName: string;
+  authorAvatar: string;
+  content: string;
+  isAiGenerated: boolean;
+  createdAt: string;
+}
+
+//获取回复响应
+export interface GetRepliesResponse {
+  count: number;
+  replies: Reply[];
+}

@@ -2,7 +2,9 @@ package com.example.deeptalk.modules.community.controller;
 
 import com.example.deeptalk.modules.community.dto.*;
 import com.example.deeptalk.modules.community.entity.Post;
+import com.example.deeptalk.modules.community.entity.Reply;
 import com.example.deeptalk.modules.community.service.PostService;
+import com.example.deeptalk.modules.community.service.ReplyService;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -19,6 +21,9 @@ import java.util.List;
 public class CommunityController {
     @Autowired
     private PostService postService;
+    
+    @Autowired
+    private ReplyService replyService;
 
     @PostMapping(value = "/search", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
     public ResponseEntity<SearchResult> searchCommunity(@RequestBody SearchRequest request) {
@@ -69,12 +74,41 @@ public class CommunityController {
             response.setPost(null);
             return ResponseEntity.internalServerError().body(response);
         }
-    }
-
-    @PostMapping(value = "/posts/check-author", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
+    }    @PostMapping(value = "/posts/check-author", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
     public ResponseEntity<CheckAuthorResponse> checkPostAuthor(@RequestBody CheckAuthorRequest request) {
         CheckAuthorResponse response = postService.getAuthorInfo(request.getAuthorId());
         return ResponseEntity.ok(response);
+    }
+    
+    /**
+     * 获取帖子的回复列表
+     */
+    @GetMapping(value = "/posts/{postId}/replies", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
+    public ResponseEntity<GetRepliesResponse> getReplies(@PathVariable String postId) {
+        try {
+            System.out.println("📥 获取帖子回复，postId: " + postId);
+            List<Reply> replies = replyService.getRepliesByPostId(postId);
+            
+            GetRepliesResponse response = new GetRepliesResponse();
+            response.setSuccess(true);
+            response.setMessage("获取回复成功");
+            response.setReplies(replies);
+            response.setCount(replies.size());
+            
+            System.out.println("✅ 返回 " + replies.size() + " 条回复");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            System.err.println("❌ 获取回复失败: " + e.getMessage());
+            e.printStackTrace();
+            
+            GetRepliesResponse response = new GetRepliesResponse();
+            response.setSuccess(false);
+            response.setMessage("获取回复失败: " + e.getMessage());
+            response.setReplies(List.of());
+            response.setCount(0);
+            
+            return ResponseEntity.internalServerError().body(response);
+        }
     }
 }
 
