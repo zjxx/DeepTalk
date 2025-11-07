@@ -2,49 +2,48 @@ package com.example.deeptalk.modules.community.service;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.http.*;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.ArrayList;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.google.gson.JsonArray;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 
 @Service
 public class AIReplyService {
     
-    @Value("${gemini.api.key:}")  // 添加空字符串作为默认值
+    @Value("${minimax.api.key:}")  // 添加空字符串作为默认值
     private String apiKey;
     
-    @Value("${gemini.api.url:https://zjxx.lol/v1beta/models/gemini-2.5-flash:generateContent}")
+    @Value("${minimax.api.url:https://api.minimaxi.com/v1}")
     private String apiUrl;
     
-    @Value("${gemini.api.timeout:10000}")  // 默认超时10秒
+    @Value("${minimax.api.model:MiniMax-M2}")  // 默认模型
+    private String model;
+    
+    @Value("${minimax.api.timeout:10000}")  // 默认超时60秒
     private int apiTimeout;
     
-    private final RestTemplate restTemplate;
-    private final ObjectMapper objectMapper;
+    private final HttpClient httpClient;
     
     public AIReplyService() {
-        // 配置RestTemplate的超时设置
-        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(5000);  // 连接超时5秒
-        factory.setReadTimeout(10000);     // 读取超时10秒
-        
-        this.restTemplate = new RestTemplate(factory);
-        this.objectMapper = new ObjectMapper();
+        // 配置HttpClient的超时设置
+        this.httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(30))
+                .build();
     }
     
     // 在Bean创建后打印配置信息（用于调试）
     @javax.annotation.PostConstruct
     public void init() {
         if (apiKey != null && !apiKey.isEmpty()) {
-            System.out.println("🔑 Gemini API密钥已加载: " + apiKey.substring(0, Math.min(15, apiKey.length())) + "...");
-            System.out.println("🌐 Gemini API URL: " + apiUrl);
+            System.out.println("🔑 MiniMax API密钥已加载: " + apiKey.substring(0, Math.min(15, apiKey.length())) + "...");
+            System.out.println("🌐 MiniMax API URL: " + apiUrl);
+            System.out.println("🤖 MiniMax 模型: " + model);
         } else {
-            System.out.println("⚠️ Gemini API密钥未配置，将使用备用回复");
+            System.out.println("⚠️ MiniMax API密钥未配置，将使用备用回复");
         }
     }
     
@@ -61,55 +60,55 @@ public class AIReplyService {
             System.out.println("⚠️ API密钥为空，使用备用回复");
             return generateFallbackReply(postTitle, postContent);
         }
-          System.out.println("✅ API密钥已配置，准备调用Gemini API...");
+        System.out.println("✅ API密钥已配置，准备调用MiniMax API...");
         try {
-            // 构造Gemini API请求体
-            String prompt = String.format(
+            // 构造MiniMax API请求体
+            String userMessage = String.format(
                 "你是一个友好且乐于助人的社区成员。请为以下帖子生成一条有见地、鼓励性的回复（2-3句话）。\n\n标题：%s\n\n内容：%s\n\n请用中文回复。",
                 postTitle, 
                 postContent
             );
             
-            Map<String, Object> requestBody = new HashMap<>();
-            List<Map<String, Object>> contents = new ArrayList<>();
-            Map<String, Object> contentObj = new HashMap<>();
-            List<Map<String, String>> partsList = new ArrayList<>();
-            Map<String, String> part = new HashMap<>();
-            part.put("text", prompt);
-            partsList.add(part);
-            contentObj.put("parts", partsList);
-            contents.add(contentObj);
-            requestBody.put("contents", contents);
+            // 构建JSON请求体
+            JsonObject requestBody = new JsonObject();
+            requestBody.addProperty("model", model);
             
-            // 设置请求头 - Gemini使用x-goog-api-key
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.set("x-goog-api-key", apiKey);
-            headers.set("HTTP-Referer", "http://localhost:8080");
-                        
-            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+            JsonArray messages = new JsonArray();
+            JsonObject message = new JsonObject();
+            message.addProperty("role", "user");
+            message.addProperty("content", userMessage);
+            messages.add(message);
+            requestBody.add("messages", messages);
             
-            // 发送请求到Gemini API
-            ResponseEntity<String> response = restTemplate.exchange(
-                apiUrl,
-                HttpMethod.POST,
-                entity,
-                String.class
-            );
+            String requestBodyStr = requestBody.toString();
             
-            // 解析Gemini API响应
-            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
-                JsonNode jsonNode = objectMapper.readTree(response.getBody());
-                JsonNode candidates = jsonNode.get("candidates");
-                if (candidates != null && candidates.isArray() && candidates.size() > 0) {
-                    JsonNode firstCandidate = candidates.get(0);
-                    JsonNode content = firstCandidate.get("content");
-                    if (content != null) {
-                        JsonNode parts = content.get("parts");
-                        if (parts != null && parts.isArray() && parts.size() > 0) {
-                            JsonNode text = parts.get(0).get("text");
-                            if (text != null) {
-                                String aiReply = text.asText().trim();
+            // 构建HTTP请求
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(apiUrl + "/chat/completions"))
+                    .header("Content-Type", "application/json")
+                    .header("Authorization", "Bearer " + apiKey)
+                    .POST(HttpRequest.BodyPublishers.ofString(requestBodyStr))
+                    .timeout(Duration.ofSeconds(apiTimeout))
+                    .build();
+            
+            // 发送请求到MiniMax API
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            
+            System.out.println("📡 MiniMax API响应状态码: " + response.statusCode());
+            
+            // 解析MiniMax API响应
+            if (response.statusCode() == 200 && response.body() != null) {
+                JsonObject jsonResponse = JsonParser.parseString(response.body()).getAsJsonObject();
+                
+                // 检查是否有choices数组
+                if (jsonResponse.has("choices") && jsonResponse.get("choices").isJsonArray()) {
+                    JsonArray choices = jsonResponse.getAsJsonArray("choices");
+                    if (choices.size() > 0) {
+                        JsonObject firstChoice = choices.get(0).getAsJsonObject();
+                        if (firstChoice.has("message")) {
+                            JsonObject messageObj = firstChoice.getAsJsonObject("message");
+                            if (messageObj.has("content")) {
+                                String aiReply = messageObj.get("content").getAsString().trim();
                                 System.out.println("✅ AI回复生成成功: " + aiReply);
                                 return aiReply;
                             }
@@ -120,6 +119,9 @@ public class AIReplyService {
             
             // 如果解析失败，返回备用回复
             System.out.println("⚠️ AI回复解析失败，使用备用回复");
+            if (response.body() != null) {
+                System.out.println("📄 响应内容: " + response.body());
+            }
             return generateFallbackReply(postTitle, postContent);
             
         } catch (Exception e) {
