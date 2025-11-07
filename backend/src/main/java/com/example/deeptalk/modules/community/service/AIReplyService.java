@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.http.*;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.HashMap;
@@ -14,17 +15,25 @@ import java.util.ArrayList;
 @Service
 public class AIReplyService {
     
-    @Value("${gemini.api.key}")
+    @Value("${gemini.api.key:}")  // 添加空字符串作为默认值
     private String apiKey;
     
     @Value("${gemini.api.url:https://zjxx.lol/v1beta/models/gemini-2.5-flash:generateContent}")
     private String apiUrl;
     
+    @Value("${gemini.api.timeout:10000}")  // 默认超时10秒
+    private int apiTimeout;
+    
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
     
     public AIReplyService() {
-        this.restTemplate = new RestTemplate();
+        // 配置RestTemplate的超时设置
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(5000);  // 连接超时5秒
+        factory.setReadTimeout(10000);     // 读取超时10秒
+        
+        this.restTemplate = new RestTemplate(factory);
         this.objectMapper = new ObjectMapper();
     }
     

@@ -50,8 +50,9 @@ kurento:
         uri: ws://127.0.0.1:8888/kurento
 
 # Gemini API配置（用于AI回复生成）
-# 请设置环境变量 GEMINI_API_KEY
+# 可以通过环境变量 GEMINI_API_KEY 设置，或在此处留空使用备用回复
 gemini:
   api:
-    key: ${GEMINI_API_KEY}  # 从环境变量读取，请勿在此处硬编码密钥
+    key: ${GEMINI_API_KEY:}  # 从环境变量读取，默认为空（将使用备用回复）
     url: https://zjxx.lol/v1beta/models/gemini-2.5-flash:generateContent
+    timeout: 10000  # API调用超时时间（毫秒），默认10秒
