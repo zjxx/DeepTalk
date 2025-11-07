@@ -14,9 +14,9 @@ import java.time.Duration;
 @Service
 public class AIReplyService {
     
-    @Value("${minimax.api.key:}")  // 添加空字符串作为默认值
+    @Value("${minimax.api.key:eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJHcm91cE5hbWUiOiLmnLHlmInovakiLCJVc2VyTmFtZSI6IuacseWYiei9qSIsIkFjY291bnQiOiIiLCJTdWJqZWN0SUQiOiIxOTgyNDU3ODkwOTgzNjQ5NjAzIiwiUGhvbmUiOiIxODkyMTMzMzAwMSIsIkdyb3VwSUQiOiIxOTgyNDU3ODkwOTc5NDU1Mjk5IiwiUGFnZU5hbWUiOiIiLCJNYWlsIjoiIiwiQ3JlYXRlVGltZSI6IjIwMjUtMTEtMDcgMjM6NTA6NDQiLCJUb2tlblR5cGUiOjEsImlzcyI6Im1pbmltYXgifQ.ttuO_Kp94xxLsh9GvBwG7wIZHAhAYmKc8aops4xIddZ9Yf089vA6NiN_r7xoj5vbb534w2Jv3wOCk59aNEim0f5cx2GbplTneVcWzZEmZ55JrQ0E2DXU2cOhPSsj1yo-mde2PiGfZMDY1zpWord7EJy-HgPmjawEZgWNug2WbLsHa4_bj94UfgELyxMC6H_bkrag6RFGFJ6Fli-N_oTpEOsOZ7oId8R1-kD8C1BT9DD_rwHTASQbwFQtHbTEQIV6rI7r1y3KtvKtBkfHPQqznNDkMROpWOnMysA6ceyS90cYVkxj6HDt52X9W3KY_R_NCOYUm4SZ-NOm4LJU90KMYw}")  // 添加空字符串作为默认值
     private String apiKey;
-    //2333333
+    //2333
     
     @Value("${minimax.api.url:https://api.minimaxi.com/v1}")
     private String apiUrl;
