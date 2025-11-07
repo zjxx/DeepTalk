@@ -16,6 +16,7 @@ public class AIReplyService {
     
     @Value("${minimax.api.key:}")  // 添加空字符串作为默认值
     private String apiKey;
+    //2333333
     
     @Value("${minimax.api.url:https://api.minimaxi.com/v1}")
     private String apiUrl;
