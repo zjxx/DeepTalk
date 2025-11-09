@@ -302,4 +302,17 @@ public class PostCacheService {
         
         log.info("缓存预热完成，共缓存 {} 个帖子", allPosts.size());
     }
+
+    /**
+     * 清除所有帖子缓存
+     */
+    public void clearAllCache() {
+        log.info("清除所有帖子缓存...");
+        
+        // 清除列表缓存
+        redisUtil.del(POST_LIST_KEY);
+        redisUtil.del(POST_HOT_LIST_KEY);
+        
+        log.info("帖子缓存已清除");
+    }
 }

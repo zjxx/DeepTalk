@@ -105,11 +105,12 @@ public class AIReplyService {
                 if (jsonResponse.has("choices") && jsonResponse.get("choices").isJsonArray()) {
                     JsonArray choices = jsonResponse.getAsJsonArray("choices");
                     if (choices.size() > 0) {
-                        JsonObject firstChoice = choices.get(0).getAsJsonObject();
-                        if (firstChoice.has("message")) {
+                        JsonObject firstChoice = choices.get(0).getAsJsonObject();                        if (firstChoice.has("message")) {
                             JsonObject messageObj = firstChoice.getAsJsonObject("message");
                             if (messageObj.has("content")) {
                                 String aiReply = messageObj.get("content").getAsString().trim();
+                                // 过滤掉 <think> 标签及其内容
+                                aiReply = removeThinkTags(aiReply);
                                 System.out.println("✅ AI回复生成成功: " + aiReply);
                                 return aiReply;
                             }
@@ -147,5 +148,30 @@ public class AIReplyService {
         // 根据内容长度选择不同的回复
         int index = postContent.length() % templates.length;
         return templates[index];
+    }
+    
+    /**
+     * 移除 AI 回复中的 <think> 标签及其内容
+     * MiniMax API 有时会返回包含 <think>...</think> 的思考过程，需要过滤掉
+     */
+    private String removeThinkTags(String text) {
+        if (text == null || text.isEmpty()) {
+            return text;
+        }
+        
+        // 使用正则表达式移除 <think>...</think> 标签及其内容
+        // 支持多行匹配和嵌套标签
+        String result = text.replaceAll("(?s)<think>.*?</think>", "");
+        
+        // 移除可能残留的单独标签
+        result = result.replaceAll("</?think>", "");
+        
+        // 清理多余的空白字符
+        result = result.trim();
+        
+        // 清理连续的空行
+        result = result.replaceAll("\\n\\s*\\n", "\n");
+        
+        return result;
     }
 }

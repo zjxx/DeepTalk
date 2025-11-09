@@ -16,19 +16,26 @@ public class ReplyService {
     @Autowired
     private AIReplyService aiReplyService;
     
-    /**
-     * 获取帖子的所有回复
+    @Autowired
+    private ReplyCacheService replyCacheService;
+      /**
+     * 获取帖子的所有回复（使用缓存）
      */
     public List<Reply> getRepliesByPostId(String postId) {
-        return replyRepository.findByPostIdOrderByCreatedAtAsc(postId);
+        return replyCacheService.getRepliesByPostId(postId);
     }
     
     /**
-     * 添加回复
+     * 添加回复（清除缓存）
      */
     public Reply addReply(Reply reply) {
         reply.setCreatedAt(LocalDateTime.now());
-        return replyRepository.save(reply);
+        Reply savedReply = replyRepository.save(reply);
+        
+        // 清除缓存
+        replyCacheService.clearReplyCache(reply.getPostId());
+        
+        return savedReply;
     }
     
     /**
@@ -51,18 +58,20 @@ public class ReplyService {
         aiReply.setAuthorAvatar("https://ui-avatars.com/api/?name=AI&background=4A90E2&color=fff");
         aiReply.setIsAiGenerated(true);
         aiReply.setCreatedAt(LocalDateTime.now());
-        
-        // 保存到数据库
+          // 保存到数据库
         Reply savedReply = replyRepository.save(aiReply);
         System.out.println("✅ AI回复已保存，ID: " + savedReply.getId());
+        
+        // 清除缓存
+        replyCacheService.clearReplyCache(postId);
         
         return savedReply;
     }
     
     /**
-     * 获取帖子的回复数量
+     * 获取帖子的回复数量（使用缓存）
      */
     public long getReplyCount(String postId) {
-        return replyRepository.countByPostId(postId);
+        return replyCacheService.getReplyCount(postId);
     }
 }

@@ -4,6 +4,11 @@ export const API_BASE_URL = import.meta.env.PROD
   ? 'https://115.175.45.173:8080' 
   : 'http://localhost:8080'
 
+// WebSocket 基础配置
+export const WS_BASE_URL = import.meta.env.PROD
+  ? 'wss://115.175.45.173:8080'
+  : 'ws://localhost:8080'
+
 // API 端点配置
 export const API_ENDPOINTS = {
   // 用户相关

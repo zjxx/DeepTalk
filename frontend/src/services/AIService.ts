@@ -1,13 +1,15 @@
 // src/services/AIService.ts
 import { HuggingFaceService, type ConversationContext } from './HuggingFaceService'
 import { GeminiService } from './GeminiService'
+import { BackendAIService } from './BackendAIService'
 
-export type AIServiceProvider = 'gemini' | 'huggingface';
+export type AIServiceProvider = 'backend' | 'gemini' | 'huggingface';
 
 export class AIService {
   private aiSpeakingTimeout: number | null = null
   private huggingFaceService: HuggingFaceService
   private geminiService: GeminiService
+  private backendAIService: BackendAIService
   private currentProvider: AIServiceProvider
   private isProcessing: boolean = false
   
@@ -17,18 +19,25 @@ export class AIService {
   onThinkingStateChange?: (isThinking: boolean) => void
   onErrorOccurred?: (error: string) => void
 
-  constructor(provider: AIServiceProvider = 'gemini') {
+  constructor(provider: AIServiceProvider = 'backend') {
     this.huggingFaceService = new HuggingFaceService()
     this.geminiService = new GeminiService()
+    this.backendAIService = new BackendAIService()
     this.currentProvider = provider
     
-    // 如果首选provider没有配置API密钥，自动切换
+    // 优先使用后端服务
+    if (provider === 'backend') {
+      console.log('✅ 使用后端 MiniMax AI 服务（推荐）')
+      return
+    }
+    
+    // 如果指定了其他provider，检查配置
     if (provider === 'gemini' && !this.isGeminiConfigured()) {
-      console.warn('Gemini not configured, falling back to HuggingFace')
-      this.currentProvider = 'huggingface'
+      console.warn('Gemini not configured, falling back to backend AI')
+      this.currentProvider = 'backend'
     } else if (provider === 'huggingface' && !this.huggingFaceService.isConfigured()) {
-      console.warn('HuggingFace not configured, trying Gemini')
-      this.currentProvider = 'gemini'
+      console.warn('HuggingFace not configured, falling back to backend AI')
+      this.currentProvider = 'backend'
     }
   }
 
@@ -43,7 +52,10 @@ export class AIService {
   /**
    * 获取当前活动的AI服务
    */
-  private getCurrentService(): HuggingFaceService | GeminiService {
+  private getCurrentService(): HuggingFaceService | GeminiService | BackendAIService {
+    if (this.currentProvider === 'backend') {
+      return this.backendAIService
+    }
     return this.currentProvider === 'gemini' 
       ? this.geminiService 
       : this.huggingFaceService;
