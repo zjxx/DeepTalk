@@ -33,6 +33,15 @@ public class CommunityController {
         return ResponseEntity.ok(result);
     }
 
+    @GetMapping(value = "/posts/latest", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
+    public ResponseEntity<SearchResult> getLatestPosts() {
+        System.out.println("📥 获取最新帖子请求");
+       List<Post> posts = postService.searchPosts("","posts");
+        SearchResult response = new SearchResult();
+        response.setPosts(posts);
+        return ResponseEntity.ok(response);
+    }
+
     @PostMapping(value = "/posts/like", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
     public ResponseEntity<LikeResponse> likePost(@RequestBody LikeRequest request) {
         LikeResponse response = postService.likePost(request);

@@ -69,7 +69,7 @@ export class BackendAIService {
    */
   private buildContextInfo(userMessage: string): string {
     const { topic, difficulty } = this.conversationContext
-    
+    console.log(userMessage)
     let context = ''
     
     // 添加主题信息（英文）
