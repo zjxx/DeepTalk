@@ -500,4 +500,172 @@ public class RedisUtil {
             return 0;
         }
     }
+
+    // ============================ZSet=============================
+
+    /**
+     * 添加元素到有序集合
+     * @param key 键
+     * @param value 值
+     * @param score 分数
+     * @return true成功 false失败
+     */
+    public boolean zAdd(String key, Object value, double score) {
+        try {
+            redisTemplate.opsForZSet().add(key, value, score);
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * 增加有序集合中元素的分数
+     * @param key 键
+     * @param value 值
+     * @param delta 增加的分数
+     * @return 增加后的分数
+     */
+    public Double zIncrement(String key, Object value, double delta) {
+        return redisTemplate.opsForZSet().incrementScore(key, value, delta);
+    }
+
+    /**
+     * 获取有序集合中指定范围的元素（按分数从小到大）
+     * @param key 键
+     * @param start 开始位置
+     * @param end 结束位置
+     * @return 元素集合
+     */
+    public Set<Object> zRange(String key, long start, long end) {
+        try {
+            return redisTemplate.opsForZSet().range(key, start, end);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    /**
+     * 获取有序集合中指定范围的元素（按分数从大到小）
+     * @param key 键
+     * @param start 开始位置
+     * @param end 结束位置
+     * @return 元素集合
+     */
+    public Set<Object> zReverseRange(String key, long start, long end) {
+        try {
+            return redisTemplate.opsForZSet().reverseRange(key, start, end);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    /**
+     * 获取有序集合的大小
+     * @param key 键
+     * @return 大小
+     */
+    public Long zSize(String key) {
+        try {
+            return redisTemplate.opsForZSet().size(key);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return 0L;
+        }
+    }
+
+    /**
+     * 获取元素在有序集合中的排名（从小到大）
+     * @param key 键
+     * @param value 值
+     * @return 排名
+     */
+    public Long zRank(String key, Object value) {
+        try {
+            return redisTemplate.opsForZSet().rank(key, value);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    /**
+     * 获取元素在有序集合中的排名（从大到小）
+     * @param key 键
+     * @param value 值
+     * @return 排名
+     */
+    public Long zReverseRank(String key, Object value) {
+        try {
+            return redisTemplate.opsForZSet().reverseRank(key, value);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    /**
+     * 获取元素的分数
+     * @param key 键
+     * @param value 值
+     * @return 分数
+     */
+    public Double zScore(String key, Object value) {
+        try {
+            return redisTemplate.opsForZSet().score(key, value);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    /**
+     * 移除有序集合中的元素
+     * @param key 键
+     * @param values 值
+     * @return 移除的个数
+     */
+    public Long zRemove(String key, Object... values) {
+        try {
+            return redisTemplate.opsForZSet().remove(key, values);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return 0L;
+        }
+    }
+
+    /**
+     * 按分数范围移除元素
+     * @param key 键
+     * @param min 最小分数
+     * @param max 最大分数
+     * @return 移除的个数
+     */
+    public Long zRemoveRangeByScore(String key, double min, double max) {
+        try {
+            return redisTemplate.opsForZSet().removeRangeByScore(key, min, max);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return 0L;
+        }
+    }
+
+    /**
+     * 按索引范围移除元素
+     * @param key 键
+     * @param start 开始位置
+     * @param end 结束位置
+     * @return 移除的个数
+     */
+    public Long zRemoveRange(String key, long start, long end) {
+        try {
+            return redisTemplate.opsForZSet().removeRange(key, start, end);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return 0L;
+        }
+    }
 }

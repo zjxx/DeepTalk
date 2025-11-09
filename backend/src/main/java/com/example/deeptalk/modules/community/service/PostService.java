@@ -22,33 +22,23 @@ public class PostService {
     
     @Autowired
     private AsyncReplyService asyncReplyService;
+    
+    @Autowired
+    private PostCacheService postCacheService;
 
     public List<Post> searchPosts(String keyword, String type) {
-        List<Post> posts;
+        // 使用缓存服务
         if (keyword == null || keyword.trim().isEmpty()) {
-            posts = postRepository.findAll();
+            return postCacheService.getAllPosts();
         } else if ("authors".equals(type)) {
-            posts = postRepository.searchAuthors(keyword);
+            return postCacheService.searchPostsByAuthor(keyword);
         } else {
-            posts = postRepository.searchPosts(keyword);
+            return postCacheService.searchPosts(keyword);
         }
-        // 组装 author 字段
-        return posts.stream().map(post -> {
-            Author author = new Author();
-            author.setId(post.getAuthorId());
-            author.setUsername(post.getAuthorName());
-            author.setAvatar(post.getAuthorAvatar());
-            // 查询作者发帖数和获赞数
-            List<Post> authorPosts = postRepository.findByAuthorId(post.getAuthorId());
-            author.setAuthorPosts(authorPosts.size());
-            int totalLikes = authorPosts.stream().mapToInt(Post::getLikesCount).sum();
-            author.setAuthorLikes(totalLikes);
-            post.setAuthor(author);
-            return post;
-        }).collect(Collectors.toList());
     }    @Transactional
     public Post addPost(Post post) {
-        Post savedPost = postRepository.save(post);
+        // 使用缓存服务保存（会自动清除缓存）
+        Post savedPost = postCacheService.savePost(post);
         
         // 异步生成AI回复（通过独立的Service确保异步生效）
         asyncReplyService.generateAIReplyAsync(savedPost);
