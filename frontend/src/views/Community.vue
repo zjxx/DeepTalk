@@ -124,7 +124,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import PostPreview from '../components/PostPreview.vue'
 import { useCommunityController } from '../controllers/CommunityController'
@@ -155,7 +155,17 @@ const handleSearch = async () => { await loadCommunityData() }
 // 查看帖子详情
 const viewPost = (postId: string) => { router.push(`/post/${postId}`) }
 
-const currentUserId = 'current_user_id'
+// 获取当前登录用户信息（与 PostAdding.vue 逻辑保持一致）
+const getCurrentUser = () => {
+  const raw = localStorage.getItem('userInfo') || sessionStorage.getItem('userInfo')
+  if (!raw) return null
+  try { return JSON.parse(raw) as { userId: string; username: string; avatar?: string } } catch { return null }
+}
+
+const currentUser = getCurrentUser()
+const currentUserId = currentUser?.userId || ''
+const isLoggedIn = computed(() => !!currentUserId)
+
 const followedAuthors = ref<Set<string>>(new Set())
 const favorites = ref<Set<string>>(new Set())
 const reactionSummary = ref<Record<string, { counters: Record<string, number>; myReaction?: string | null }>>({})
@@ -163,65 +173,86 @@ const reactionTypes: ReactionRequest['type'][] = ['like','love','laugh','sad','a
 const reactionEmoji: Record<string,string> = { like:'👍', love:'❤️', laugh:'😂', sad:'😢', angry:'😡' }
 
 const ensureReactionSummary = async (postId: string) => {
-  if (!reactionSummary.value[postId]) {
+  if (!isLoggedIn.value || reactionSummary.value[postId]) return
+  try {
     const resp = await getReactionSummary(postId, currentUserId)
     if (resp) reactionSummary.value[postId] = { counters: resp.counters, myReaction: resp.myReaction }
-  }
+  } catch (e) { console.warn('获取reaction summary失败', e) }
 }
 
 const getCounter = (postId: string, type: string) => reactionSummary.value[postId]?.counters?.[type] ?? 0
 const getMyReaction = (postId: string) => reactionSummary.value[postId]?.myReaction
 
 const handleReaction = async (postId: string, type: ReactionRequest['type']) => {
+  if (!isLoggedIn.value) return
   await ensureReactionSummary(postId)
   const my = getMyReaction(postId)
   const add = my !== type
-  const resp = await react(postId, currentUserId, type, add)
-  if (resp) reactionSummary.value[postId] = { counters: resp.counters, myReaction: resp.myReaction }
+  try {
+    const resp = await react(postId, currentUserId, type, add)
+    if (resp) reactionSummary.value[postId] = { counters: resp.counters, myReaction: resp.myReaction }
+  } catch (e) { console.error('reaction失败', e) }
 }
 
 const toggleFollow = async (authorId: string) => {
+  if (!isLoggedIn.value) return
   const follow = !followedAuthors.value.has(authorId)
-  const resp = await apiToggleFollow(currentUserId, authorId, follow)
-  if (resp) {
-    if (resp.followed) { followedAuthors.value.add(authorId) } else { followedAuthors.value.delete(authorId) }
-  }
+  try {
+    const resp = await apiToggleFollow(currentUserId, authorId, follow)
+    if (resp) {
+      if (resp.followed) { followedAuthors.value.add(authorId) } else { followedAuthors.value.delete(authorId) }
+    }
+  } catch (e) { console.error('follow失败', e) }
 }
 
 const toggleFavorite = async (postId: string) => {
+  if (!isLoggedIn.value) return
   const fav = !favorites.value.has(postId)
-  const resp = await apiToggleFavorite(postId, currentUserId, fav)
-  if (resp) {
-    if (resp.favorited) { favorites.value.add(postId) } else { favorites.value.delete(postId) }
-  }
+  try {
+    const resp = await apiToggleFavorite(postId, currentUserId, fav)
+    if (resp) {
+      if (resp.favorited) { favorites.value.add(postId) } else { favorites.value.delete(postId) }
+    }
+  } catch (e) { console.error('favorite失败', e) }
 }
 
 const recommendedAuthors = ref<Array<{ id: string; username: string; avatar: string; authorPosts: number; followerCount: number; followed: boolean }>>([])
 
 const loadRecommendedAuthors = async () => {
-  const res = await getRecommendedAuthors(currentUserId, 10)
-  if (res?.authors) recommendedAuthors.value = res.authors
+  try {
+    const res = await getRecommendedAuthors(currentUserId, 10)
+    if (res?.authors) recommendedAuthors.value = res.authors
+  } catch (e) { console.error('推荐作者获取失败', e) }
 }
 
 const toggleFollowSidebar = async (a: { id: string; followed: boolean }) => {
-  const resp = await apiToggleFollow(currentUserId, a.id, !a.followed)
-  if (resp) a.followed = resp.followed
+  if (!isLoggedIn.value) return
+  try {
+    const resp = await apiToggleFollow(currentUserId, a.id, !a.followed)
+    if (resp) a.followed = resp.followed
+  } catch (e) { console.error('侧边栏关注失败', e) }
 }
 
 onMounted(async () => {
   await loadCommunityData()
-  for (const p of posts.value) {
-    getReactionSummary(p.id, currentUserId).then(r => { if (r) reactionSummary.value[p.id] = { counters: r.counters, myReaction: r.myReaction } })
+  // 仅登录时加载社交状态
+  if (isLoggedIn.value) {
+    for (const p of posts.value) {
+      getReactionSummary(p.id, currentUserId)
+        .then(r => { if (r) reactionSummary.value[p.id] = { counters: r.counters, myReaction: r.myReaction } })
+        .catch(() => {})
+    }
+    const seen = new Set<string>()
+    for (const p of posts.value) {
+      const aid = p.author?.id
+      if (!aid || seen.has(aid)) continue
+      seen.add(aid)
+      getFollowStatus(currentUserId, aid)
+        .then(res => { if (res?.followed) followedAuthors.value.add(aid) })
+        .catch(() => {})
+    }
+    await loadRecommendedAuthors()
   }
-  const seen = new Set<string>()
-  for (const p of posts.value) {
-    const aid = p.author?.id
-    if (!aid || seen.has(aid)) continue
-    seen.add(aid)
-    getFollowStatus(currentUserId, aid).then(res => { if (res?.followed) followedAuthors.value.add(aid) }).catch(() => {})
-  }
-  // 加载推荐作者
-  await loadRecommendedAuthors()
 })
 </script>
 
@@ -360,4 +391,6 @@ onMounted(async () => {
 .author-meta { flex: 1; min-width: 0; }
 .author-meta .name { font-size: 14px; font-weight: 600; color: #333; }
 .author-meta .stats { font-size: 12px; color: #999; }
+/* 为未登录用户禁用社交操作的样式（可选） */
+.social-actions[disabled] { opacity: 0.4; pointer-events: none; }
 </style>

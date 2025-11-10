@@ -24,7 +24,7 @@ public class AIReplyService {
     @Value("${minimax.api.model:MiniMax-M2}")  // 默认模型
     private String model;
     
-    @Value("${minimax.api.timeout:10000}")  // 默认超时60秒
+    @Value("${minimax.api.timeout:30}")  // 超时秒数，默认30秒
     private int apiTimeout;
     
     private final HttpClient httpClient;
@@ -89,7 +89,7 @@ public class AIReplyService {
                     .header("Content-Type", "application/json")
                     .header("Authorization", "Bearer " + apiKey)
                     .POST(HttpRequest.BodyPublishers.ofString(requestBodyStr))
-                    .timeout(Duration.ofSeconds(apiTimeout))
+                    .timeout(Duration.ofSeconds(apiTimeout)) // 使用秒
                     .build();
             
             // 发送请求到MiniMax API

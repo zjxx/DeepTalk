@@ -21,7 +21,7 @@
           <v-card-text class="post-header">
             <h1 class="post-title">{{ currentPost.title }}</h1>
             <v-btn :icon="isLiked ? 'mdi-heart' : 'mdi-heart-outline'" :color="isLiked ? 'red' : 'grey'" variant="text"
-              size="large" :loading="isProcessingLike" :disabled="isProcessingLike" @click="handleLike">
+              size="large" :loading="isProcessingLike" :disabled="isProcessingLike || !isLoggedIn" @click="handleLike">
             </v-btn>
           </v-card-text>
 
@@ -119,6 +119,7 @@
                 :color="followed ? 'green' : 'blue'" 
                 variant="text" 
                 size="large" 
+                :disabled="!isLoggedIn"
                 @click="toggleFollowAuthor"
               >
                 {{ followed ? '已关注' : '关注' }}
@@ -183,8 +184,17 @@ const replies = ref<Reply[]>([])
 const loadingReplies = ref(false)
 const followed = ref(false)
 
+// 获取当前登录用户
+const getCurrentUser = () => {
+  const raw = localStorage.getItem('userInfo') || sessionStorage.getItem('userInfo')
+  if (!raw) return null
+  try { return JSON.parse(raw) as { userId: string; username: string; avatar?: string } } catch { return null }
+}
+const currentUser = getCurrentUser()
+const currentUserId = currentUser?.userId || ''
+const isLoggedIn = computed(() => !!currentUserId)
+
 const postId = computed(() => route.params.id as string)
-const currentUserId = 'current_user_id'
 
 // 格式化时间 - 适配后端时间格式
 const formatTime = (time: string) => {
@@ -272,29 +282,16 @@ const loadReplies = async () => {
 
 // 处理点赞
 const handleLike = async () => {
-  if (!currentPost.value) return
-
-  // 添加加载状态防止重复点击
-  const isProcessing = ref(false)
-  if (isProcessing.value) return
-
-  isProcessing.value = true
-
+  if (!currentPost.value || !isLoggedIn.value) return
+  if (isProcessingLike.value) return
+  isProcessingLike.value = true
   try {
-    const userId = 'current_user_id'
-    const result = await likePost(currentPost.value.id, userId)
-
-    // 只有成功时才更新UI
-    isLiked.value = !isLiked.value
-    currentPost.value.likesCount = result.likes
-  } catch (error) {
-    console.error('点赞失败:', error)
-
-    // 点赞失败时按钮保持原样，不做任何UI更新
-    // 可选：显示错误提示
-  } finally {
-    isProcessing.value = false
-  }
+    const result = await likePost(currentPost.value.id, currentUserId)
+    if (result.success) {
+      isLiked.value = !isLiked.value
+      currentPost.value.likesCount = result.likes
+    }
+  } catch (e) { console.error('点赞失败', e) } finally { isProcessingLike.value = false }
 }
 
 // 确保作者对象为扁平字段回填
@@ -313,17 +310,22 @@ const ensureAuthor = () => {
 
 // 加载关注状态
 const loadFollowStatus = async () => {
+  if (!isLoggedIn.value) return
   if (currentPost.value?.author?.id) {
-    const res: FollowStatusResponse | null = await getFollowStatus(currentUserId, currentPost.value.author.id)
-    if (res) followed.value = res.followed
+    try {
+      const res: FollowStatusResponse | null = await getFollowStatus(currentUserId, currentPost.value.author.id)
+      if (res) followed.value = res.followed
+    } catch (e) { console.warn('获取关注状态失败', e) }
   }
 }
 
 // 切换关注状态
 const toggleFollowAuthor = async () => {
-  if (!currentPost.value?.author?.id) return
-  const res = await apiToggleFollow(currentUserId, currentPost.value.author.id, !followed.value)
-  if (res) followed.value = res.followed
+  if (!isLoggedIn.value || !currentPost.value?.author?.id) return
+  try {
+    const res = await apiToggleFollow(currentUserId, currentPost.value.author.id, !followed.value)
+    if (res) followed.value = res.followed
+  } catch (e) { console.error('关注操作失败', e) }
 }
 
 // 返回社区
