@@ -114,6 +114,15 @@
                 <v-img :src="currentPost.author.avatar || '/default-avatar.png'" />
               </v-avatar>
               <h2 class="author-name">{{ currentPost.author.username }}</h2>
+              <v-btn 
+                :icon="followed ? 'mdi-account-check' : 'mdi-account-plus'" 
+                :color="followed ? 'green' : 'blue'" 
+                variant="text" 
+                size="large" 
+                @click="toggleFollowAuthor"
+              >
+                {{ followed ? '已关注' : '关注' }}
+              </v-btn>
             </div>
 
             <!-- 作者统计信息 -->
@@ -150,7 +159,9 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useCommunityController } from '../controllers/CommunityController'
+import { useSocialController } from '../controllers/SocialController'
 import type { Post, Reply } from '../interface/CommunityInterface'
+import type { FollowStatusResponse } from '../interface/SocialInterface'
 
 const route = useRoute()
 const router = useRouter()
@@ -163,13 +174,17 @@ const {
   getReplies
 } = useCommunityController()
 
+const { toggleFollow: apiToggleFollow, getFollowStatus } = useSocialController()
+
 const currentPost = ref<Post | null>(null)
 const isLiked = ref(false)
 const isProcessingLike = ref(false)
 const replies = ref<Reply[]>([])
 const loadingReplies = ref(false)
+const followed = ref(false)
 
 const postId = computed(() => route.params.id as string)
+const currentUserId = 'current_user_id'
 
 // 格式化时间 - 适配后端时间格式
 const formatTime = (time: string) => {
@@ -224,7 +239,8 @@ const loadPostDetail = async () => {
 
   if (post) {
     currentPost.value = post
-    console.log('设置currentPost成功')
+    ensureAuthor()
+    await loadFollowStatus()
     
     // 加载帖子的回复
     await loadReplies()
@@ -279,6 +295,35 @@ const handleLike = async () => {
   } finally {
     isProcessing.value = false
   }
+}
+
+// 确保作者对象为扁平字段回填
+const ensureAuthor = () => {
+  if (currentPost.value) {
+    const p = currentPost.value
+    if (!p.author) {
+      p.author = { id: p.authorId || '', username: p.authorName || '', avatar: p.authorAvatar || '', authorLikes: 0, authorPosts: 0 }
+    } else {
+      if (p.authorName) p.author.username = p.authorName
+      if (p.authorAvatar) p.author.avatar = p.authorAvatar
+      if (p.authorId) p.author.id = p.authorId
+    }
+  }
+}
+
+// 加载关注状态
+const loadFollowStatus = async () => {
+  if (currentPost.value?.author?.id) {
+    const res: FollowStatusResponse | null = await getFollowStatus(currentUserId, currentPost.value.author.id)
+    if (res) followed.value = res.followed
+  }
+}
+
+// 切换关注状态
+const toggleFollowAuthor = async () => {
+  if (!currentPost.value?.author?.id) return
+  const res = await apiToggleFollow(currentUserId, currentPost.value.author.id, !followed.value)
+  if (res) followed.value = res.followed
 }
 
 // 返回社区

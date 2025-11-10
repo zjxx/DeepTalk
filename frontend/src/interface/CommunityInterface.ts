@@ -6,6 +6,10 @@ export interface Post {
   author: Author;
   likesCount: number;
   createdAt: string;
+  // 兼容后端扁平字段
+  authorId?: string;
+  authorName?: string;
+  authorAvatar?: string;
 }
 //作者
 export interface Author {
@@ -74,6 +78,8 @@ export interface Reply {
 
 //获取回复响应
 export interface GetRepliesResponse {
+  success?: boolean;
+  message?: string;
   count: number;
   replies: Reply[];
 }

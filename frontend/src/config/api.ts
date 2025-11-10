@@ -1,11 +1,13 @@
 // API 基础配置
-// 本地开发环境使用 localhost，生产环境使用实际服务器地址
-export const API_BASE_URL = import.meta.env.PROD 
+interface ImportMetaEnvFlag { env?: { PROD?: boolean } }
+const meta = import.meta as unknown as ImportMetaEnvFlag;
+const isProd = meta.env?.PROD === true;
+export const API_BASE_URL = isProd 
   ? 'https://115.175.45.173:8080' 
   : 'http://localhost:8080'
 
 // WebSocket 基础配置
-export const WS_BASE_URL = import.meta.env.PROD
+export const WS_BASE_URL = isProd
   ? 'wss://115.175.45.173:8080'
   : 'ws://localhost:8080'
 
@@ -50,6 +52,24 @@ export const API_ENDPOINTS = {
   // WebSocket 相关
   VERSUS: {
     CONNECT: '/api/speech/connect'
+  },
+  // 社交相关
+  SOCIAL: {
+    FOLLOW: {
+      ACTION: '/api/social/follow',
+      STATUS: '/api/social/follow/status'
+    },
+    FAVORITE: {
+      ACTION: '/api/social/favorite',
+      STATUS: '/api/social/favorite/status'
+    },
+    REACTION: {
+      ACTION: '/api/social/reaction',
+      SUMMARY: '/api/social/reaction/summary'
+    },
+    AUTHORS: {
+      RECOMMEND: '/api/social/authors/recommend'
+    }
   },
   // 其他模块的 API 端点可以在这里添加
   // 例如：
