@@ -41,12 +41,12 @@ export const useCommunityController = () => {
 //   ]
 
     // 加载社区启动数据：发送空搜索分别拉取帖子和作者列表
-    const loadCommunityData = async () => {
+    const loadCommunityData = async (queryStr: string, typeStr: string) => {
         loading.value = true
         error.value = null
         try {
             //空搜索拉取帖子
-            const postReq: SearchRequest = { query: '', type: 'posts' }
+            const postReq: SearchRequest = { query: queryStr, type: typeStr as 'posts' | 'authors' }
             const postRes: SearchResult = await CommunitySearchAPI(postReq)
             posts.value = postRes.posts ?? []
             normalizePosts(posts.value)

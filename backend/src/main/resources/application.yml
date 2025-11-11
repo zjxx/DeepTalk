@@ -93,7 +93,7 @@ qiniu:
   accessKey: MOosx2s_cWYuvru7ruI4xqQjmWdkKQI_L_b7CTyt
   secretKey: zxnGiANK5FBq6yB_-ibpnGL03c4J1zhxU8_2kLs0
   bucket: deeptalk-community
-  domain: http://t5k08v3r8.hd-bkt.clouddn.com
+  domain: http://t5k4vqb6d.hd-bkt.clouddn.com/
   uploadRegion: z0
 
 logging:

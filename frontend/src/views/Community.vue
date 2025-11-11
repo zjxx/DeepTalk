@@ -151,7 +151,7 @@ const searchOptions = [
 ]
 
 // 处理搜索（简化为重新加载）
-const handleSearch = async () => { await loadCommunityData() }
+const handleSearch = async () => { await loadCommunityData(searchQuery.value, searchType.value) }
 
 // 查看帖子详情
 const viewPost = (postId: string) => { router.push(`/post/${postId}`) }
