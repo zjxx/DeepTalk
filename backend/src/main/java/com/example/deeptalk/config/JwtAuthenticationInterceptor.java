@@ -3,6 +3,7 @@ package com.example.deeptalk.config;
 import com.example.deeptalk.service.TokenBlacklistService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
@@ -11,6 +12,7 @@ import javax.crypto.SecretKey;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+@Slf4j
 @Component
 public class JwtAuthenticationInterceptor implements HandlerInterceptor {
 
@@ -27,15 +29,22 @@ public class JwtAuthenticationInterceptor implements HandlerInterceptor {
             return true;
         }
 
+        String uri = request.getRequestURI();
+        String method = request.getMethod();
         String authHeader = request.getHeader("Authorization");
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return true; // 如果没有token，继续处理请求
+        boolean hasAuth = authHeader != null && authHeader.startsWith("Bearer ");
+        log.debug("[JWT] preHandle uri={}, method={}, hasAuth={}", uri, method, hasAuth);
+
+        if (!hasAuth) {
+            // 无token则不做鉴权，直接放行
+            return true;
         }
 
         String token = authHeader.replace("Bearer ", "");
 
         // 检查token是否在黑名单中
         if (tokenBlacklistService.isBlacklisted(token)) {
+            log.warn("[JWT] token in blacklist, uri={}", uri);
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.getWriter().write("Token已被注销");
             return false;
@@ -53,11 +62,13 @@ public class JwtAuthenticationInterceptor implements HandlerInterceptor {
             request.setAttribute("username", claims.get("username"));
             request.setAttribute("email", claims.getSubject());
 
+            log.debug("[JWT] valid token for userId={}, uri={}", claims.get("userId"), uri);
             return true;
         } catch (Exception e) {
+            log.warn("[JWT] invalid token, uri={}, reason={}", uri, e.getMessage());
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.getWriter().write("无效的Token");
             return false;
         }
     }
-} 
+}

@@ -9,6 +9,17 @@
       <!-- 帖子标题 -->
       <h3 class="post-title">{{ post.title }}</h3>
       
+      <!-- 配图缩略图（最多3张） -->
+      <div v-if="post.imageUrls && post.imageUrls.length" class="thumb-grid">
+        <v-img
+          v-for="(img, i) in post.imageUrls.slice(0, 3)"
+          :key="i"
+          :src="img"
+          class="thumb-item"
+          cover
+        />
+      </div>
+      
       <!-- 帖子内容前100字 -->
       <p class="post-content">{{ formatContent(post.content) }}</p>
       
@@ -123,6 +134,7 @@ const formatTime = (time: string) => {
   -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
   word-break: break-all;
+  line-clamp: 4;
 }
 
 .post-footer {
@@ -155,5 +167,19 @@ const formatTime = (time: string) => {
   gap: 4px;
   font-size: 14px;
   color: #666;
+}
+
+.thumb-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.thumb-item {
+  width: 100%;
+  height: 80px;
+  border-radius: 6px;
+  overflow: hidden;
 }
 </style>

@@ -50,6 +50,24 @@
                     hide-details="auto"
                     class="content-input"
                   />
+                  <div class="image-uploader">
+                    <div class="uploader-header">
+                      <h3>配图（最多9张，支持 jpg/png/webp，≤5MB）</h3>
+                      <v-btn size="small" variant="outlined" @click="pickImages">选择图片</v-btn>
+                      <input ref="fileInput" type="file" accept="image/jpeg,image/png,image/webp" multiple class="hidden-input" @change="onFilesPicked" />
+                    </div>
+                    <div v-if="imagePreviews.length" class="preview-grid">
+                      <div v-for="(img, idx) in imagePreviews" :key="img.id" class="preview-item" draggable="true"
+                           @dragstart="onDragStart(idx)" @dragover.prevent @drop="onDrop(idx)">
+                        <img :src="img.url" alt="preview" />
+                        <div class="preview-actions">
+                          <v-chip size="x-small">{{ idx + 1 }}</v-chip>
+                          <v-btn icon="mdi-close" size="x-small" color="error" variant="text" @click="removeImage(idx)" />
+                        </div>
+                      </div>
+                    </div>
+                    <div v-else class="preview-empty">未选择图片</div>
+                  </div>
                 </v-card-text>
               </div>
             </v-card>
@@ -158,7 +176,7 @@ const router = useRouter()
 
 const {
   addPost,
-  //loading
+  addPostWithImages
 } = useCommunityController()
 
 // 表单数据
@@ -169,6 +187,12 @@ const showSuccessMessage = ref(false)
 const showErrorMessage = ref(false)
 const errorMessage = ref('')
 const showClearDialog = ref(false)
+const fileInput = ref<HTMLInputElement | null>(null)
+const imageFiles = ref<File[]>([])
+const imagePreviews = ref<{ id: string; url: string }[]>([])
+let dragIndex = -1
+
+const genId = () => (crypto && 'randomUUID' in crypto) ? crypto.randomUUID() : Math.random().toString(36).slice(2)
 
 // 表单验证规则
 const titleRules = [
@@ -203,6 +227,39 @@ const getCurrentUser = () => {
   }
 }
 
+const pickImages = () => fileInput.value?.click()
+
+const onFilesPicked = (e: Event) => {
+  const files = Array.from((e.target as HTMLInputElement).files || []) as File[]
+  const remain = 9 - imageFiles.value.length
+  const append = files.slice(0, Math.max(0, remain)).filter(f => {
+    const okType = ['image/jpeg', 'image/png', 'image/webp'].includes(f.type)
+    const okSize = f.size <= 5 * 1024 * 1024
+    return okType && okSize
+  })
+  append.forEach(f => {
+    imageFiles.value.push(f)
+    imagePreviews.value.push({ id: genId(), url: URL.createObjectURL(f) })
+  })
+  ;(e.target as HTMLInputElement).value = ''
+}
+
+const removeImage = (idx: number) => {
+  URL.revokeObjectURL(imagePreviews.value[idx].url)
+  imagePreviews.value.splice(idx, 1)
+  imageFiles.value.splice(idx, 1)
+}
+
+const onDragStart = (idx: number) => { dragIndex = idx }
+const onDrop = (idx: number) => {
+  if (dragIndex === -1 || dragIndex === idx) return
+  const [p] = imagePreviews.value.splice(dragIndex, 1)
+  const [f] = imageFiles.value.splice(dragIndex, 1)
+  imagePreviews.value.splice(idx, 0, p)
+  imageFiles.value.splice(idx, 0, f)
+  dragIndex = -1
+}
+
 // 处理发布
 const handlePublish = async () => {
   if (!canPublish.value) return
@@ -218,46 +275,55 @@ const handlePublish = async () => {
   isPublishing.value = true
   
   try {
-    // 使用真实用户信息构造发帖请求
-    const postRequest: AddPostRequest = {
-      authorId: currentUser.userId,
-      post: {
-        id: '',
-        title: postTitle.value.trim(),
-        content: postContent.value.trim(),
-        author: {
-          id: currentUser.userId,
-          username: currentUser.username,
-          avatar: currentUser.avatar || getUserAvatar(),
-          authorLikes: 0,
-          authorPosts: 0
-        },
-        likesCount: 0,
-        createdAt: new Date().toISOString()
+    if (imageFiles.value.length > 0) {
+      const res = await addPostWithImages(postTitle.value.trim(), postContent.value.trim(), imageFiles.value)
+      if (res.success) {
+        showSuccessMessage.value = true
+        postTitle.value = ''
+        postContent.value = ''
+        imagePreviews.value.forEach(p => URL.revokeObjectURL(p.url))
+        imagePreviews.value = []
+        imageFiles.value = []
+        setTimeout(() => {
+          if (res.post?.id) router.push(`/post/${res.post.id}`)
+          else router.push('/community')
+        }, 1200)
+      } else {
+        errorMessage.value = res.message || '发布失败，请稍后重试'
+        showErrorMessage.value = true
       }
-    }
-
-    // 调用控制器的发帖函数
-    const response = await addPost(postRequest)
-
-    if (response && response.success) {
-      showSuccessMessage.value = true
-      
-      // 清空表单
-      postTitle.value = ''
-      postContent.value = ''
-      
-      // 延迟跳转到帖子详情页或社区页面
-      setTimeout(() => {
-        if (response.post && response.post.id) {
-          router.push(`/post/${response.post.id}`)
-        } else {
-          router.push('/community')
-        }
-      }, 1200)
     } else {
-      errorMessage.value = response?.message || '发布失败，请稍后重试'
-      showErrorMessage.value = true
+      // 走原文字发帖
+      const postRequest: AddPostRequest = {
+        authorId: currentUser.userId,
+        post: {
+          id: '',
+          title: postTitle.value.trim(),
+          content: postContent.value.trim(),
+          author: {
+            id: currentUser.userId,
+            username: currentUser.username,
+            avatar: currentUser.avatar || getUserAvatar(),
+            authorLikes: 0,
+            authorPosts: 0
+          },
+          likesCount: 0,
+          createdAt: new Date().toISOString()
+        }
+      }
+      const response = await addPost(postRequest)
+      if (response && response.success) {
+        showSuccessMessage.value = true
+        postTitle.value = ''
+        postContent.value = ''
+        setTimeout(() => {
+          if (response.post && response.post.id) router.push(`/post/${response.post.id}`)
+          else router.push('/community')
+        }, 1200)
+      } else {
+        errorMessage.value = response?.message || '发布失败，请稍后重试'
+        showErrorMessage.value = true
+      }
     }
   } catch (error) {
     console.error('发布失败:', error)
@@ -513,4 +579,13 @@ const goBack = () => {
     padding: 12px;
   }
 }
+
+.image-uploader { margin-top: 16px; }
+.hidden-input { display: none; }
+.uploader-header { display:flex; align-items:center; gap:12px; margin-bottom:8px; }
+.preview-grid { display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; }
+.preview-item { position:relative; border:1px solid #eee; border-radius:8px; overflow:hidden; }
+.preview-item img { width:100%; height:120px; object-fit:cover; display:block; }
+.preview-actions { position:absolute; top:4px; right:4px; display:flex; gap:6px; align-items:center; }
+.preview-empty { color:#888; font-size:13px; }
 </style>

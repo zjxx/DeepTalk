@@ -5,6 +5,7 @@ import lombok.Data;
 import java.time.LocalDateTime;
 import javax.persistence.Transient;
 import org.hibernate.annotations.GenericGenerator;
+import java.util.List;
 
 @Data
 @Entity
@@ -39,8 +40,11 @@ public class Post {
     @Transient
     private Author author;
 
+    @Transient
+    private List<String> imageUrls;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
     }
-} 
+}

@@ -33,6 +33,7 @@ export const API_ENDPOINTS = {
     POSTS: {
       LIKE: '/api/community/posts/like',
       ADD: '/api/community/posts/add',
+      ADD_WITH_IMAGES: '/api/community/posts/add-with-images', // 新增: 带图片发帖
       CHECK_AUTHOR: '/api/community/posts/check-author',
       REPLIES: '/api/community/posts'  // GET /api/community/posts/{postId}/replies
     },

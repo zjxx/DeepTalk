@@ -39,6 +39,14 @@
           <!-- 正文内容 -->
           <v-card-text class="post-body-section">
             <div class="post-body">{{ currentPost.content }}</div>
+
+            <div v-if="currentPost.imageUrls && currentPost.imageUrls.length" class="image-gallery">
+              <v-row dense>
+                <v-col v-for="(img, i) in currentPost.imageUrls" :key="i" cols="12" sm="6" md="4">
+                  <v-img :src="img" class="gallery-item" cover @click.stop="openPreview(i)"/>
+                </v-col>
+              </v-row>
+            </div>
           </v-card-text>
 
           <v-divider class="my-4"></v-divider>
@@ -154,6 +162,16 @@
       </div>
     </div>
     <v-snackbar v-model="followErrorShown" color="error" timeout="2500">{{ followError }}</v-snackbar>
+
+    <v-dialog v-model="previewOpen" max-width="900">
+      <v-card>
+        <v-carousel v-model="previewIndex" hide-delimiter-background>
+          <v-carousel-item v-for="(img, i) in (currentPost?.imageUrls || [])" :key="i">
+            <v-img :src="img" class="preview-img" contain />
+          </v-carousel-item>
+        </v-carousel>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -355,6 +373,10 @@ const goBack = () => {
   router.push('/community')
 }
 
+const previewOpen = ref(false)
+const previewIndex = ref(0)
+const openPreview = (i: number) => { previewIndex.value = i; previewOpen.value = true }
+
 onMounted(() => {
   loadPostDetail()
 })
@@ -443,6 +465,20 @@ onMounted(() => {
   line-height: 1.8;
   color: #333;
   white-space: pre-wrap;
+}
+
+.image-gallery { 
+  margin-top: 12px; 
+}
+
+.gallery-item { 
+  height: 200px; 
+  border-radius: 8px; 
+  cursor: pointer; 
+}
+
+.preview-img { 
+  height: 600px; 
 }
 
 /* 右侧作者信息卡片 */

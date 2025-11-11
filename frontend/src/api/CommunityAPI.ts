@@ -1,5 +1,5 @@
 //import axios from 'axios'
-import type { Post, CheckAuthorRequest, CheckAuthorResponse, SearchRequest, SearchResult, LikeRequest, LikeResponse, AddPostRequest, GetRepliesResponse } from '../interface/CommunityInterface'
+import type { Post, CheckAuthorRequest, CheckAuthorResponse, SearchRequest, SearchResult, LikeRequest, LikeResponse, AddPostRequest, GetRepliesResponse, AddPostWithImagesResponse } from '../interface/CommunityInterface'
 import { API_ENDPOINTS } from '../config/api'
 import { http } from '../utils/http'
 import type { FollowActionRequest, FollowStatusResponse, FavoriteRequest, FavoriteStatusResponse, ReactionRequest, ReactionSummaryResponse, AuthorListResponse } from '../interface/SocialInterface.ts'
@@ -32,6 +32,12 @@ export function CommunityCheckAuthorAPI(request: CheckAuthorRequest): Promise<Ch
 export function CommunityAddPostAPI(request: AddPostRequest): Promise<Post> {
     console.log('发送的发帖请求:', JSON.stringify(request))
     return http.post<Post, AddPostRequest>(API_ENDPOINTS.COMMUNITY.POSTS.ADD, request)
+}
+
+//发帖带图片
+export function CommunityAddPostWithImagesAPI(formData: FormData): Promise<AddPostWithImagesResponse> {
+  // 让浏览器自动设置 multipart/form-data 边界
+  return http.post<AddPostWithImagesResponse, FormData>(API_ENDPOINTS.COMMUNITY.POSTS.ADD_WITH_IMAGES, formData)
 }
 
 //获取帖子回复

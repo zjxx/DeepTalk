@@ -1,5 +1,15 @@
 server:
   port: 8080
+  tomcat:
+    accesslog:
+      enabled: true
+      directory: logs
+      prefix: access_log
+      suffix: .log
+      pattern: common
+      rotate: true
+      renameOnRotate: true
+      maxDays: 7
 
 spring:
   datasource:
@@ -22,6 +32,12 @@ spring:
         min-idle: 0       # 连接池最小空闲连接数
         max-wait: -1      # 连接池最大阻塞等待时间（-1表示没有限制）
   
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 50MB
+
   http:
     encoding:
       charset: UTF-8
@@ -72,3 +88,22 @@ minimax:
     url: https://api.minimaxi.com/v1  # MiniMax API基础URL
     model: MiniMax-M2  # 使用的模型名称
     timeout: 60  # API调用超时时间（秒），默认60秒
+
+qiniu:
+  accessKey: MOosx2s_cWYuvru7ruI4xqQjmWdkKQI_L_b7CTyt
+  secretKey: zxnGiANK5FBq6yB_-ibpnGL03c4J1zhxU8_2kLs0
+  bucket: deeptalk-community
+  domain: http://t5k08v3r8.hd-bkt.clouddn.com
+  uploadRegion: z0
+
+logging:
+  level:
+    com.example.deeptalk: INFO
+    com.example.deeptalk.config: DEBUG
+    com.example.deeptalk.modules.community: DEBUG
+    com.example.deeptalk.modules.community.controller: DEBUG
+    com.example.deeptalk.modules.community.service: DEBUG
+    org.springframework.web.multipart: DEBUG
+    org.springframework.web.servlet.mvc.method.annotation: DEBUG
+    org.apache.catalina.core: INFO
+    com.qiniu: INFO

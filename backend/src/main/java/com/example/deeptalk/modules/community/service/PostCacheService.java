@@ -26,6 +26,9 @@ public class PostCacheService {
     @Autowired
     private PostRepository postRepository;
 
+    @Autowired
+    private com.example.deeptalk.modules.community.repository.PostImageRepository postImageRepository;
+
     // Redis Key 前缀
     private static final String POST_DETAIL_PREFIX = "post:detail:";
     private static final String POST_LIST_KEY = "post:list:all";
@@ -278,6 +281,12 @@ public class PostCacheService {
         author.setAuthorLikes(totalLikes);
         
         post.setAuthor(author);
+        // 填充图片URL
+        try {
+            List<String> urls = postImageRepository.findByPostIdOrderBySortOrderAsc(post.getId())
+                    .stream().map(img -> img.getUrl()).collect(Collectors.toList());
+            post.setImageUrls(urls);
+        } catch (Exception ignore) {}
         return post;
     }
 

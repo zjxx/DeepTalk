@@ -1,6 +1,6 @@
 import { ref } from 'vue'
-import { CommunitySearchAPI, CommunityLikeAPI, CommunityCheckAuthorAPI, CommunityAddPostAPI, CommunityGetRepliesAPI } from '../api/CommunityAPI'
-import type { Post, SearchRequest, SearchResult, LikeRequest, LikeResponse, CheckAuthorRequest, CheckAuthorResponse, AddPostRequest, AddPostResponse, GetRepliesResponse } from '../interface/CommunityInterface'
+import { CommunitySearchAPI, CommunityLikeAPI, CommunityCheckAuthorAPI, CommunityAddPostAPI, CommunityGetRepliesAPI, CommunityAddPostWithImagesAPI } from '../api/CommunityAPI'
+import type { Post, SearchRequest, SearchResult, LikeRequest, LikeResponse, CheckAuthorRequest, CheckAuthorResponse, AddPostRequest, AddPostResponse, GetRepliesResponse, AddPostWithImagesResponse } from '../interface/CommunityInterface'
 
 export const useCommunityController = () => {
     const posts = ref<Post[]>([]) 
@@ -174,6 +174,25 @@ const addPost = async (crrpost: AddPostRequest): Promise<AddPostResponse | null>
     }
 }
 
+const addPostWithImages = async (title: string, content: string, files: File[]): Promise<AddPostWithImagesResponse> => {
+  loading.value = true
+  error.value = null
+  try {
+    const fd = new FormData()
+    fd.append('title', title)
+    fd.append('content', content)
+    files.slice(0, 9).forEach(f => fd.append('images', f))
+    const res = await CommunityAddPostWithImagesAPI(fd)
+    if (res.post) normalizePosts([res.post])
+    return res
+  } catch (e) {
+    console.error('带图发帖失败', e)
+    return { success: false, message: '发布失败', post: null, imageUrls: [] }
+  } finally {
+    loading.value = false
+  }
+}
+
     // 获取帖子回复
     const getReplies = async (postId: string): Promise<GetRepliesResponse> => {
         try {
@@ -209,6 +228,7 @@ const addPost = async (crrpost: AddPostRequest): Promise<AddPostResponse | null>
         searchAuthors,
         likePost,
         addPost,
+        addPostWithImages, // 新增导出
         checkAuthor,
         getReplies,
     }

@@ -10,6 +10,7 @@ export interface Post {
   authorId?: string;
   authorName?: string;
   authorAvatar?: string;
+  imageUrls?: string[]; // 新增: 图片URL数组
 }
 //作者
 export interface Author {
@@ -82,4 +83,11 @@ export interface GetRepliesResponse {
   message?: string;
   count: number;
   replies: Reply[];
+}
+
+export interface AddPostWithImagesResponse {
+  success: boolean;
+  message: string;
+  post: Post | null;
+  imageUrls: string[];
 }

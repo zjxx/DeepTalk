@@ -6,8 +6,10 @@ import com.example.deeptalk.modules.community.dto.CheckAuthorResponse;
 import com.example.deeptalk.modules.community.entity.Post;
 import com.example.deeptalk.modules.community.entity.PostLike;
 import com.example.deeptalk.modules.community.entity.Author;
+import com.example.deeptalk.modules.community.entity.PostImage;
 import com.example.deeptalk.modules.community.repository.PostLikeRepository;
 import com.example.deeptalk.modules.community.repository.PostRepository;
+import com.example.deeptalk.modules.community.repository.PostImageRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,7 +19,8 @@ import java.util.stream.Collectors;
 @Service
 public class PostService {
     @Autowired
-    private PostRepository postRepository;    @Autowired
+    private PostRepository postRepository;    
+    @Autowired
     private PostLikeRepository postLikeRepository;
     
     @Autowired
@@ -25,6 +28,9 @@ public class PostService {
     
     @Autowired
     private PostCacheService postCacheService;
+    
+    @Autowired
+    private PostImageRepository postImageRepository;
 
     public List<Post> searchPosts(String keyword, String type) {
         // 使用缓存服务
@@ -35,10 +41,24 @@ public class PostService {
         } else {
             return postCacheService.searchPosts(keyword);
         }
-    }    @Transactional
+    }    
+    
+    @Transactional
     public Post addPost(Post post) {
         // 使用缓存服务保存（会自动清除缓存）
         Post savedPost = postCacheService.savePost(post);
+        
+        // 保存图片
+        if (post.getImageUrls() != null) {
+            int order = 0;
+            for (String url : post.getImageUrls()) {
+                PostImage img = new PostImage();
+                img.setPostId(savedPost.getId());
+                img.setUrl(url);
+                img.setSortOrder(order++);
+                postImageRepository.save(img);
+            }
+        }
         
         // 异步生成AI回复（通过独立的Service确保异步生效）
         asyncReplyService.generateAIReplyAsync(savedPost);
@@ -113,4 +133,4 @@ public class PostService {
         response.setAuthor(author);
         return response;
     }
-} 
+}
