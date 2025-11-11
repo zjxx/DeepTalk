@@ -14,8 +14,9 @@ import java.time.Duration;
 @Service
 public class AIReplyService {
     
-    @Value("${minimax.api.key:}")  // 添加空字符串作为默认值
+    @Value("${minimax.api.key:eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJHcm91cE5hbWUiOiLmnLHlmInovakiLCJVc2VyTmFtZSI6IuacseWYiei9qSIsIkFjY291bnQiOiIiLCJTdWJqZWN0SUQiOiIxOTgyNDU3ODkwOTgzNjQ5NjAzIiwiUGhvbmUiOiIxODkyMTMzMzAwMSIsIkdyb3VwSUQiOiIxOTgyNDU3ODkwOTc5NDU1Mjk5IiwiUGFnZU5hbWUiOiIiLCJNYWlsIjoiIiwiQ3JlYXRlVGltZSI6IjIwMjUtMTEtMDcgMjM6NTA6NDQiLCJUb2tlblR5cGUiOjEsImlzcyI6Im1pbmltYXgifQ.ttuO_Kp94xxLsh9GvBwG7wIZHAhAYmKc8aops4xIddZ9Yf089vA6NiN_r7xoj5vbb534w2Jv3wOCk59aNEim0f5cx2GbplTneVcWzZEmZ55JrQ0E2DXU2cOhPSsj1yo-mde2PiGfZMDY1zpWord7EJy-HgPmjawEZgWNug2WbLsHa4_bj94UfgELyxMC6H_bkrag6RFGFJ6Fli-N_oTpEOsOZ7oId8R1-kD8C1BT9DD_rwHTASQbwFQtHbTEQIV6rI7r1y3KtvKtBkfHPQqznNDkMROpWOnMysA6ceyS90cYVkxj6HDt52X9W3KY_R_NCOYUm4SZ-NOm4LJU90KMYw}")  // 添加空字符串作为默认值
     private String apiKey;
+    //2333
     
     @Value("${minimax.api.url:https://api.minimaxi.com/v1}")
     private String apiUrl;
@@ -23,7 +24,7 @@ public class AIReplyService {
     @Value("${minimax.api.model:MiniMax-M2}")  // 默认模型
     private String model;
     
-    @Value("${minimax.api.timeout:10000}")  // 默认超时60秒
+    @Value("${minimax.api.timeout:30}")  // 超时秒数，默认30秒
     private int apiTimeout;
     
     private final HttpClient httpClient;
@@ -88,7 +89,7 @@ public class AIReplyService {
                     .header("Content-Type", "application/json")
                     .header("Authorization", "Bearer " + apiKey)
                     .POST(HttpRequest.BodyPublishers.ofString(requestBodyStr))
-                    .timeout(Duration.ofSeconds(apiTimeout))
+                    .timeout(Duration.ofSeconds(apiTimeout)) // 使用秒
                     .build();
             
             // 发送请求到MiniMax API
@@ -104,11 +105,12 @@ public class AIReplyService {
                 if (jsonResponse.has("choices") && jsonResponse.get("choices").isJsonArray()) {
                     JsonArray choices = jsonResponse.getAsJsonArray("choices");
                     if (choices.size() > 0) {
-                        JsonObject firstChoice = choices.get(0).getAsJsonObject();
-                        if (firstChoice.has("message")) {
+                        JsonObject firstChoice = choices.get(0).getAsJsonObject();                        if (firstChoice.has("message")) {
                             JsonObject messageObj = firstChoice.getAsJsonObject("message");
                             if (messageObj.has("content")) {
                                 String aiReply = messageObj.get("content").getAsString().trim();
+                                // 过滤掉 <think> 标签及其内容
+                                aiReply = removeThinkTags(aiReply);
                                 System.out.println("✅ AI回复生成成功: " + aiReply);
                                 return aiReply;
                             }
@@ -146,5 +148,30 @@ public class AIReplyService {
         // 根据内容长度选择不同的回复
         int index = postContent.length() % templates.length;
         return templates[index];
+    }
+    
+    /**
+     * 移除 AI 回复中的 <think> 标签及其内容
+     * MiniMax API 有时会返回包含 <think>...</think> 的思考过程，需要过滤掉
+     */
+    private String removeThinkTags(String text) {
+        if (text == null || text.isEmpty()) {
+            return text;
+        }
+        
+        // 使用正则表达式移除 <think>...</think> 标签及其内容
+        // 支持多行匹配和嵌套标签
+        String result = text.replaceAll("(?s)<think>.*?</think>", "");
+        
+        // 移除可能残留的单独标签
+        result = result.replaceAll("</?think>", "");
+        
+        // 清理多余的空白字符
+        result = result.trim();
+        
+        // 清理连续的空行
+        result = result.replaceAll("\\n\\s*\\n", "\n");
+        
+        return result;
     }
 }

@@ -7,6 +7,21 @@ spring:
     username: root
     password: 123456
     driver-class-name: com.mysql.cj.jdbc.Driver
+  
+  # Redis配置
+  redis:
+    host: localhost        # Redis服务器地址
+    port: 6379            # Redis服务器端口
+    password:             # Redis密码（如果没有设置密码则留空）
+    database: 0           # 使用的数据库索引（0-15）
+    timeout: 5000         # 连接超时时间（毫秒）
+    lettuce:
+      pool:
+        max-active: 8     # 连接池最大连接数
+        max-idle: 8       # 连接池最大空闲连接数
+        min-idle: 0       # 连接池最小空闲连接数
+        max-wait: -1      # 连接池最大阻塞等待时间（-1表示没有限制）
+  
   http:
     encoding:
       charset: UTF-8
@@ -53,7 +68,7 @@ kurento:
 # 可以通过环境变量 MINIMAX_API_KEY 设置，或在此处留空使用备用回复
 minimax:
   api:
-    key: ${MINIMAX_API_KEY:}  # 从环境变量读取，默认为空（将使用备用回复）
+    key: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJHcm91cE5hbWUiOiLmnLHlmInovakiLCJVc2VyTmFtZSI6IuacseWYiei9qSIsIkFjY291bnQiOiIiLCJTdWJqZWN0SUQiOiIxOTgyNDU3ODkwOTgzNjQ5NjAzIiwiUGhvbmUiOiIxODkyMTMzMzAwMSIsIkdyb3VwSUQiOiIxOTgyNDU3ODkwOTc5NDU1Mjk5IiwiUGFnZU5hbWUiOiIiLCJNYWlsIjoiIiwiQ3JlYXRlVGltZSI6IjIwMjUtMTEtMDcgMjM6NTA6NDQiLCJUb2tlblR5cGUiOjEsImlzcyI6Im1pbmltYXgifQ.ttuO_Kp94xxLsh9GvBwG7wIZHAhAYmKc8aops4xIddZ9Yf089vA6NiN_r7xoj5vbb534w2Jv3wOCk59aNEim0f5cx2GbplTneVcWzZEmZ55JrQ0E2DXU2cOhPSsj1yo-mde2PiGfZMDY1zpWord7EJy-HgPmjawEZgWNug2WbLsHa4_bj94UfgELyxMC6H_bkrag6RFGFJ6Fli-N_oTpEOsOZ7oId8R1-kD8C1BT9DD_rwHTASQbwFQtHbTEQIV6rI7r1y3KtvKtBkfHPQqznNDkMROpWOnMysA6ceyS90cYVkxj6HDt52X9W3KY_R_NCOYUm4SZ-NOm4LJU90KMYw  # 从环境变量读取，默认为空（将使用备用回复）
     url: https://api.minimaxi.com/v1  # MiniMax API基础URL
     model: MiniMax-M2  # 使用的模型名称
     timeout: 60  # API调用超时时间（秒），默认60秒

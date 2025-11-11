@@ -33,7 +33,7 @@ export class VersusController {
     this.model = new VersusModel()
     this.audioService = new AudioService()
     this.timerService = new TimerService()
-    this.aiService = new AIService() // 默认使用Gemini
+    this.aiService = new AIService('backend') // 使用后端 MiniMax AI 服务
     this.ttsService = new TTSService()
     this.questionManager = new QuestionManager()
     this.webSocketService = new WebSocketService('ws://115.175.45.173:8765')

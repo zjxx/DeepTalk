@@ -14,6 +14,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import javax.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/api/community")
@@ -33,6 +34,15 @@ public class CommunityController {
         return ResponseEntity.ok(result);
     }
 
+    @GetMapping(value = "/posts/latest", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
+    public ResponseEntity<SearchResult> getLatestPosts() {
+        System.out.println("📥 获取最新帖子请求");
+       List<Post> posts = postService.searchPosts("","posts");
+        SearchResult response = new SearchResult();
+        response.setPosts(posts);
+        return ResponseEntity.ok(response);
+    }
+
     @PostMapping(value = "/posts/like", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
     public ResponseEntity<LikeResponse> likePost(@RequestBody LikeRequest request) {
         LikeResponse response = postService.likePost(request);
@@ -40,15 +50,26 @@ public class CommunityController {
     }
 
     @PostMapping(value = "/posts/add", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
-    public ResponseEntity<AddPostResponse> addPost(@RequestBody AddPostRequest request) {
+    public ResponseEntity<AddPostResponse> addPost(@RequestBody AddPostRequest request, HttpServletRequest httpRequest) {
         try {
             Post post = request.getPost();
-            String authorId = request.getAuthorId();
+            // 从认证拦截器注入的请求属性中获取用户
+            String tokenUserId = (String) httpRequest.getAttribute("userId");
+            String tokenUsername = (String) httpRequest.getAttribute("username");
+
+            // 服务器端作为真实来源：优先使用token中的信息
+            String effectiveAuthorId = tokenUserId != null ? tokenUserId : request.getAuthorId();
+            String effectiveAuthorName = tokenUsername != null ? tokenUsername
+                    : (post.getAuthor() != null && post.getAuthor().getUsername() != null ? post.getAuthor().getUsername() : post.getAuthorName());
+            String defaultAvatar = "https://sns-avatar-qc.xhscdn.com/avatar/1040g2jo31b593h86ng005p4rmeo7531ts9tr1og?imageView2/2/w/540/format/webp|imageMogr2/strip2";
+            String effectiveAvatar = (post.getAuthor() != null && post.getAuthor().getAvatar() != null && !post.getAuthor().getAvatar().isEmpty())
+                    ? post.getAuthor().getAvatar()
+                    : (post.getAuthorAvatar() != null && !post.getAuthorAvatar().isEmpty() ? post.getAuthorAvatar() : defaultAvatar);
             
-            // 从嵌套的 author 对象中获取信息并设置到 post 中
-            post.setAuthorId(authorId);
-            post.setAuthorName(post.getAuthor().getUsername());
-            post.setAuthorAvatar("https://sns-avatar-qc.xhscdn.com/avatar/1040g2jo31b593h86ng005p4rmeo7531ts9tr1og?imageView2/2/w/540/format/webp|imageMogr2/strip2");
+            // 设置到post中，覆盖客户端传入
+            post.setAuthorId(effectiveAuthorId);
+            post.setAuthorName(effectiveAuthorName != null ? effectiveAuthorName : "匿名用户");
+            post.setAuthorAvatar(effectiveAvatar);
             post.setLikesCount(0);
             post.setCreatedAt(LocalDateTime.now());
             
@@ -74,7 +95,9 @@ public class CommunityController {
             response.setPost(null);
             return ResponseEntity.internalServerError().body(response);
         }
-    }    @PostMapping(value = "/posts/check-author", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
+    }
+
+    @PostMapping(value = "/posts/check-author", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
     public ResponseEntity<CheckAuthorResponse> checkPostAuthor(@RequestBody CheckAuthorRequest request) {
         CheckAuthorResponse response = postService.getAuthorInfo(request.getAuthorId());
         return ResponseEntity.ok(response);

@@ -7,6 +7,7 @@ import com.example.deeptalk.modules.shop.entity.UserModel;
 import com.example.deeptalk.modules.shop.repository.OrderRepository;
 import com.example.deeptalk.modules.shop.repository.ProductRepository;
 import com.example.deeptalk.modules.shop.repository.UserModelRepository;
+import com.example.deeptalk.modules.shop.service.ProductCacheService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -29,15 +30,11 @@ public class ShopController {
     @Autowired
     private UserModelRepository userModelRepository;
 
-    @PostMapping(value = "/search", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
+    @Autowired
+    private ProductCacheService productCacheService;    @PostMapping(value = "/search", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
     public ResponseEntity<SearchResponse> searchShop(@RequestBody SearchRequest request) {
-
-        List<Product> products;
-        if (request.getQuery() == null || request.getQuery().trim().isEmpty()) {
-            products = productRepository.findAll();
-        } else {
-            products = productRepository.searchProducts(request.getQuery());
-        }
+        // 使用缓存服务
+        List<Product> products = productCacheService.searchProducts(request.getQuery());
         
         SearchResponse response = new SearchResponse();
         response.setProducts(products);

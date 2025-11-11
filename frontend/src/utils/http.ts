@@ -19,7 +19,8 @@ httpClient.interceptors.request.use(
         config.url?.includes('/api/auth/send-verification-code') ||
         config.url?.includes('/api/auth/forgot-password') ||
         config.url?.includes('/api/shop/search') ||
-        config.url?.includes('/api/shop/check-stock')) {
+        config.url?.includes('/api/shop/check-stock') ||
+        config.url?.includes('/api/community/search')) {
       console.log('发送请求(无需token):', {
         url: config.url,
         method: config.method,
@@ -79,15 +80,15 @@ httpClient.interceptors.response.use(
 
 // 封装请求方法
 export const http = {
-  get: <T>(url: string, config?: AxiosRequestConfig) =>
-    httpClient.get<T>(url, config),
+  get: <T>(url: string, config?: AxiosRequestConfig): Promise<T> =>
+    httpClient.get<T>(url, config).then(d => d as unknown as T),
 
-  post: <T, D = unknown>(url: string, data?: D, config?: AxiosRequestConfig) =>
-    httpClient.post<T, T, D>(url, data, config),
+  post: <T, D = unknown>(url: string, data?: D, config?: AxiosRequestConfig): Promise<T> =>
+    httpClient.post<T>(url, data, config).then(d => d as unknown as T),
 
-  put: <T, D = unknown>(url: string, data?: D, config?: AxiosRequestConfig) =>
-    httpClient.put<T, T, D>(url, data, config),
+  put: <T, D = unknown>(url: string, data?: D, config?: AxiosRequestConfig): Promise<T> =>
+    httpClient.put<T>(url, data, config).then(d => d as unknown as T),
 
-  delete: <T>(url: string, config?: AxiosRequestConfig) =>
-    httpClient.delete<T>(url, config)
+  delete: <T>(url: string, config?: AxiosRequestConfig): Promise<T> =>
+    httpClient.delete<T>(url, config).then(d => d as unknown as T)
 }

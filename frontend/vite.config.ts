@@ -3,7 +3,7 @@ import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import eslint from 'vite-plugin-eslint'
-import VueDevTools from 'vite-plugin-vue-devtools'
+// import VueDevTools from 'vite-plugin-vue-devtools'
 import basicSsl from '@vitejs/plugin-basic-ssl'
 
 // https://vite.dev/config/
@@ -11,7 +11,8 @@ export default defineConfig({
   plugins: [
     vue(),
     eslint(),
-    VueDevTools(),
+    // 需要时在 .env.local 里设置 VITE_ENABLE_DEVTOOLS=true 并取消下行注释引入
+    // VueDevTools(),
     basicSsl(),
   ],
   server: {

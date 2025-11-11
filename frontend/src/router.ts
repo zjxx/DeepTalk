@@ -17,6 +17,10 @@ import MyRepositories from './views/MyRepositories.vue'
 import RepositoriesLive2dView from './views/RepositoriesLive2dView.vue'
 import PostAdding from './views/PostAdding.vue'
 import HistoricalScores from './views/HistoricalScores.vue'
+import MobileCommunity from './views/mobile/MobileCommunity.vue'
+import MobileShop from './views/mobile/MobileShop.vue'
+import MobileProfile from './views/mobile/MobileProfile.vue'
+import MobileEvaluation from './views/mobile/MobileEvaluation.vue'
 
 // 你可以后续添加Profile等页面
 
@@ -135,6 +139,30 @@ const routes = [
     name: 'HistoricalScores',
     component: HistoricalScores,
     meta: { requiresAuth: true }
+  },
+  {
+    path: '/m/community',
+    name: 'MobileCommunity',
+    component: MobileCommunity,
+    meta: { requiresAuth: false }
+  },
+  {
+    path: '/m/shop',
+    name: 'MobileShop',
+    component: MobileShop,
+    meta: { requiresAuth: false }
+  },
+  {
+    path: '/m/profile',
+    name: 'MobileProfile',
+    component: MobileProfile,
+    meta: { requiresAuth: false }
+  },
+  {
+    path: '/m/evaluation',
+    name: 'MobileEvaluation',
+    component: MobileEvaluation,
+    meta: { requiresAuth: false }
   },
   // { path: '/profile', component: () => import('./views/Profile.vue') },
 ]

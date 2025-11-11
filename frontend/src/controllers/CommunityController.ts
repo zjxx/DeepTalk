@@ -49,6 +49,7 @@ export const useCommunityController = () => {
             const postReq: SearchRequest = { query: '', type: 'posts' }
             const postRes: SearchResult = await CommunitySearchAPI(postReq)
             posts.value = postRes.posts ?? []
+            normalizePosts(posts.value)
             // // 模拟API调用延迟
             // await new Promise(resolve => setTimeout(resolve, 1000))
             // posts.value = samplePosts
@@ -70,6 +71,7 @@ export const useCommunityController = () => {
             const postReq: SearchRequest = { query: keyword, type: 'posts' }
             const postRes: SearchResult = await CommunitySearchAPI(postReq)
             posts.value = postRes.posts ?? []
+            normalizePosts(posts.value)
 
         } catch (e) {
             error.value = '搜索失败，请稍后重试'
@@ -88,6 +90,7 @@ export const useCommunityController = () => {
             const authorReq: SearchRequest = { query: keyword, type: 'authors' }
             const authorRes: SearchResult = await CommunitySearchAPI(authorReq)
             posts.value = authorRes.posts ?? []
+            normalizePosts(posts.value)
 
         } catch (e) {
             error.value = '搜索失败，请稍后重试'
@@ -144,6 +147,7 @@ const addPost = async (crrpost: AddPostRequest): Promise<AddPostResponse | null>
         
         // 发送到后端，API 返回的是 Post 类型
         const newPost: Post = await CommunityAddPostAPI(crrpost)
+        normalizePosts([newPost])
         console.log('发帖成功:', newPost)
         
         // 构造 AddPostResponse 响应
@@ -181,6 +185,19 @@ const addPost = async (crrpost: AddPostRequest): Promise<AddPostResponse | null>
             console.error('Controller: 获取回复失败:', e)
             throw e
         }
+    }
+
+    const normalizePosts = (arr: Post[]) => {
+        arr.forEach(p => {
+            if (!p.author) {
+                p.author = { id: p.authorId || '', username: p.authorName || '', avatar: p.authorAvatar || '', authorLikes: 0, authorPosts: 0 }
+            } else {
+                // 覆盖为最新扁平字段
+                if (p.authorName) p.author.username = p.authorName
+                if (p.authorAvatar) p.author.avatar = p.authorAvatar
+                if (p.authorId) p.author.id = p.authorId
+            }
+        })
     }
 
     return {
