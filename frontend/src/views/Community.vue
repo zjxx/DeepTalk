@@ -120,6 +120,7 @@
         </div>
       </v-sheet>
     </div>
+    <v-snackbar v-model="followErrorShown" color="error" timeout="2500">{{ followError }}</v-snackbar>
   </v-container>
 </template>
 
@@ -172,6 +173,10 @@ const reactionSummary = ref<Record<string, { counters: Record<string, number>; m
 const reactionTypes: ReactionRequest['type'][] = ['like','love','laugh','sad','angry']
 const reactionEmoji: Record<string,string> = { like:'👍', love:'❤️', laugh:'😂', sad:'😢', angry:'😡' }
 
+const followError = ref<string>('')
+const followErrorShown = ref(false)
+const showFollowError = (msg: string) => { followError.value = msg; followErrorShown.value = true }
+
 const ensureReactionSummary = async (postId: string) => {
   if (!isLoggedIn.value || reactionSummary.value[postId]) return
   try {
@@ -195,14 +200,35 @@ const handleReaction = async (postId: string, type: ReactionRequest['type']) => 
 }
 
 const toggleFollow = async (authorId: string) => {
-  if (!isLoggedIn.value) return
-  const follow = !followedAuthors.value.has(authorId)
+  if (!isLoggedIn.value) { showFollowError('请先登录'); return }
+  const wasFollowed = followedAuthors.value.has(authorId)
+  if (wasFollowed) {
+    const ok = window.confirm('确定要取消关注该作者吗？')
+    if (!ok) return
+  }
+  // 乐观更新
+  if (wasFollowed) followedAuthors.value.delete(authorId); else followedAuthors.value.add(authorId)
   try {
-    const resp = await apiToggleFollow(currentUserId, authorId, follow)
-    if (resp) {
-      if (resp.followed) { followedAuthors.value.add(authorId) } else { followedAuthors.value.delete(authorId) }
-    }
-  } catch (e) { console.error('follow失败', e) }
+    const resp = await apiToggleFollow(currentUserId, authorId, !wasFollowed)
+    if (!resp) { if (wasFollowed) followedAuthors.value.add(authorId); else followedAuthors.value.delete(authorId); showFollowError('关注操作失败'); return }
+    if (resp.followed) followedAuthors.value.add(authorId); else followedAuthors.value.delete(authorId)
+  } catch (e) {
+    console.error('follow失败', e)
+    if (wasFollowed) followedAuthors.value.add(authorId); else followedAuthors.value.delete(authorId)
+    showFollowError('网络错误，稍后重试')
+  }
+}
+
+const toggleFollowSidebar = async (a: { id: string; followed: boolean }) => {
+  if (!isLoggedIn.value) { showFollowError('请先登录'); return }
+  const wasFollowed = a.followed
+  if (wasFollowed) { const ok = window.confirm('确定要取消关注该作者吗？'); if (!ok) return }
+  a.followed = !wasFollowed
+  try {
+    const resp = await apiToggleFollow(currentUserId, a.id, !wasFollowed)
+    if (!resp) { a.followed = wasFollowed; showFollowError('关注操作失败'); return }
+    a.followed = resp.followed
+  } catch (e) { console.error('侧边栏关注失败', e); a.followed = wasFollowed; showFollowError('网络错误，稍后重试') }
 }
 
 const toggleFavorite = async (postId: string) => {
@@ -223,14 +249,6 @@ const loadRecommendedAuthors = async () => {
     const res = await getRecommendedAuthors(currentUserId, 10)
     if (res?.authors) recommendedAuthors.value = res.authors
   } catch (e) { console.error('推荐作者获取失败', e) }
-}
-
-const toggleFollowSidebar = async (a: { id: string; followed: boolean }) => {
-  if (!isLoggedIn.value) return
-  try {
-    const resp = await apiToggleFollow(currentUserId, a.id, !a.followed)
-    if (resp) a.followed = resp.followed
-  } catch (e) { console.error('侧边栏关注失败', e) }
 }
 
 onMounted(async () => {

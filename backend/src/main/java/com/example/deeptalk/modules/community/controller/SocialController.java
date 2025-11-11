@@ -16,6 +16,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
+
 @RestController
 @RequestMapping("/api/social")
 @CrossOrigin(origins = "*")
@@ -27,12 +29,24 @@ public class SocialController {
     private final AuthorService authorService;
 
     @PostMapping(value = "/follow", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
-    public ResponseEntity<FollowStatusResponse> follow(@RequestBody FollowActionRequest request) {
+    public ResponseEntity<FollowStatusResponse> follow(@RequestBody FollowActionRequest request, HttpServletRequest httpRequest) {
+        String tokenUserId = (String) httpRequest.getAttribute("userId");
+        if (tokenUserId != null && !tokenUserId.isEmpty()) {
+            request.setUserId(tokenUserId); // 以服务端认证为准
+        }
+        System.out.println("[Social] FOLLOW action user=" + request.getUserId() + ", target=" + request.getTargetAuthorId() + ", follow=" + request.isFollow());
         return ResponseEntity.ok(followService.toggleFollow(request));
     }
 
     @GetMapping(value = "/follow/status", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
-    public ResponseEntity<FollowStatusResponse> status(@RequestParam String currentUserId, @RequestParam String targetAuthorId) {
+    public ResponseEntity<FollowStatusResponse> status(@RequestParam(required = false) String currentUserId,
+                                                       @RequestParam String targetAuthorId,
+                                                       HttpServletRequest httpRequest) {
+        if (currentUserId == null || currentUserId.isEmpty()) {
+            String tokenUserId = (String) httpRequest.getAttribute("userId");
+            if (tokenUserId != null && !tokenUserId.isEmpty()) currentUserId = tokenUserId;
+        }
+        System.out.println("[Social] FOLLOW status user=" + currentUserId + ", target=" + targetAuthorId);
         return ResponseEntity.ok(followService.getStatus(currentUserId, targetAuthorId));
     }
 

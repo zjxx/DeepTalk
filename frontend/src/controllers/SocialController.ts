@@ -2,6 +2,15 @@ import { ref } from 'vue'
 import { SocialFollowAPI, SocialFollowStatusAPI, SocialFavoriteAPI, SocialFavoriteStatusAPI, SocialReactAPI, SocialReactionSummaryAPI, SocialRecommendAuthorsAPI } from '../api/CommunityAPI'
 import type { FollowActionRequest, FollowStatusResponse, FavoriteRequest, FavoriteStatusResponse, ReactionRequest, ReactionSummaryResponse, AuthorListResponse } from '../interface/SocialInterface'
 
+const getCurrentUserId = (): string | null => {
+  try {
+    const raw = localStorage.getItem('userInfo') || sessionStorage.getItem('userInfo')
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    return parsed.userId || null
+  } catch { return null }
+}
+
 export const useSocialController = () => {
   const followLoading = ref(false)
   const favoriteLoading = ref(false)
@@ -10,10 +19,12 @@ export const useSocialController = () => {
 
   // 关注/取关
   const toggleFollow = async (currentUserId: string, targetAuthorId: string, follow: boolean): Promise<FollowStatusResponse | null> => {
+    const uid = currentUserId || getCurrentUserId()
+    if (!uid) { console.warn('未登录，无法关注'); return null }
     followLoading.value = true
     error.value = null
     try {
-      const req: FollowActionRequest = { userId: currentUserId, targetAuthorId, follow }
+      const req: FollowActionRequest = { userId: uid, targetAuthorId, follow }
       return await SocialFollowAPI(req)
     } catch (e) {
       error.value = '关注操作失败'
@@ -25,8 +36,10 @@ export const useSocialController = () => {
   }
 
   const getFollowStatus = async (currentUserId: string, targetAuthorId: string): Promise<FollowStatusResponse | null> => {
+    const uid = currentUserId || getCurrentUserId()
+    if (!uid) return null
     try {
-      return await SocialFollowStatusAPI(currentUserId, targetAuthorId)
+      return await SocialFollowStatusAPI(uid, targetAuthorId)
     } catch (e) {
       console.error(e)
       return null

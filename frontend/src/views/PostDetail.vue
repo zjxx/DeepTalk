@@ -153,6 +153,7 @@
         <v-btn color="primary" @click="goBack" class="mt-4">返回社区</v-btn>
       </div>
     </div>
+    <v-snackbar v-model="followErrorShown" color="error" timeout="2500">{{ followError }}</v-snackbar>
   </v-container>
 </template>
 
@@ -183,6 +184,10 @@ const isProcessingLike = ref(false)
 const replies = ref<Reply[]>([])
 const loadingReplies = ref(false)
 const followed = ref(false)
+
+const followError = ref('')
+const followErrorShown = ref(false)
+const showFollowError = (msg: string) => { followError.value = msg; followErrorShown.value = true }
 
 // 获取当前登录用户
 const getCurrentUser = () => {
@@ -321,11 +326,28 @@ const loadFollowStatus = async () => {
 
 // 切换关注状态
 const toggleFollowAuthor = async () => {
-  if (!isLoggedIn.value || !currentPost.value?.author?.id) return
+  if (!isLoggedIn.value) { showFollowError('请先登录'); return }
+  if (!currentPost.value?.author?.id) return
+  const targetId = currentPost.value.author.id
+  const wasFollowed = followed.value
+  if (wasFollowed) {
+    const ok = window.confirm('确定要取消关注该作者吗？')
+    if (!ok) return
+  }
+  followed.value = !wasFollowed
   try {
-    const res = await apiToggleFollow(currentUserId, currentPost.value.author.id, !followed.value)
-    if (res) followed.value = res.followed
-  } catch (e) { console.error('关注操作失败', e) }
+    const res = await apiToggleFollow(currentUserId, targetId, !wasFollowed)
+    if (res) {
+      followed.value = res.followed
+    } else {
+      followed.value = wasFollowed
+      showFollowError('关注操作失败')
+    }
+  } catch (e) {
+    console.error('关注操作失败', e)
+    followed.value = wasFollowed
+    showFollowError('网络错误，稍后重试')
+  }
 }
 
 // 返回社区

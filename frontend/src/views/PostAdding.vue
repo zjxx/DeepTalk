@@ -152,6 +152,7 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCommunityController } from '../controllers/CommunityController'
 import type { AddPostRequest } from '../interface/CommunityInterface'
+import { getUserAvatar } from '../controllers/userController'
 
 const router = useRouter()
 
@@ -191,29 +192,48 @@ const canPublish = computed(() => {
          !isPublishing.value
 })
 
+// 从本地/会话存储获取当前登录用户
+const getCurrentUser = () => {
+  const raw = localStorage.getItem('userInfo') || sessionStorage.getItem('userInfo')
+  if (!raw) return null
+  try {
+    return JSON.parse(raw) as { userId: string; username: string; avatar?: string }
+  } catch {
+    return null
+  }
+}
+
 // 处理发布
 const handlePublish = async () => {
   if (!canPublish.value) return
 
+  // 校验登录用户
+  const currentUser = getCurrentUser()
+  if (!currentUser || !currentUser.userId || !currentUser.username) {
+    errorMessage.value = '未登录或登录信息失效，请先登录后再发布'
+    showErrorMessage.value = true
+    return
+  }
+
   isPublishing.value = true
   
   try {
-    // 构造发帖请求 - 根据接口定义修正
+    // 使用真实用户信息构造发帖请求
     const postRequest: AddPostRequest = {
-      authorId: 'current_user_id', // 这里应该从用户状态中获取真实的用户ID
+      authorId: currentUser.userId,
       post: {
-        id: '', // 新帖子ID由后端生成，这里传空字符串
+        id: '',
         title: postTitle.value.trim(),
         content: postContent.value.trim(),
         author: {
-          id: 'current_user_id', // 应该从用户状态获取
-          username: 'current_username', // 应该从用户状态获取
-          avatar: '', // 应该从用户状态获取
-          authorLikes: 0, // 新用户默认值
-          authorPosts: 0  // 将会在后端更新
+          id: currentUser.userId,
+          username: currentUser.username,
+          avatar: currentUser.avatar || getUserAvatar(),
+          authorLikes: 0,
+          authorPosts: 0
         },
-        likesCount: 0, // 新帖子默认0个赞
-        createdAt: new Date().toISOString() // 当前时间，后端可能会覆盖
+        likesCount: 0,
+        createdAt: new Date().toISOString()
       }
     }
 
@@ -230,15 +250,12 @@ const handlePublish = async () => {
       // 延迟跳转到帖子详情页或社区页面
       setTimeout(() => {
         if (response.post && response.post.id) {
-          // 如果有帖子ID，跳转到帖子详情页
           router.push(`/post/${response.post.id}`)
         } else {
-          // 否则返回社区页面
           router.push('/community')
         }
-      }, 2000)
+      }, 1200)
     } else {
-      // 处理发布失败的情况
       errorMessage.value = response?.message || '发布失败，请稍后重试'
       showErrorMessage.value = true
     }
