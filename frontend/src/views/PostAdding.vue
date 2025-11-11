@@ -51,11 +51,26 @@
                     class="content-input"
                   />
                   <div class="image-uploader">
-                    <div class="uploader-header">
-                      <h3>配图（最多9张，支持 jpg/png/webp，≤5MB）</h3>
-                      <v-btn size="small" variant="outlined" @click="pickImages">选择图片</v-btn>
-                      <input ref="fileInput" type="file" accept="image/jpeg,image/png,image/webp" multiple class="hidden-input" @change="onFilesPicked" />
+                    <!-- 综合版：拖拽 + 点击 + 粘贴提示 -->
+                    <div
+                      class="image-drop-zone"
+                      :class="{ dragging: isDragging }"
+                      @click="pickImages"
+                      @dragover.prevent
+                      @dragenter.prevent="onDragEnter"
+                      @dragleave.prevent="onDragLeave"
+                      @drop.prevent="onDropFiles"
+                    >
+                      <div class="drop-zone-inner">
+                        <v-icon size="48" color="primary">mdi-file-image-outline</v-icon>
+                        <p class="dz-title">拖拽 / 点击 / 粘贴图片上传</p>
+                        <p class="dz-desc">支持 JPG / PNG / WEBP · 单张 ≤5MB · 最多 9 张</p>
+                        <v-btn size="small" variant="outlined" class="dz-btn">选择图片</v-btn>
+                        <span class="paste-tip">也可使用 Ctrl+V粘贴图片</span>
+                        <input ref="fileInput" type="file" accept="image/jpeg,image/png,image/webp" multiple class="hidden-input" @change="onFilesPicked" />
+                      </div>
                     </div>
+                    <!-- 预览区 -->
                     <div v-if="imagePreviews.length" class="preview-grid">
                       <div v-for="(img, idx) in imagePreviews" :key="img.id" class="preview-item" draggable="true"
                            @dragstart="onDragStart(idx)" @dragover.prevent @drop="onDrop(idx)">
@@ -166,7 +181,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCommunityController } from '../controllers/CommunityController'
 import type { AddPostRequest } from '../interface/CommunityInterface'
@@ -191,6 +206,7 @@ const fileInput = ref<HTMLInputElement | null>(null)
 const imageFiles = ref<File[]>([])
 const imagePreviews = ref<{ id: string; url: string }[]>([])
 let dragIndex = -1
+const isDragging = ref(false)
 
 const genId = () => (crypto && 'randomUUID' in crypto) ? crypto.randomUUID() : Math.random().toString(36).slice(2)
 
@@ -229,8 +245,7 @@ const getCurrentUser = () => {
 
 const pickImages = () => fileInput.value?.click()
 
-const onFilesPicked = (e: Event) => {
-  const files = Array.from((e.target as HTMLInputElement).files || []) as File[]
+const addFiles = (files: File[]) => {
   const remain = 9 - imageFiles.value.length
   const append = files.slice(0, Math.max(0, remain)).filter(f => {
     const okType = ['image/jpeg', 'image/png', 'image/webp'].includes(f.type)
@@ -241,8 +256,38 @@ const onFilesPicked = (e: Event) => {
     imageFiles.value.push(f)
     imagePreviews.value.push({ id: genId(), url: URL.createObjectURL(f) })
   })
+}
+
+// 选择文件回调
+const onFilesPicked = (e: Event) => {
+  const files = Array.from((e.target as HTMLInputElement).files || []) as File[]
+  addFiles(files)
   ;(e.target as HTMLInputElement).value = ''
 }
+
+// 粘贴上传：仅在本页挂载时监听
+const handlePaste = (e: ClipboardEvent) => {
+  const items = Array.from(e.clipboardData?.items || [])
+  const files: File[] = []
+  for (const item of items) {
+    if (item.kind === 'file') {
+      const f = item.getAsFile()
+      if (f && f.type.startsWith('image/')) files.push(f)
+    }
+  }
+  if (files.length) {
+    addFiles(files)
+    e.preventDefault()
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('paste', handlePaste)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('paste', handlePaste)
+})
 
 const removeImage = (idx: number) => {
   URL.revokeObjectURL(imagePreviews.value[idx].url)
@@ -258,6 +303,15 @@ const onDrop = (idx: number) => {
   imagePreviews.value.splice(idx, 0, p)
   imageFiles.value.splice(idx, 0, f)
   dragIndex = -1
+}
+
+const onDragEnter = () => { isDragging.value = true }
+const onDragLeave = () => { isDragging.value = false }
+const onDropFiles = (e: DragEvent) => {
+  isDragging.value = false
+  const files = Array.from(e.dataTransfer?.files || []) as File[]
+  if (!files.length) return
+  addFiles(files)
 }
 
 // 处理发布
@@ -580,9 +634,16 @@ const goBack = () => {
   }
 }
 
-.image-uploader { margin-top: 16px; }
+/* 上传区样式（恢复拖拽区域） */
+.image-drop-zone { border:2px dashed #90caf9; background:#f5f9ff; border-radius:12px; padding:32px 16px; text-align:center; cursor:pointer; transition:.2s; position:relative; }
+.image-drop-zone.dragging { background:#e3f2fd; border-color:#1976d2; }
+.drop-zone-inner { display:flex; flex-direction:column; align-items:center; gap:8px; }
+.dz-title { font-size:16px; font-weight:600; margin:4px 0 0; color:#1976d2; }
+.dz-desc { font-size:12px; color:#666; margin:0; }
+.dz-btn { margin-top:4px; }
+.paste-tip { font-size:12px; color:#666; }
+.image-uploader { margin-top:16px; display:flex; flex-direction:column; gap:12px; }
 .hidden-input { display: none; }
-.uploader-header { display:flex; align-items:center; gap:12px; margin-bottom:8px; }
 .preview-grid { display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; }
 .preview-item { position:relative; border:1px solid #eee; border-radius:8px; overflow:hidden; }
 .preview-item img { width:100%; height:120px; object-fit:cover; display:block; }
