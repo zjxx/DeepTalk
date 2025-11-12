@@ -6,6 +6,7 @@ import com.example.deeptalk.modules.community.entity.Reply;
 import com.example.deeptalk.modules.community.service.PostService;
 import com.example.deeptalk.modules.community.service.ReplyService;
 import com.example.deeptalk.modules.community.service.QiniuStorageService;
+import com.example.deeptalk.modules.community.util.AvatarUtil;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -66,16 +67,20 @@ public class CommunityController {
             Object userIdObj = httpRequest.getAttribute("userId");
             Object usernameObj = httpRequest.getAttribute("username");
             String tokenUserId = userIdObj != null ? String.valueOf(userIdObj) : null;
-            String tokenUsername = usernameObj != null ? String.valueOf(usernameObj) : null;
-
-            // 服务器端作为真实来源：优先使用token中的信息
+            String tokenUsername = usernameObj != null ? String.valueOf(usernameObj) : null;            // 服务器端作为真实来源：优先使用token中的信息
             String effectiveAuthorId = tokenUserId != null ? tokenUserId : request.getAuthorId();
             String effectiveAuthorName = tokenUsername != null ? tokenUsername
                     : (post.getAuthor() != null && post.getAuthor().getUsername() != null ? post.getAuthor().getUsername() : post.getAuthorName());
-            String defaultAvatar = "https://sns-avatar-qc.xhscdn.com/avatar/1040g2jo31b593h86ng005p4rmeo7531ts9tr1og?imageView2/2/w/540/format/webp|imageMogr2/strip2";
-            String effectiveAvatar = (post.getAuthor() != null && post.getAuthor().getAvatar() != null && !post.getAuthor().getAvatar().isEmpty())
-                    ? post.getAuthor().getAvatar()
-                    : (post.getAuthorAvatar() != null && !post.getAuthorAvatar().isEmpty() ? post.getAuthorAvatar() : defaultAvatar);
+            
+            // 使用 AvatarUtil 根据用户ID和用户名生成不同的头像
+            String effectiveAvatar = AvatarUtil.getAvatar(effectiveAuthorId, effectiveAuthorName);
+            
+            // 如果用户已经有自定义头像，则使用自定义头像
+            if (post.getAuthor() != null && post.getAuthor().getAvatar() != null && !post.getAuthor().getAvatar().isEmpty()) {
+                effectiveAvatar = post.getAuthor().getAvatar();
+            } else if (post.getAuthorAvatar() != null && !post.getAuthorAvatar().isEmpty()) {
+                effectiveAvatar = post.getAuthorAvatar();
+            }
             
             // 设置到post中，覆盖客户端传入
             post.setAuthorId(effectiveAuthorId);
@@ -129,17 +134,18 @@ public class CommunityController {
             log.warn("[AddPostWithImages] images list is null (no part received)");
         }
         log.info("[AddPostWithImages] start, title='{}', contentLen={}, imagesCount={}, userId={}, username={}",
-                title, content != null ? content.length() : 0, images != null ? images.size() : 0, tokenUserId, tokenUsername);
-        try {
+                title, content != null ? content.length() : 0, images != null ? images.size() : 0, tokenUserId, tokenUsername);        try {
             Post post = new Post();
             post.setTitle(title);
             post.setContent(content);
 
-            String defaultAvatar = "https://sns-avatar-qc.xhscdn.com/avatar/1040g2jo31b593h86ng005p4rmeo7531ts9tr1og?imageView2/2/w/540/format/webp|imageMogr2/strip2";
+            String userId = tokenUserId != null ? tokenUserId : "anonymous";
+            String username = tokenUsername != null ? tokenUsername : "匿名用户";
+            String avatar = AvatarUtil.getAvatar(userId, username);
 
-            post.setAuthorId(tokenUserId != null ? tokenUserId : "anonymous");
-            post.setAuthorName(tokenUsername != null ? tokenUsername : "匿名用户");
-            post.setAuthorAvatar(defaultAvatar);
+            post.setAuthorId(userId);
+            post.setAuthorName(username);
+            post.setAuthorAvatar(avatar);
             post.setLikesCount(0);
             post.setCreatedAt(LocalDateTime.now());
 

@@ -3,6 +3,9 @@ package com.example.deeptalk.modules.community.service;
 import com.example.deeptalk.modules.community.entity.Author;
 import com.example.deeptalk.modules.community.entity.Post;
 import com.example.deeptalk.modules.community.repository.PostRepository;
+import com.example.deeptalk.modules.community.util.AvatarUtil;
+import com.example.deeptalk.modules.auth.repository.UserRepository;
+import com.example.deeptalk.modules.auth.entity.User;
 import com.example.deeptalk.util.RedisUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +31,9 @@ public class PostCacheService {
 
     @Autowired
     private com.example.deeptalk.modules.community.repository.PostImageRepository postImageRepository;
+    
+    @Autowired
+    private UserRepository userRepository;
 
     // Redis Key 前缀
     private static final String POST_DETAIL_PREFIX = "post:detail:";
@@ -261,16 +267,34 @@ public class PostCacheService {
         }
         
         // 注意：搜索缓存无法精确清除，等待自动过期
-    }
-
-    /**
+    }    /**
      * 组装帖子的作者信息
-     */
-    private Post assembleAuthorInfo(Post post) {
+     */    private Post assembleAuthorInfo(Post post) {
         Author author = new Author();
         author.setId(post.getAuthorId());
         author.setUsername(post.getAuthorName());
-        author.setAvatar(post.getAuthorAvatar());
+        
+        // 优先从数据库读取用户真实头像，如果没有则使用动态生成的头像
+        String avatarUrl = null;
+        try {
+            Long userId = Long.parseLong(post.getAuthorId());
+            User user = userRepository.findById(userId).orElse(null);
+            if (user != null && user.getAvatar() != null && !user.getAvatar().isEmpty()) {
+                avatarUrl = user.getAvatar();
+                log.debug("[AssembleAuthor] 使用数据库头像, userId={}, avatar={}", userId, avatarUrl);
+            }
+        } catch (NumberFormatException e) {
+            log.debug("[AssembleAuthor] userId 不是数字格式: {}", post.getAuthorId());
+        }
+        
+        // 如果数据库没有头像，使用 AvatarUtil 动态生成
+        if (avatarUrl == null || avatarUrl.isEmpty()) {
+            avatarUrl = AvatarUtil.getAvatar(post.getAuthorId(), post.getAuthorName());
+            log.debug("[AssembleAuthor] 使用动态生成头像, userId={}, avatar={}", post.getAuthorId(), avatarUrl);
+        }
+        
+        author.setAvatar(avatarUrl);
+        post.setAuthorAvatar(avatarUrl);
         
         // 查询作者发帖数和获赞数
         List<Post> authorPosts = postRepository.findByAuthorId(post.getAuthorId());

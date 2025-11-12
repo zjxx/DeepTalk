@@ -7,6 +7,9 @@ import com.example.deeptalk.modules.community.entity.AuthorFollow;
 import com.example.deeptalk.modules.community.entity.Post;
 import com.example.deeptalk.modules.community.repository.AuthorFollowRepository;
 import com.example.deeptalk.modules.community.repository.PostRepository;
+import com.example.deeptalk.modules.community.util.AvatarUtil;
+import com.example.deeptalk.modules.auth.repository.UserRepository;
+import com.example.deeptalk.modules.auth.entity.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +22,7 @@ import java.util.List;
 public class FollowService {
     private final AuthorFollowRepository followRepository;
     private final PostRepository postRepository;
+    private final UserRepository userRepository;
 
     @Transactional
     public FollowStatusResponse toggleFollow(FollowActionRequest req) {
@@ -68,16 +72,31 @@ public class FollowService {
             if (authorPosts.isEmpty()) {
                 continue; // 该作者没有帖子，跳过
             }
-            
-            Post firstPost = authorPosts.get(0);
+              Post firstPost = authorPosts.get(0);
             int totalLikes = authorPosts.stream()
                 .mapToInt(p -> p.getLikesCount() == null ? 0 : p.getLikesCount())
                 .sum();
-            
-            AuthorView view = new AuthorView();
+              AuthorView view = new AuthorView();
             view.setId(authorId);
             view.setUsername(firstPost.getAuthorName());
-            view.setAvatar(firstPost.getAuthorAvatar());
+              // 优先从数据库读取用户真实头像
+            String avatarUrl = null;
+            try {
+                Long authorUserId = Long.parseLong(authorId);
+                User user = userRepository.findById(authorUserId).orElse(null);
+                if (user != null && user.getAvatar() != null && !user.getAvatar().isEmpty()) {
+                    avatarUrl = user.getAvatar();
+                }
+            } catch (NumberFormatException ex) {
+                // userId 不是数字格式，使用动态生成
+            }
+            
+            // 如果数据库没有头像，使用 AvatarUtil 动态生成
+            if (avatarUrl == null || avatarUrl.isEmpty()) {
+                avatarUrl = AvatarUtil.getAvatar(authorId, firstPost.getAuthorName());
+            }
+            
+            view.setAvatar(avatarUrl);
             view.setAuthorPosts(authorPosts.size());
             view.setAuthorLikes(totalLikes);
             view.setFollowerCount(followRepository.countByFollowingId(authorId));

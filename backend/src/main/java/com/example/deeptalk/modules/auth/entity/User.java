@@ -15,10 +15,11 @@ public class User {
     private String username;
 
     @Column(nullable = false)
-    private String password;
-
-    @Column(nullable = false)
+    private String password;    @Column(nullable = false)
     private String email;
 
     private String role = "USER";
-} 
+    
+    @Column(length = 500)
+    private String avatar;
+}

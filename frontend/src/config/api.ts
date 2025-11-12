@@ -25,7 +25,10 @@ export const API_ENDPOINTS = {
       VERIFY_CODE: '/api/auth/forgot-password/verify-code',
       RESET_PASSWORD: '/api/auth/forgot-password/reset'
     },
-    LOGOUT: '/api/auth/logout'
+    LOGOUT: '/api/auth/logout',
+    UPDATE_AVATAR: '/api/auth/avatar/update',
+    UPLOAD_AVATAR: '/api/auth/avatar/upload',
+    USER_INFO: '/api/auth/user/info'
   },
   // 社区相关
   COMMUNITY: {

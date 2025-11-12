@@ -99,10 +99,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import userModel from '../models/user'
 import { useSnackbar } from '../composables/useSnackbar'
 import { getUserAvatar, setUserAvatar } from '../controllers/userController'
+import { uploadAvatarApi, getUserInfoApi } from '../api/user'
 
 const { snackbar, showSuccess, showError } = useSnackbar()
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -112,16 +113,37 @@ const xiaohongshuId = ref(userModel.userId)
 const followCount = ref(1)
 const fanCount = ref(2)
 const likesAndCollections = ref(0)
+const isUploading = ref(false)
 
 const activeTab = ref('posts') // 默认激活"帖子"选项卡
 
+// 页面加载时获取最新用户信息
+onMounted(async () => {
+  try {
+    const userInfo = await getUserInfoApi()
+    if (userInfo.avatar) {
+      // 更新头像
+      userAvatar.value = userInfo.avatar
+      setUserAvatar(userInfo.avatar)
+      console.log('✅ 从服务器获取头像:', userInfo.avatar)
+    }
+  } catch (error) {
+    console.error('❌ 获取用户信息失败:', error)
+    // 失败时使用本地缓存的头像
+  }
+})
+
 // 触发文件选择
 const triggerFileInput = () => {
+  if (isUploading.value) {
+    showError('正在上传头像，请稍候...')
+    return
+  }
   fileInput.value?.click()
 }
 
 // 处理文件选择
-const handleFileChange = (event: Event) => {
+const handleFileChange = async (event: Event) => {
   const target = event.target as HTMLInputElement
   const file = target.files?.[0]
   
@@ -132,30 +154,58 @@ const handleFileChange = (event: Event) => {
       return
     }
     
-    // 检查文件大小（限制为 5MB）
-    if (file.size > 5 * 1024 * 1024) {
-      showError('图片大小不能超过 5MB')
+    // 检查文件大小（限制为 2MB，与后端一致）
+    if (file.size > 2 * 1024 * 1024) {
+      showError('图片大小不能超过 2MB')
       return
     }
     
-    // 创建文件预览
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const newAvatar = e.target?.result as string
-      // 更新 userController 中的头像
-      setUserAvatar(newAvatar)
-      // 更新本地状态
-      userAvatar.value = newAvatar
-      // 更新 localStorage 中的用户信息
-      const userInfo = localStorage.getItem('userInfo')
-      if (userInfo) {
-        const info = JSON.parse(userInfo)
-        info.avatar = newAvatar
-        localStorage.setItem('userInfo', JSON.stringify(info))
-      }
-      showSuccess('头像更新成功')
+    // 检查文件格式
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
+    if (!allowedTypes.includes(file.type)) {
+      showError('仅支持 JPG、PNG、WEBP 格式')
+      return
     }
-    reader.readAsDataURL(file)
+    
+    isUploading.value = true
+    
+    try {
+      console.log('🚀 开始上传头像到七牛云...', {
+        fileName: file.name,
+        size: file.size,
+        type: file.type
+      })
+      
+      // 调用后端 API 上传头像到七牛云
+      const response = await uploadAvatarApi(file, xiaohongshuId.value)
+      
+      if (response.success && response.avatarUrl) {
+        // 更新 userController 中的头像
+        setUserAvatar(response.avatarUrl)
+        // 更新本地状态
+        userAvatar.value = response.avatarUrl
+        // 更新 localStorage 中的用户信息
+        const userInfo = localStorage.getItem('userInfo')
+        if (userInfo) {
+          const info = JSON.parse(userInfo)
+          info.avatar = response.avatarUrl
+          localStorage.setItem('userInfo', JSON.stringify(info))
+        }
+        showSuccess('头像更新成功')
+        console.log('✅ 头像已上传到七牛云:', response.avatarUrl)
+      } else {
+        showError(response.message || '头像更新失败')
+      }
+    } catch (error) {
+      console.error('❌ 上传头像失败:', error)
+      showError('头像上传失败，请重试')
+    } finally {
+      isUploading.value = false
+      // 清空 input，允许重复上传同一文件
+      if (target) {
+        target.value = ''
+      }
+    }
   }
 }
 

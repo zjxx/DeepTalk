@@ -185,7 +185,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCommunityController } from '../controllers/CommunityController'
 import type { AddPostRequest } from '../interface/CommunityInterface'
-import { getUserAvatar } from '../controllers/userController'
+import { getAvatar } from '../utils/avatarUtil'
 
 const router = useRouter()
 
@@ -357,7 +357,7 @@ const handlePublish = async () => {
           author: {
             id: currentUser.userId,
             username: currentUser.username,
-            avatar: currentUser.avatar || getUserAvatar(),
+            avatar: currentUser.avatar || getAvatar(currentUser.userId, currentUser.username),
             authorLikes: 0,
             authorPosts: 0
           },

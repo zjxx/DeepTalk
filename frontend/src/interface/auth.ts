@@ -53,4 +53,16 @@ export interface ResetPasswordResponse {
 
 export interface LogoutResponse {
   message: string;
-} 
+}
+
+export interface UpdateAvatarRequest {
+  userId: string;
+  avatar: string;
+}
+
+export interface UpdateAvatarResponse {
+  success: boolean;
+  message: string;
+  avatar?: string;
+  avatarUrl?: string;  // 七牛云上传返回的 URL
+}
