@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { CommunitySearchAPI, CommunityLikeAPI, CommunityCheckAuthorAPI, CommunityAddPostAPI, CommunityGetRepliesAPI, CommunityAddPostWithImagesAPI, CommunityAddReplyAPI, CommunityGetUserPostsAPI } from '../api/CommunityAPI'
+import { CommunitySearchAPI, CommunityLikeAPI, CommunityCheckAuthorAPI, CommunityAddPostAPI, CommunityGetRepliesAPI, CommunityAddPostWithImagesAPI, CommunityAddReplyAPI, CommunityGetUserPostsAPI, CommunityDeletePostAPI } from '../api/CommunityAPI'
 import type { Post, SearchRequest, SearchResult, LikeRequest, LikeResponse, CheckAuthorRequest, CheckAuthorResponse, AddPostRequest, AddPostResponse, GetRepliesResponse, AddPostWithImagesResponse, AddReplyRequest, AddReplyResponse, GetUserPostsRequest, GetUserPostsResponse } from '../interface/CommunityInterface'
 
 export const useCommunityController = () => {
@@ -259,6 +259,24 @@ const addPostWithImages = async (title: string, content: string, files: File[]):
         }
     }
 
+    // 删除帖子
+    const deletePost = async (postId: string): Promise<{success: boolean, message: string}> => {
+        loading.value = true
+        error.value = null
+        try {
+            console.log('Controller: 删除帖子，postId:', postId)
+            const response = await CommunityDeletePostAPI(postId)
+            console.log('Controller: 帖子删除成功')
+            return response
+        } catch (e) {
+            console.error('Controller: 删除帖子失败:', e)
+            error.value = '删除帖子失败，请稍后重试'
+            throw e
+        } finally {
+            loading.value = false
+        }
+    }
+
     return {
         posts,
         loading,
@@ -273,5 +291,6 @@ const addPostWithImages = async (title: string, content: string, files: File[]):
         getReplies,
         addReply, // 新增：导出用户回复功能
         getUserPosts, // 新增：导出获取用户帖子功能
+        deletePost, // 新增：导出删除帖子功能
     }
 }

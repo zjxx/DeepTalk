@@ -105,3 +105,9 @@ export function SocialGetUserFavoritesAPI(userId: string): Promise<Post[]> {
     const url = `${API_ENDPOINTS.SOCIAL.FAVORITE.USER_POSTS}?userId=${encodeURIComponent(userId)}`
     return http.get<Post[]>(url)
 }
+
+// 删除帖子
+export function CommunityDeletePostAPI(postId: string): Promise<{success: boolean, message: string}> {
+    console.log('删除帖子请求，帖子ID:', postId)
+    return http.delete<{success: boolean, message: string}>(`${API_ENDPOINTS.COMMUNITY.POSTS.DELETE}/${postId}`)
+}

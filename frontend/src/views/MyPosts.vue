@@ -119,7 +119,7 @@ import { useCommunityController } from '../controllers/CommunityController'
 import type { Post } from '../interface/CommunityInterface'
 
 const router = useRouter()
-const { getUserPosts, loading, error } = useCommunityController()
+const { getUserPosts, deletePost: deletePostAPI, loading, error } = useCommunityController()
 
 const userPosts = ref<Post[]>([])
 const deleteDialog = ref(false)
@@ -185,11 +185,29 @@ const confirmDelete = (postId: string) => {
 
 // 删除帖子
 const deletePost = async () => {
-  // TODO: 这里需要后端实现删除帖子的API
-  // 目前先显示提示信息
-  showSnackbar('删除功能即将推出', 'info')
-  deleteDialog.value = false
-  postToDelete.value = ''
+  if (!postToDelete.value) {
+    deleteDialog.value = false
+    return
+  }
+
+  try {
+    const response = await deletePostAPI(postToDelete.value)
+    
+    if (response.success) {
+      showSnackbar('删除成功', 'success')
+      // 从列表中移除已删除的帖子
+      userPosts.value = userPosts.value.filter(post => post.id !== postToDelete.value)
+    } else {
+      showSnackbar(response.message || '删除失败', 'error')
+    }
+  } catch (e) {
+    console.error('删除帖子失败:', e)
+    const errorMessage = e instanceof Error ? e.message : '删除失败，请稍后重试'
+    showSnackbar(errorMessage, 'error')
+  } finally {
+    deleteDialog.value = false
+    postToDelete.value = ''
+  }
 }
 
 // 格式化日期

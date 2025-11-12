@@ -283,9 +283,7 @@ public class CommunityController {
             
             return ResponseEntity.internalServerError().body(response);
         }
-    }
-
-    /**
+    }    /**
      * 获取用户的所有帖子
      */
     @PostMapping(value = "/posts/user", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
@@ -314,6 +312,57 @@ public class CommunityController {
             response.setCount(0);
             
             return ResponseEntity.internalServerError().body(response);
+        }
+    }
+
+    /**
+     * 删除帖子
+     */
+    @DeleteMapping(value = "/posts/{postId}", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
+    public ResponseEntity<Map<String, Object>> deletePost(
+            @PathVariable String postId,
+            HttpServletRequest httpRequest) {
+        try {
+            log.info("📥 删除帖子请求，postId: {}", postId);
+            
+            // 从Token中获取用户ID
+            Object userIdObj = httpRequest.getAttribute("userId");
+            String userId = userIdObj != null ? String.valueOf(userIdObj) : null;
+            
+            if (userId == null) {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("success", false);
+                errorResponse.put("message", "未登录");
+                return ResponseEntity.status(401).body(errorResponse);
+            }
+            
+            boolean deleted = postService.deletePost(postId, userId);
+            
+            Map<String, Object> response = new HashMap<>();
+            if (deleted) {
+                response.put("success", true);
+                response.put("message", "删除成功");
+                log.info("✅ 帖子删除成功，postId: {}", postId);
+            } else {
+                response.put("success", false);
+                response.put("message", "帖子不存在");
+                log.warn("⚠️ 帖子不存在，postId: {}", postId);
+            }
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (RuntimeException e) {
+            log.error("❌ 删除帖子失败: {}", e.getMessage(), e);
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", e.getMessage());
+            return ResponseEntity.status(403).body(errorResponse);
+        } catch (Exception e) {
+            log.error("❌ 删除帖子失败: {}", e.getMessage(), e);
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "删除失败: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(errorResponse);
         }
     }
 

@@ -10,6 +10,7 @@ import com.example.deeptalk.modules.community.entity.PostImage;
 import com.example.deeptalk.modules.community.repository.PostLikeRepository;
 import com.example.deeptalk.modules.community.repository.PostRepository;
 import com.example.deeptalk.modules.community.repository.PostImageRepository;
+import com.example.deeptalk.modules.community.repository.ReplyRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,9 +29,11 @@ public class PostService {
     
     @Autowired
     private PostCacheService postCacheService;
-    
-    @Autowired
+      @Autowired
     private PostImageRepository postImageRepository;
+
+    @Autowired
+    private ReplyRepository replyRepository;
 
     public List<Post> searchPosts(String keyword, String type) {
         // 使用缓存服务
@@ -136,12 +139,45 @@ public class PostService {
         CheckAuthorResponse response = new CheckAuthorResponse();
         response.setAuthor(author);
         return response;
-    }
-
-    /**
+    }    /**
      * 获取指定用户的所有帖子
      */
     public List<Post> getPostsByUserId(String userId) {
         return postRepository.findByAuthorIdOrderByCreatedAtDesc(userId);
+    }    /**
+     * 删除帖子
+     */
+    @Transactional
+    public boolean deletePost(String postId, String userId) {
+        try {
+            // 查找帖子
+            Post post = postRepository.findById(postId).orElse(null);
+            if (post == null) {
+                return false;
+            }
+            
+            // 验证是否为帖子作者
+            if (!post.getAuthorId().equals(userId)) {
+                throw new RuntimeException("无权删除此帖子");
+            }
+            
+            // 删除帖子的回复
+            replyRepository.deleteByPostId(postId);
+            
+            // 删除帖子相关的图片记录
+            postImageRepository.deleteByPostId(postId);
+            
+            // 删除帖子的点赞记录
+            postLikeRepository.deleteByPostId(postId);
+              // 删除帖子
+            postRepository.deleteById(postId);
+            
+            // 清除缓存
+            postCacheService.clearAllCache();
+            
+            return true;
+        } catch (Exception e) {
+            throw new RuntimeException("删除帖子失败: " + e.getMessage());
+        }
     }
 }
