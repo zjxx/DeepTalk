@@ -4,7 +4,7 @@ const meta = import.meta as unknown as ImportMetaEnvFlag;
 const isProd = meta.env?.PROD === true;
 export const API_BASE_URL = isProd 
   ? 'https://115.175.45.173:8080' 
-  : 'http://localhost:8080'
+  : 'http://10.210.83.161:8080'
 
 // WebSocket 基础配置
 export const WS_BASE_URL = isProd
