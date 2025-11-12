@@ -136,12 +136,13 @@ export class VersusController {
     }
 
     this.aiService.onThinkingStateChange = (isThinking) => {
+      console.log(isThinking ? '🤔 AI开始思考，正在等待真正的回复...' : '✅ AI思考完成')
       this.model.updateMatchState({ isPartnerThinking: isThinking })
       this.notifyStateChange()
     }
 
     this.aiService.onResponseGenerated = (response) => {
-      console.log('AI回复已生成，添加到对话历史:', response)
+      console.log('🎉 AI正常回复已生成，添加到对话历史:', response)
       
       // 立即添加到对话记录显示
       this.model.addTranscriptMessage({ 
@@ -154,14 +155,21 @@ export class VersusController {
       // 如果是AI辅助模式，使用TTS朗读
       const state = this.model.getState()
       if (state.matchType === 'AI辅助') {
-        console.log('开始TTS朗读AI回复')
+        console.log('🔊 开始TTS朗读AI回复')
         this.ttsService.speak(response, 'en-US', 1.0, 1.0)
       }
     }
 
     this.aiService.onErrorOccurred = (error) => {
-      console.error('AI服务错误:', error)
-      // 可以在这里添加错误处理逻辑
+      console.error('❌ AI服务错误:', error)
+      
+      // 添加系统消息到对话历史
+      this.model.addTranscriptMessage({ 
+        isUser: false, 
+        text: `[系统消息] ${error}`,
+        timestamp: Date.now()
+      })
+      this.notifyStateChange()
     }
 
     // TTS 服务事件监听
@@ -415,9 +423,8 @@ export class VersusController {
     this.model.switchSpeakingTurn()
     
     const newState = this.model.getState()
-    if (newState.speakingTurn === 'partner' && newState.matchType === 'AI辅助') {
-      this.aiService.startSpeaking()
-    }
+    // 移除自动调用 startSpeaking() 的逻辑
+    // AI回复现在完全通过语音识别结果触发，在 handleAIResponse() 中处理
     
     this.notifyStateChange()
     console.log(`发言权切换到: ${newState.speakingTurn}`)
