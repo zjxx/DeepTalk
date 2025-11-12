@@ -85,6 +85,14 @@ export function SocialRecommendAuthorsAPI(currentUserId?: string, limit = 10): P
   return http.get<AuthorListResponse>(url)
 }
 
+// 获取用户关注的作者列表
+export function SocialGetFollowingListAPI(userId?: string): Promise<AuthorListResponse> {
+  const url = userId 
+    ? `${API_ENDPOINTS.SOCIAL.FOLLOW.LIST}?userId=${encodeURIComponent(userId)}`
+    : API_ENDPOINTS.SOCIAL.FOLLOW.LIST
+  return http.get<AuthorListResponse>(url)
+}
+
 // 获取用户帖子
 export function CommunityGetUserPostsAPI(request: GetUserPostsRequest): Promise<GetUserPostsResponse> {
     console.log('获取用户帖子请求:', JSON.stringify(request))

@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { SocialFollowAPI, SocialFollowStatusAPI, SocialFavoriteAPI, SocialFavoriteStatusAPI, SocialReactAPI, SocialReactionSummaryAPI, SocialRecommendAuthorsAPI } from '../api/CommunityAPI'
+import { SocialFollowAPI, SocialFollowStatusAPI, SocialFavoriteAPI, SocialFavoriteStatusAPI, SocialReactAPI, SocialReactionSummaryAPI, SocialRecommendAuthorsAPI, SocialGetFollowingListAPI } from '../api/CommunityAPI'
 import type { FollowActionRequest, FollowStatusResponse, FavoriteRequest, FavoriteStatusResponse, ReactionRequest, ReactionSummaryResponse, AuthorListResponse } from '../interface/SocialInterface'
 
 const getCurrentUserId = (): string | null => {
@@ -105,6 +105,16 @@ export const useSocialController = () => {
     }
   }
 
+  // 获取用户关注列表
+  const getFollowingList = async (userId?: string): Promise<AuthorListResponse | null> => {
+    try {
+      return await SocialGetFollowingListAPI(userId)
+    } catch (e) {
+      console.error('获取关注列表失败', e)
+      return null
+    }
+  }
+
   return {
     followLoading,
     favoriteLoading,
@@ -116,6 +126,7 @@ export const useSocialController = () => {
     getFavoriteStatus,
     react,
     getReactionSummary,
-    getRecommendedAuthors
+    getRecommendedAuthors,
+    getFollowingList
   }
 }

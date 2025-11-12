@@ -59,7 +59,8 @@ export const API_ENDPOINTS = {
   SOCIAL: {
     FOLLOW: {
       ACTION: '/api/social/follow',
-      STATUS: '/api/social/follow/status'
+      STATUS: '/api/social/follow/status',
+      LIST: '/api/social/follow/list'  // 新增: 获取用户关注列表
     },
     FAVORITE: {
       ACTION: '/api/social/favorite',

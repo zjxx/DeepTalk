@@ -7,6 +7,7 @@ import com.example.deeptalk.modules.community.dto.FavoriteStatusResponse;
 import com.example.deeptalk.modules.community.dto.ReactionRequest;
 import com.example.deeptalk.modules.community.dto.ReactionSummaryResponse;
 import com.example.deeptalk.modules.community.dto.AuthorListResponse;
+import com.example.deeptalk.modules.community.dto.AuthorView;
 import com.example.deeptalk.modules.community.service.FollowService;
 import com.example.deeptalk.modules.community.service.FavoriteService;
 import com.example.deeptalk.modules.community.service.ReactionService;
@@ -55,6 +56,35 @@ public class SocialController {
         }
         System.out.println("[Social] FOLLOW status user=" + currentUserId + ", target=" + targetAuthorId);
         return ResponseEntity.ok(followService.getStatus(currentUserId, targetAuthorId));
+    }
+    
+    /**
+     * 获取用户关注的作者列表
+     */
+    @GetMapping(value = "/follow/list", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
+    public ResponseEntity<AuthorListResponse> getFollowingList(@RequestParam(required = false) String userId,
+                                                                HttpServletRequest httpRequest) {
+        if (userId == null || userId.isEmpty()) {
+            // 从 Token 中获取用户 ID
+            Object userIdObj = httpRequest.getAttribute("userId");
+            String tokenUserId = userIdObj != null ? String.valueOf(userIdObj) : null;
+            
+            if (tokenUserId != null && !tokenUserId.isEmpty()) {
+                userId = tokenUserId;
+            }
+        }
+        
+        System.out.println("[Social] GET following list for user=" + userId);
+        
+        if (userId == null || userId.isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+        
+        List<AuthorView> followingList = followService.getFollowingList(userId);
+        AuthorListResponse response = new AuthorListResponse();
+        response.setAuthors(followingList);
+        
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping(value = "/favorite", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
