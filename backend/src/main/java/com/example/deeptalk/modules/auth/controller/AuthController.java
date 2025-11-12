@@ -2,6 +2,8 @@ package com.example.deeptalk.modules.auth.controller;
 
 import com.example.deeptalk.modules.auth.entity.User;
 import com.example.deeptalk.modules.auth.repository.UserRepository;
+import com.example.deeptalk.modules.auth.dto.UploadAvatarResponse;
+import com.example.deeptalk.modules.community.service.QiniuStorageService;
 import com.example.deeptalk.service.VerificationCodeService;
 import com.example.deeptalk.service.TokenBlacklistService;
 import io.jsonwebtoken.Claims;
@@ -15,6 +17,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
@@ -25,9 +28,7 @@ import java.util.Map;
 @RequestMapping("/api/auth")
 @CrossOrigin(origins = "*")
 public class AuthController {
-    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
-
-    @Autowired
+    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);    @Autowired
     private UserRepository userRepository;
 
     @Autowired
@@ -38,6 +39,9 @@ public class AuthController {
     
     @Autowired
     private TokenBlacklistService tokenBlacklistService;
+
+    @Autowired
+    private QiniuStorageService qiniuStorageService;
 
     @Autowired
     private SecretKey jwtSecretKey;
@@ -178,9 +182,7 @@ public class AuthController {
         response.put("resetToken", resetToken);
         
         return ResponseEntity.ok(response);
-    }
-
-    @PostMapping("/forgot-password/reset")
+    }    @PostMapping("/forgot-password/reset")
     public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordWithTokenRequest request) {
         logger.info("收到重置密码请求");
         try {
@@ -205,6 +207,53 @@ public class AuthController {
             return ResponseEntity.ok("密码重置成功");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("重置密码失败：" + e.getMessage());
+        }
+    }
+
+    @PostMapping("/avatar/upload")
+    public ResponseEntity<?> uploadAvatar(
+            @RequestParam("avatar") MultipartFile file,
+            @RequestParam("userId") Long userId) {
+        logger.info("收到头像上传请求 - 用户ID: {}, 文件名: {}, 文件大小: {} bytes", 
+                userId, file.getOriginalFilename(), file.getSize());
+        
+        UploadAvatarResponse response = new UploadAvatarResponse();
+        
+        try {
+            // 验证用户是否存在
+            User user = userRepository.findById(userId).orElse(null);
+            if (user == null) {
+                response.setSuccess(false);
+                response.setMessage("用户不存在");
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            // 验证文件
+            if (file.isEmpty()) {
+                response.setSuccess(false);
+                response.setMessage("文件为空");
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            // 上传到七牛云
+            String avatarUrl = qiniuStorageService.uploadImage(file, "avatars");
+            
+            // 更新用户头像
+            user.setAvatar(avatarUrl);
+            userRepository.save(user);
+            
+            response.setSuccess(true);
+            response.setMessage("头像上传成功");
+            response.setAvatarUrl(avatarUrl);
+            
+            logger.info("头像上传成功 - 用户ID: {}, 头像URL: {}", userId, avatarUrl);
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            logger.error("头像上传失败 - 用户ID: {}, 错误: {}", userId, e.getMessage(), e);
+            response.setSuccess(false);
+            response.setMessage("头像上传失败：" + e.getMessage());
+            return ResponseEntity.status(500).body(response);
         }
     }
 
