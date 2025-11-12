@@ -107,3 +107,16 @@ export interface AddPostWithImagesResponse {
   post: Post | null;
   imageUrls: string[];
 }
+
+// 获取用户帖子请求
+export interface GetUserPostsRequest {
+  userId: string;
+}
+
+// 获取用户帖子响应
+export interface GetUserPostsResponse {
+  success: boolean;
+  message?: string;
+  posts: Post[];
+  count: number;
+}

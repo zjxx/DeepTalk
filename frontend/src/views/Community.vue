@@ -113,6 +113,12 @@
                     <v-icon size="24">mdi-pencil</v-icon>
                   </v-btn>
                   <p class="btn-label mt-2">发布新帖</p>
+                  
+                  <v-btn icon size="large" color="secondary" variant="elevated" class="my-posts-btn mt-4"
+                    @click="goToMyPosts" title="我的帖子">
+                    <v-icon size="24">mdi-post</v-icon>
+                  </v-btn>
+                  <p class="btn-label mt-2">我的帖子</p>
                 </div>
               </v-card-text>
             </v-card>
@@ -143,6 +149,9 @@ const searchType = ref('posts')
 
 // 跳转到发帖页面
 const goToCreatePost = () => { router.push('/post/create') }
+
+// 跳转到我的帖子页面
+const goToMyPosts = () => { router.push('/my-posts') }
 
 // 搜索选项
 const searchOptions = [
@@ -252,7 +261,7 @@ const loadRecommendedAuthors = async () => {
 }
 
 onMounted(async () => {
-  await loadCommunityData()
+  await loadCommunityData('', 'posts')
   // 仅登录时加载社交状态
   if (isLoggedIn.value) {
     for (const p of posts.value) {
@@ -283,7 +292,8 @@ onMounted(async () => {
   padding: 16px 0;
 }
 
-.create-post-btn {
+.create-post-btn,
+.my-posts-btn {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 

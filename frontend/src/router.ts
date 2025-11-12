@@ -16,6 +16,7 @@ import ShopLive2dView from './views/ShopLive2dView.vue'
 import MyRepositories from './views/MyRepositories.vue'
 import RepositoriesLive2dView from './views/RepositoriesLive2dView.vue'
 import PostAdding from './views/PostAdding.vue'
+import MyPosts from './views/MyPosts.vue'
 import HistoricalScores from './views/HistoricalScores.vue'
 import MobileCommunity from './views/mobile/MobileCommunity.vue'
 import MobileShop from './views/mobile/MobileShop.vue'
@@ -79,6 +80,12 @@ const routes = [
   name: 'PostAdding',
   component: PostAdding,
   meta: { requiresAuth: true }
+  },
+  {
+    path: '/my-posts',
+    name: 'MyPosts',
+    component: MyPosts,
+    meta: { requiresAuth: true }
   },
   {
     path: '/shop',

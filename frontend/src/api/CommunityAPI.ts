@@ -1,5 +1,5 @@
 //import axios from 'axios'
-import type { Post, CheckAuthorRequest, CheckAuthorResponse, SearchRequest, SearchResult, LikeRequest, LikeResponse, AddPostRequest, GetRepliesResponse, AddPostWithImagesResponse, AddReplyRequest, AddReplyResponse } from '../interface/CommunityInterface'
+import type { Post, CheckAuthorRequest, CheckAuthorResponse, SearchRequest, SearchResult, LikeRequest, LikeResponse, AddPostRequest, GetRepliesResponse, AddPostWithImagesResponse, AddReplyRequest, AddReplyResponse, GetUserPostsRequest, GetUserPostsResponse } from '../interface/CommunityInterface'
 import { API_ENDPOINTS } from '../config/api'
 import { http } from '../utils/http'
 import type { FollowActionRequest, FollowStatusResponse, FavoriteRequest, FavoriteStatusResponse, ReactionRequest, ReactionSummaryResponse, AuthorListResponse } from '../interface/SocialInterface.ts'
@@ -83,4 +83,10 @@ export function SocialReactionSummaryAPI(postId: string, userId: string): Promis
 export function SocialRecommendAuthorsAPI(currentUserId?: string, limit = 10): Promise<AuthorListResponse> {
   const url = `${API_ENDPOINTS.SOCIAL.AUTHORS.RECOMMEND}?limit=${limit}${currentUserId ? `&currentUserId=${encodeURIComponent(currentUserId)}` : ''}`
   return http.get<AuthorListResponse>(url)
+}
+
+// 获取用户帖子
+export function CommunityGetUserPostsAPI(request: GetUserPostsRequest): Promise<GetUserPostsResponse> {
+    console.log('获取用户帖子请求:', JSON.stringify(request))
+    return http.post<GetUserPostsResponse, GetUserPostsRequest>(API_ENDPOINTS.COMMUNITY.POSTS.USER_POSTS, request)
 }

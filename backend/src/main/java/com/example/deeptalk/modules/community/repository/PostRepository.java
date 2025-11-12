@@ -15,4 +15,7 @@ public interface PostRepository extends JpaRepository<Post, String> {
 
     @Query("SELECT p FROM Post p WHERE p.authorId = :authorId")
     List<Post> findByAuthorId(@Param("authorId") String authorId);
-} 
+
+    @Query("SELECT p FROM Post p WHERE p.authorId = :authorId ORDER BY p.createdAt DESC")
+    List<Post> findByAuthorIdOrderByCreatedAtDesc(@Param("authorId") String authorId);
+}

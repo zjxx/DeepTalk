@@ -137,4 +137,11 @@ public class PostService {
         response.setAuthor(author);
         return response;
     }
+
+    /**
+     * 获取指定用户的所有帖子
+     */
+    public List<Post> getPostsByUserId(String userId) {
+        return postRepository.findByAuthorIdOrderByCreatedAtDesc(userId);
+    }
 }

@@ -1,6 +1,6 @@
 import { ref } from 'vue'
-import { CommunitySearchAPI, CommunityLikeAPI, CommunityCheckAuthorAPI, CommunityAddPostAPI, CommunityGetRepliesAPI, CommunityAddPostWithImagesAPI, CommunityAddReplyAPI } from '../api/CommunityAPI'
-import type { Post, SearchRequest, SearchResult, LikeRequest, LikeResponse, CheckAuthorRequest, CheckAuthorResponse, AddPostRequest, AddPostResponse, GetRepliesResponse, AddPostWithImagesResponse, AddReplyRequest, AddReplyResponse } from '../interface/CommunityInterface'
+import { CommunitySearchAPI, CommunityLikeAPI, CommunityCheckAuthorAPI, CommunityAddPostAPI, CommunityGetRepliesAPI, CommunityAddPostWithImagesAPI, CommunityAddReplyAPI, CommunityGetUserPostsAPI } from '../api/CommunityAPI'
+import type { Post, SearchRequest, SearchResult, LikeRequest, LikeResponse, CheckAuthorRequest, CheckAuthorResponse, AddPostRequest, AddPostResponse, GetRepliesResponse, AddPostWithImagesResponse, AddReplyRequest, AddReplyResponse, GetUserPostsRequest, GetUserPostsResponse } from '../interface/CommunityInterface'
 
 export const useCommunityController = () => {
     const posts = ref<Post[]>([]) 
@@ -239,6 +239,26 @@ const addPostWithImages = async (title: string, content: string, files: File[]):
         })
     }
 
+    // 获取用户自己的帖子
+    const getUserPosts = async (userId: string): Promise<GetUserPostsResponse> => {
+        loading.value = true
+        error.value = null
+        try {
+            console.log('Controller: 获取用户帖子，userId:', userId)
+            const request: GetUserPostsRequest = { userId }
+            const response = await CommunityGetUserPostsAPI(request)
+            console.log('Controller: 用户帖子获取成功，数量:', response.count)
+            normalizePosts(response.posts)
+            return response
+        } catch (e) {
+            console.error('Controller: 获取用户帖子失败:', e)
+            error.value = '获取用户帖子失败，请稍后重试'
+            throw e
+        } finally {
+            loading.value = false
+        }
+    }
+
     return {
         posts,
         loading,
@@ -252,5 +272,6 @@ const addPostWithImages = async (title: string, content: string, files: File[]):
         checkAuthor,
         getReplies,
         addReply, // 新增：导出用户回复功能
+        getUserPosts, // 新增：导出获取用户帖子功能
     }
 }

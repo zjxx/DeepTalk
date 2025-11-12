@@ -35,7 +35,8 @@ export const API_ENDPOINTS = {
       ADD: '/api/community/posts/add',
       ADD_WITH_IMAGES: '/api/community/posts/add-with-images', // 新增: 带图片发帖
       CHECK_AUTHOR: '/api/community/posts/check-author',
-      REPLIES: '/api/community/posts'  // GET /api/community/posts/{postId}/replies
+      REPLIES: '/api/community/posts',  // GET /api/community/posts/{postId}/replies
+      USER_POSTS: '/api/community/posts/user'  // 新增: 获取用户帖子
     },
   },
   //商店相关

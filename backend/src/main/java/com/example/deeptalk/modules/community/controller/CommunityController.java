@@ -279,6 +279,38 @@ public class CommunityController {
         }
     }
 
+    /**
+     * 获取用户的所有帖子
+     */
+    @PostMapping(value = "/posts/user", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
+    public ResponseEntity<GetUserPostsResponse> getUserPosts(@RequestBody GetUserPostsRequest request) {
+        try {
+            log.info("📥 获取用户帖子，userId: {}", request.getUserId());
+            
+            List<Post> userPosts = postService.getPostsByUserId(request.getUserId());
+            
+            GetUserPostsResponse response = new GetUserPostsResponse();
+            response.setSuccess(true);
+            response.setMessage("获取成功");
+            response.setPosts(userPosts);
+            response.setCount(userPosts.size());
+            
+            log.info("✅ 返回 {} 条帖子", userPosts.size());
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            log.error("❌ 获取用户帖子失败: {}", e.getMessage(), e);
+            
+            GetUserPostsResponse response = new GetUserPostsResponse();
+            response.setSuccess(false);
+            response.setMessage("获取失败: " + e.getMessage());
+            response.setPosts(List.of());
+            response.setCount(0);
+            
+            return ResponseEntity.internalServerError().body(response);
+        }
+    }
+
     @GetMapping(value = "/ping", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
     public ResponseEntity<Map<String, Object>> ping(HttpServletRequest req) {
         Map<String, Object> m = new HashMap<>();
