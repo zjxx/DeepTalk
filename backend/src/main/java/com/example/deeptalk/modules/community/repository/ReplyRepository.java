@@ -10,4 +10,6 @@ public interface ReplyRepository extends JpaRepository<Reply, String> {
     List<Reply> findByPostIdOrderByCreatedAtAsc(String postId);
     
     long countByPostId(String postId);
+    
+    void deleteByPostId(String postId);
 }

@@ -25,7 +25,10 @@ export const API_ENDPOINTS = {
       VERIFY_CODE: '/api/auth/forgot-password/verify-code',
       RESET_PASSWORD: '/api/auth/forgot-password/reset'
     },
-    LOGOUT: '/api/auth/logout'
+    LOGOUT: '/api/auth/logout',
+    UPDATE_AVATAR: '/api/auth/avatar/update',
+    UPLOAD_AVATAR: '/api/auth/avatar/upload',
+    USER_INFO: '/api/auth/user/info'
   },
   // 社区相关
   COMMUNITY: {
@@ -33,8 +36,11 @@ export const API_ENDPOINTS = {
     POSTS: {
       LIKE: '/api/community/posts/like',
       ADD: '/api/community/posts/add',
+      ADD_WITH_IMAGES: '/api/community/posts/add-with-images', // 新增: 带图片发帖
       CHECK_AUTHOR: '/api/community/posts/check-author',
-      REPLIES: '/api/community/posts'  // GET /api/community/posts/{postId}/replies
+      REPLIES: '/api/community/posts',  // GET /api/community/posts/{postId}/replies
+      USER_POSTS: '/api/community/posts/user',  // 新增: 获取用户帖子
+      DELETE: '/api/community/posts'  // 新增: 删除帖子 DELETE /api/community/posts/{postId}
     },
   },
   //商店相关
@@ -57,11 +63,13 @@ export const API_ENDPOINTS = {
   SOCIAL: {
     FOLLOW: {
       ACTION: '/api/social/follow',
-      STATUS: '/api/social/follow/status'
+      STATUS: '/api/social/follow/status',
+      LIST: '/api/social/follow/list'  // 新增: 获取用户关注列表
     },
     FAVORITE: {
       ACTION: '/api/social/favorite',
-      STATUS: '/api/social/favorite/status'
+      STATUS: '/api/social/favorite/status',
+      USER_POSTS: '/api/social/favorite/posts'  // 新增: 获取用户收藏的帖子
     },
     REACTION: {
       ACTION: '/api/social/reaction',

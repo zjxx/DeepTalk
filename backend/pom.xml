@@ -90,6 +90,13 @@
             <artifactId>commons-pool2</artifactId>
         </dependency>
         
+        <!-- 七牛云SDK依赖 -->
+        <dependency>
+            <groupId>com.qiniu</groupId>
+            <artifactId>qiniu-java-sdk</artifactId>
+            <version>7.13.0</version>
+        </dependency>
+        
         <!-- 测试依赖 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -150,4 +157,4 @@
             </plugin>
         </plugins>
     </build>
-</project> 
+</project>

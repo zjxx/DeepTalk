@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试关注列表 API</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .section {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h2 {
+            color: #333;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        .btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn:hover {
+            background: #45a049;
+        }
+        .result {
+            background: #f9f9f9;
+            padding: 15px;
+            margin-top: 10px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        input {
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 300px;
+        }
+        .error {
+            color: red;
+            background: #fee;
+        }
+        .success {
+            color: green;
+            background: #efe;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 测试关注列表功能</h1>
+    
+    <div class="section">
+        <h2>1. 设置用户 ID</h2>
+        <input type="text" id="userId" placeholder="输入用户ID (例如: user123)" value="">
+        <button class="btn" onclick="saveUserId()">保存用户ID</button>
+        <div id="userIdResult" class="result"></div>
+    </div>
+
+    <div class="section">
+        <h2>2. 关注作者</h2>
+        <input type="text" id="targetAuthorId" placeholder="输入要关注的作者ID" value="">
+        <button class="btn" onclick="followAuthor()">关注</button>
+        <button class="btn" onclick="unfollowAuthor()">取消关注</button>
+        <div id="followResult" class="result"></div>
+    </div>
+
+    <div class="section">
+        <h2>3. 获取关注列表</h2>
+        <button class="btn" onclick="getFollowingList()">获取我的关注列表</button>
+        <div id="followingListResult" class="result"></div>
+    </div>
+
+    <div class="section">
+        <h2>4. 检查关注状态</h2>
+        <input type="text" id="checkAuthorId" placeholder="输入要检查的作者ID" value="">
+        <button class="btn" onclick="checkFollowStatus()">检查状态</button>
+        <div id="statusResult" class="result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8080';
+        let currentUserId = '';
+
+        function saveUserId() {
+            currentUserId = document.getElementById('userId').value;
+            if (currentUserId) {
+                document.getElementById('userIdResult').className = 'result success';
+                document.getElementById('userIdResult').textContent = '✅ 用户ID已保存: ' + currentUserId;
+            } else {
+                document.getElementById('userIdResult').className = 'result error';
+                document.getElementById('userIdResult').textContent = '❌ 请输入用户ID';
+            }
+        }
+
+        async function followAuthor() {
+            if (!currentUserId) {
+                alert('请先设置用户ID');
+                return;
+            }
+            
+            const targetAuthorId = document.getElementById('targetAuthorId').value;
+            if (!targetAuthorId) {
+                alert('请输入要关注的作者ID');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/social/follow`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        userId: currentUserId,
+                        targetAuthorId: targetAuthorId,
+                        follow: true
+                    })
+                });
+
+                const data = await response.json();
+                document.getElementById('followResult').className = 'result success';
+                document.getElementById('followResult').textContent = '✅ 关注成功!\n' + JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('followResult').className = 'result error';
+                document.getElementById('followResult').textContent = '❌ 错误: ' + error.message;
+            }
+        }
+
+        async function unfollowAuthor() {
+            if (!currentUserId) {
+                alert('请先设置用户ID');
+                return;
+            }
+            
+            const targetAuthorId = document.getElementById('targetAuthorId').value;
+            if (!targetAuthorId) {
+                alert('请输入要取消关注的作者ID');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/social/follow`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        userId: currentUserId,
+                        targetAuthorId: targetAuthorId,
+                        follow: false
+                    })
+                });
+
+                const data = await response.json();
+                document.getElementById('followResult').className = 'result success';
+                document.getElementById('followResult').textContent = '✅ 取消关注成功!\n' + JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('followResult').className = 'result error';
+                document.getElementById('followResult').textContent = '❌ 错误: ' + error.message;
+            }
+        }
+
+        async function getFollowingList() {
+            if (!currentUserId) {
+                alert('请先设置用户ID');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/social/follow/list?userId=${encodeURIComponent(currentUserId)}`);
+                const data = await response.json();
+                
+                document.getElementById('followingListResult').className = 'result success';
+                document.getElementById('followingListResult').textContent = 
+                    '✅ 关注列表 (' + (data.authors ? data.authors.length : 0) + ' 个作者):\n' + 
+                    JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('followingListResult').className = 'result error';
+                document.getElementById('followingListResult').textContent = '❌ 错误: ' + error.message;
+            }
+        }
+
+        async function checkFollowStatus() {
+            if (!currentUserId) {
+                alert('请先设置用户ID');
+                return;
+            }
+            
+            const checkAuthorId = document.getElementById('checkAuthorId').value;
+            if (!checkAuthorId) {
+                alert('请输入要检查的作者ID');
+                return;
+            }
+
+            try {
+                const response = await fetch(
+                    `${API_BASE}/api/social/follow/status?currentUserId=${encodeURIComponent(currentUserId)}&targetAuthorId=${encodeURIComponent(checkAuthorId)}`
+                );
+                const data = await response.json();
+                
+                document.getElementById('statusResult').className = 'result success';
+                document.getElementById('statusResult').textContent = 
+                    '✅ 关注状态:\n' + JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('statusResult').className = 'result error';
+                document.getElementById('statusResult').textContent = '❌ 错误: ' + error.message;
+            }
+        }
+
+        // 页面加载时的提示
+        window.onload = function() {
+            document.getElementById('userIdResult').textContent = '💡 提示: 请先输入你的用户ID，然后可以测试关注功能';
+        };
+    </script>
+</body>
+</html>

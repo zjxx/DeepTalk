@@ -1,79 +1,53 @@
-import axios, { type AxiosRequestConfig } from 'axios'
+import axios, { type AxiosRequestConfig, type AxiosRequestHeaders } from 'axios'
 import { API_BASE_URL } from '../config/api'
 
 // 创建 axios 实例
 const httpClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
-  headers: {
-    'Content-Type': 'application/json'
-  },
+  timeout: 10000
 })
 
 // 请求拦截器
 httpClient.interceptors.request.use(
   (config) => {
-    // 登录、注册和验证码请求不需要带上 token
-    if (config.url?.includes('/api/auth/login') || 
-        config.url?.includes('/api/auth/register') || 
-        config.url?.includes('/api/auth/send-verification-code') ||
-        config.url?.includes('/api/auth/forgot-password') ||
-        config.url?.includes('/api/shop/search') ||
-        config.url?.includes('/api/shop/check-stock') ||
-        config.url?.includes('/api/community/search')) {
-      console.log('发送请求(无需token):', {
-        url: config.url,
-        method: config.method,
-        data: config.data,
-        headers: config.headers
-      })
-      return config
+    const headers: AxiosRequestHeaders = (config.headers || {}) as AxiosRequestHeaders
+    const isFormData = typeof FormData !== 'undefined' && config.data instanceof FormData
+    if (isFormData) {
+      delete headers['Content-Type']
+    } else {
+      if (!headers['Content-Type']) headers['Content-Type'] = 'application/json'
     }
-    
-    // 从 localStorage 或 sessionStorage 获取 token
-    const localToken = localStorage.getItem('token')
-    const sessionToken = sessionStorage.getItem('token')
-    const token = localToken || sessionToken
-    
-    if (!token) {
-      return Promise.reject(new Error('Token不存在，请先登录'))
+
+    // 不需要token的接口白名单（只读操作）
+    const noToken = (
+      config.url?.includes('/api/auth/login') ||
+      config.url?.includes('/api/auth/register') ||
+      config.url?.includes('/api/auth/send-verification-code') ||
+      config.url?.includes('/api/auth/forgot-password') ||
+      config.url?.includes('/api/shop/search') ||
+      config.url?.includes('/api/shop/check-stock') ||
+      config.url?.includes('/api/community/search') ||
+      config.url?.includes('/api/community/posts/latest') ||
+      (config.url?.includes('/api/community/posts/') && config.url?.includes('/replies') && config.method?.toUpperCase() === 'GET')
+    )
+    if (!noToken) {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+      if (token) headers['Authorization'] = `Bearer ${token}`
     }
-    
-    // 设置 Authorization 头
-    config.headers = config.headers || {}
-    config.headers['Authorization'] = `Bearer ${token}`
-    
-    console.log('发送请求:', {
-      url: config.url,
-      method: config.method,
-      data: config.data,
-      headers: config.headers
-    })
+    config.headers = headers
     return config
   },
-  (error) => {
-    console.error('请求错误:', error)
-    return Promise.reject(error)
-  }
+  (error) => Promise.reject(error)
 )
 
 // 响应拦截器
 httpClient.interceptors.response.use(
-  (response) => {
-    console.log('收到响应:', {
-      url: response.config.url,
-      status: response.status,
-      data: response.data
-    })
-    return response.data
-  },
+  (response) => response.data,
   (error) => {
-    console.error('响应错误:', {
-      url: error.config?.url,
-      status: error.response?.status,
-      data: error.response?.data,
-      message: error.message
-    })
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token'); sessionStorage.removeItem('token')
+      localStorage.removeItem('userInfo'); sessionStorage.removeItem('userInfo')
+    }
     return Promise.reject(error)
   }
 )

@@ -6,8 +6,11 @@ import com.example.deeptalk.modules.community.dto.CheckAuthorResponse;
 import com.example.deeptalk.modules.community.entity.Post;
 import com.example.deeptalk.modules.community.entity.PostLike;
 import com.example.deeptalk.modules.community.entity.Author;
+import com.example.deeptalk.modules.community.entity.PostImage;
 import com.example.deeptalk.modules.community.repository.PostLikeRepository;
 import com.example.deeptalk.modules.community.repository.PostRepository;
+import com.example.deeptalk.modules.community.repository.PostImageRepository;
+import com.example.deeptalk.modules.community.repository.ReplyRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,7 +20,8 @@ import java.util.stream.Collectors;
 @Service
 public class PostService {
     @Autowired
-    private PostRepository postRepository;    @Autowired
+    private PostRepository postRepository;    
+    @Autowired
     private PostLikeRepository postLikeRepository;
     
     @Autowired
@@ -25,6 +29,11 @@ public class PostService {
     
     @Autowired
     private PostCacheService postCacheService;
+      @Autowired
+    private PostImageRepository postImageRepository;
+
+    @Autowired
+    private ReplyRepository replyRepository;
 
     public List<Post> searchPosts(String keyword, String type) {
         // 使用缓存服务
@@ -35,13 +44,31 @@ public class PostService {
         } else {
             return postCacheService.searchPosts(keyword);
         }
-    }    @Transactional
+    }    
+    
+    @Transactional
     public Post addPost(Post post) {
         // 使用缓存服务保存（会自动清除缓存）
         Post savedPost = postCacheService.savePost(post);
+          // 保存图片
+        if (post.getImageUrls() != null) {
+            int order = 0;
+            for (String url : post.getImageUrls()) {
+                PostImage img = new PostImage();
+                img.setPostId(savedPost.getId());
+                img.setUrl(url);
+                img.setSortOrder(order++);
+                postImageRepository.save(img);
+            }
+        }
         
         // 异步生成AI回复（通过独立的Service确保异步生效）
-        asyncReplyService.generateAIReplyAsync(savedPost);
+        try {
+            asyncReplyService.generateAIReplyAsync(savedPost);
+        } catch (Exception e) {
+            // AI回复生成失败不应该影响发帖
+            System.err.println("AI回复生成失败，但不影响发帖: " + e.getMessage());
+        }
         
         return savedPost;
     }
@@ -112,5 +139,45 @@ public class PostService {
         CheckAuthorResponse response = new CheckAuthorResponse();
         response.setAuthor(author);
         return response;
+    }    /**
+     * 获取指定用户的所有帖子
+     */
+    public List<Post> getPostsByUserId(String userId) {
+        return postRepository.findByAuthorIdOrderByCreatedAtDesc(userId);
+    }    /**
+     * 删除帖子
+     */
+    @Transactional
+    public boolean deletePost(String postId, String userId) {
+        try {
+            // 查找帖子
+            Post post = postRepository.findById(postId).orElse(null);
+            if (post == null) {
+                return false;
+            }
+            
+            // 验证是否为帖子作者
+            if (!post.getAuthorId().equals(userId)) {
+                throw new RuntimeException("无权删除此帖子");
+            }
+            
+            // 删除帖子的回复
+            replyRepository.deleteByPostId(postId);
+            
+            // 删除帖子相关的图片记录
+            postImageRepository.deleteByPostId(postId);
+            
+            // 删除帖子的点赞记录
+            postLikeRepository.deleteByPostId(postId);
+              // 删除帖子
+            postRepository.deleteById(postId);
+            
+            // 清除缓存
+            postCacheService.clearAllCache();
+            
+            return true;
+        } catch (Exception e) {
+            throw new RuntimeException("删除帖子失败: " + e.getMessage());
+        }
     }
-} 
+}

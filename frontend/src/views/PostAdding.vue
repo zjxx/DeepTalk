@@ -50,6 +50,39 @@
                     hide-details="auto"
                     class="content-input"
                   />
+                  <div class="image-uploader">
+                    <!-- 综合版：拖拽 + 点击 + 粘贴提示 -->
+                    <div
+                      class="image-drop-zone"
+                      :class="{ dragging: isDragging }"
+                      @click="pickImages"
+                      @dragover.prevent
+                      @dragenter.prevent="onDragEnter"
+                      @dragleave.prevent="onDragLeave"
+                      @drop.prevent="onDropFiles"
+                    >
+                      <div class="drop-zone-inner">
+                        <v-icon size="48" color="primary">mdi-file-image-outline</v-icon>
+                        <p class="dz-title">拖拽 / 点击 / 粘贴图片上传</p>
+                        <p class="dz-desc">支持 JPG / PNG / WEBP · 单张 ≤5MB · 最多 9 张</p>
+                        <v-btn size="small" variant="outlined" class="dz-btn">选择图片</v-btn>
+                        <span class="paste-tip">也可使用 Ctrl+V粘贴图片</span>
+                        <input ref="fileInput" type="file" accept="image/jpeg,image/png,image/webp" multiple class="hidden-input" @change="onFilesPicked" />
+                      </div>
+                    </div>
+                    <!-- 预览区 -->
+                    <div v-if="imagePreviews.length" class="preview-grid">
+                      <div v-for="(img, idx) in imagePreviews" :key="img.id" class="preview-item" draggable="true"
+                           @dragstart="onDragStart(idx)" @dragover.prevent @drop="onDrop(idx)">
+                        <img :src="img.url" alt="preview" />
+                        <div class="preview-actions">
+                          <v-chip size="x-small">{{ idx + 1 }}</v-chip>
+                          <v-btn icon="mdi-close" size="x-small" color="error" variant="text" @click="removeImage(idx)" />
+                        </div>
+                      </div>
+                    </div>
+                    <div v-else class="preview-empty">未选择图片</div>
+                  </div>
                 </v-card-text>
               </div>
             </v-card>
@@ -148,16 +181,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCommunityController } from '../controllers/CommunityController'
 import type { AddPostRequest } from '../interface/CommunityInterface'
+import { getAvatar } from '../utils/avatarUtil'
 
 const router = useRouter()
 
 const {
   addPost,
-  //loading
+  addPostWithImages
 } = useCommunityController()
 
 // 表单数据
@@ -168,6 +202,13 @@ const showSuccessMessage = ref(false)
 const showErrorMessage = ref(false)
 const errorMessage = ref('')
 const showClearDialog = ref(false)
+const fileInput = ref<HTMLInputElement | null>(null)
+const imageFiles = ref<File[]>([])
+const imagePreviews = ref<{ id: string; url: string }[]>([])
+let dragIndex = -1
+const isDragging = ref(false)
+
+const genId = () => (crypto && 'randomUUID' in crypto) ? crypto.randomUUID() : Math.random().toString(36).slice(2)
 
 // 表单验证规则
 const titleRules = [
@@ -191,56 +232,152 @@ const canPublish = computed(() => {
          !isPublishing.value
 })
 
+// 从本地/会话存储获取当前登录用户
+const getCurrentUser = () => {
+  const raw = localStorage.getItem('userInfo') || sessionStorage.getItem('userInfo')
+  if (!raw) return null
+  try {
+    return JSON.parse(raw) as { userId: string; username: string; avatar?: string }
+  } catch {
+    return null
+  }
+}
+
+const pickImages = () => fileInput.value?.click()
+
+const addFiles = (files: File[]) => {
+  const remain = 9 - imageFiles.value.length
+  const append = files.slice(0, Math.max(0, remain)).filter(f => {
+    const okType = ['image/jpeg', 'image/png', 'image/webp'].includes(f.type)
+    const okSize = f.size <= 5 * 1024 * 1024
+    return okType && okSize
+  })
+  append.forEach(f => {
+    imageFiles.value.push(f)
+    imagePreviews.value.push({ id: genId(), url: URL.createObjectURL(f) })
+  })
+}
+
+// 选择文件回调
+const onFilesPicked = (e: Event) => {
+  const files = Array.from((e.target as HTMLInputElement).files || []) as File[]
+  addFiles(files)
+  ;(e.target as HTMLInputElement).value = ''
+}
+
+// 粘贴上传：仅在本页挂载时监听
+const handlePaste = (e: ClipboardEvent) => {
+  const items = Array.from(e.clipboardData?.items || [])
+  const files: File[] = []
+  for (const item of items) {
+    if (item.kind === 'file') {
+      const f = item.getAsFile()
+      if (f && f.type.startsWith('image/')) files.push(f)
+    }
+  }
+  if (files.length) {
+    addFiles(files)
+    e.preventDefault()
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('paste', handlePaste)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('paste', handlePaste)
+})
+
+const removeImage = (idx: number) => {
+  URL.revokeObjectURL(imagePreviews.value[idx].url)
+  imagePreviews.value.splice(idx, 1)
+  imageFiles.value.splice(idx, 1)
+}
+
+const onDragStart = (idx: number) => { dragIndex = idx }
+const onDrop = (idx: number) => {
+  if (dragIndex === -1 || dragIndex === idx) return
+  const [p] = imagePreviews.value.splice(dragIndex, 1)
+  const [f] = imageFiles.value.splice(dragIndex, 1)
+  imagePreviews.value.splice(idx, 0, p)
+  imageFiles.value.splice(idx, 0, f)
+  dragIndex = -1
+}
+
+const onDragEnter = () => { isDragging.value = true }
+const onDragLeave = () => { isDragging.value = false }
+const onDropFiles = (e: DragEvent) => {
+  isDragging.value = false
+  const files = Array.from(e.dataTransfer?.files || []) as File[]
+  if (!files.length) return
+  addFiles(files)
+}
+
 // 处理发布
 const handlePublish = async () => {
   if (!canPublish.value) return
 
+  // 校验登录用户
+  const currentUser = getCurrentUser()
+  if (!currentUser || !currentUser.userId || !currentUser.username) {
+    errorMessage.value = '未登录或登录信息失效，请先登录后再发布'
+    showErrorMessage.value = true
+    return
+  }
+
   isPublishing.value = true
   
   try {
-    // 构造发帖请求 - 根据接口定义修正
-    const postRequest: AddPostRequest = {
-      authorId: 'current_user_id', // 这里应该从用户状态中获取真实的用户ID
-      post: {
-        id: '', // 新帖子ID由后端生成，这里传空字符串
-        title: postTitle.value.trim(),
-        content: postContent.value.trim(),
-        author: {
-          id: 'current_user_id', // 应该从用户状态获取
-          username: 'current_username', // 应该从用户状态获取
-          avatar: '', // 应该从用户状态获取
-          authorLikes: 0, // 新用户默认值
-          authorPosts: 0  // 将会在后端更新
-        },
-        likesCount: 0, // 新帖子默认0个赞
-        createdAt: new Date().toISOString() // 当前时间，后端可能会覆盖
+    if (imageFiles.value.length > 0) {
+      const res = await addPostWithImages(postTitle.value.trim(), postContent.value.trim(), imageFiles.value)
+      if (res.success) {
+        showSuccessMessage.value = true
+        postTitle.value = ''
+        postContent.value = ''
+        imagePreviews.value.forEach(p => URL.revokeObjectURL(p.url))
+        imagePreviews.value = []
+        imageFiles.value = []
+        setTimeout(() => {
+          if (res.post?.id) router.push(`/post/${res.post.id}`)
+          else router.push('/community')
+        }, 1200)
+      } else {
+        errorMessage.value = res.message || '发布失败，请稍后重试'
+        showErrorMessage.value = true
       }
-    }
-
-    // 调用控制器的发帖函数
-    const response = await addPost(postRequest)
-
-    if (response && response.success) {
-      showSuccessMessage.value = true
-      
-      // 清空表单
-      postTitle.value = ''
-      postContent.value = ''
-      
-      // 延迟跳转到帖子详情页或社区页面
-      setTimeout(() => {
-        if (response.post && response.post.id) {
-          // 如果有帖子ID，跳转到帖子详情页
-          router.push(`/post/${response.post.id}`)
-        } else {
-          // 否则返回社区页面
-          router.push('/community')
-        }
-      }, 2000)
     } else {
-      // 处理发布失败的情况
-      errorMessage.value = response?.message || '发布失败，请稍后重试'
-      showErrorMessage.value = true
+      // 走原文字发帖
+      const postRequest: AddPostRequest = {
+        authorId: currentUser.userId,
+        post: {
+          id: '',
+          title: postTitle.value.trim(),
+          content: postContent.value.trim(),
+          author: {
+            id: currentUser.userId,
+            username: currentUser.username,
+            avatar: currentUser.avatar || getAvatar(currentUser.userId, currentUser.username),
+            authorLikes: 0,
+            authorPosts: 0
+          },
+          likesCount: 0,
+          createdAt: new Date().toISOString()
+        }
+      }
+      const response = await addPost(postRequest)
+      if (response && response.success) {
+        showSuccessMessage.value = true
+        postTitle.value = ''
+        postContent.value = ''
+        setTimeout(() => {
+          if (response.post && response.post.id) router.push(`/post/${response.post.id}`)
+          else router.push('/community')
+        }, 1200)
+      } else {
+        errorMessage.value = response?.message || '发布失败，请稍后重试'
+        showErrorMessage.value = true
+      }
     }
   } catch (error) {
     console.error('发布失败:', error)
@@ -496,4 +633,20 @@ const goBack = () => {
     padding: 12px;
   }
 }
+
+/* 上传区样式（恢复拖拽区域） */
+.image-drop-zone { border:2px dashed #90caf9; background:#f5f9ff; border-radius:12px; padding:32px 16px; text-align:center; cursor:pointer; transition:.2s; position:relative; }
+.image-drop-zone.dragging { background:#e3f2fd; border-color:#1976d2; }
+.drop-zone-inner { display:flex; flex-direction:column; align-items:center; gap:8px; }
+.dz-title { font-size:16px; font-weight:600; margin:4px 0 0; color:#1976d2; }
+.dz-desc { font-size:12px; color:#666; margin:0; }
+.dz-btn { margin-top:4px; }
+.paste-tip { font-size:12px; color:#666; }
+.image-uploader { margin-top:16px; display:flex; flex-direction:column; gap:12px; }
+.hidden-input { display: none; }
+.preview-grid { display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; }
+.preview-item { position:relative; border:1px solid #eee; border-radius:8px; overflow:hidden; }
+.preview-item img { width:100%; height:120px; object-fit:cover; display:block; }
+.preview-actions { position:absolute; top:4px; right:4px; display:flex; gap:6px; align-items:center; }
+.preview-empty { color:#888; font-size:13px; }
 </style>

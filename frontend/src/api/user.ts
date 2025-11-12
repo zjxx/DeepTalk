@@ -1,4 +1,4 @@
-import type { LoginRequest, LoginResponse, VerifyRequest, VerifyResponse, ForgotPasswordSendCodeRequest, ForgotPasswordSendCodeResponse, LogoutResponse } from '../interface/auth'
+import type { LoginRequest, LoginResponse, VerifyRequest, VerifyResponse, ForgotPasswordSendCodeRequest, ForgotPasswordSendCodeResponse, LogoutResponse, UpdateAvatarRequest, UpdateAvatarResponse } from '../interface/auth'
 import { API_ENDPOINTS } from '../config/api'
 import { http } from '../utils/http'
 
@@ -61,6 +61,49 @@ export function resetPasswordApi(request: { resetToken: string, newPassword: str
     request,
     { validateStatus: (status) => status === 200 }
   )
+}
+
+/**
+ * 更新用户头像
+ */
+export function updateAvatarApi(request: UpdateAvatarRequest): Promise<UpdateAvatarResponse> {
+  console.log('更新头像请求:', { userId: request.userId, avatarLength: request.avatar?.length })
+  return http.post<UpdateAvatarResponse, UpdateAvatarRequest>(
+    API_ENDPOINTS.AUTH.UPDATE_AVATAR,
+    request
+  )
+}
+
+/**
+ * 上传头像到七牛云（推荐使用）
+ * @param file 头像文件
+ * @param userId 用户ID
+ */
+export function uploadAvatarApi(file: File, userId: string): Promise<UpdateAvatarResponse> {
+  console.log('上传头像到七牛云:', { userId, fileName: file.name, size: file.size })
+  
+  const formData = new FormData()
+  formData.append('avatar', file)
+  formData.append('userId', userId)
+  
+  // 注意：不要手动设置 Content-Type，让浏览器自动添加 boundary
+  return http.post<UpdateAvatarResponse>(
+    API_ENDPOINTS.AUTH.UPLOAD_AVATAR,
+    formData
+  )
+}
+
+/**
+ * 获取用户信息（包含头像）
+ */
+export function getUserInfoApi(): Promise<{
+  userId: string
+  username: string
+  email: string
+  avatar: string | null
+}> {
+  console.log('获取用户信息')
+  return http.get(API_ENDPOINTS.AUTH.USER_INFO)
 }
 
 // 其他 API 函数可以在这里添加

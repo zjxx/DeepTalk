@@ -22,18 +22,21 @@ public class WebConfig implements WebMvcConfigurer {
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .allowCredentials(false);
-    }
-
-    @Override
+    }    @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(jwtAuthenticationInterceptor)
                 .addPathPatterns("/**")
                 .excludePathPatterns(
-                    "/api/**",
-                    "/api/auth/register/**",
-                    "/api/auth/forgot-password/**",
+                    "/api/auth/login",
+                    "/api/auth/register",
+                    "/api/auth/forgot-password",
                     "/api/verification/**",
-                    "/api/speech/**"
+                    "/api/speech/**",
+                    "/api/community/search",
+                    "/api/community/posts/latest",
+                    "/api/community/posts/*/replies",  // GET请求获取回复
+                    "/api/shop/search",
+                    "/api/shop/check-stock"
                 );
     }
 

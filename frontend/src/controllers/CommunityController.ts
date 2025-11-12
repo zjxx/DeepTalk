@@ -1,6 +1,6 @@
 import { ref } from 'vue'
-import { CommunitySearchAPI, CommunityLikeAPI, CommunityCheckAuthorAPI, CommunityAddPostAPI, CommunityGetRepliesAPI } from '../api/CommunityAPI'
-import type { Post, SearchRequest, SearchResult, LikeRequest, LikeResponse, CheckAuthorRequest, CheckAuthorResponse, AddPostRequest, AddPostResponse, GetRepliesResponse } from '../interface/CommunityInterface'
+import { CommunitySearchAPI, CommunityLikeAPI, CommunityCheckAuthorAPI, CommunityAddPostAPI, CommunityGetRepliesAPI, CommunityAddPostWithImagesAPI, CommunityAddReplyAPI, CommunityGetUserPostsAPI, CommunityDeletePostAPI } from '../api/CommunityAPI'
+import type { Post, SearchRequest, SearchResult, LikeRequest, LikeResponse, CheckAuthorRequest, CheckAuthorResponse, AddPostRequest, AddPostResponse, GetRepliesResponse, AddPostWithImagesResponse, AddReplyRequest, AddReplyResponse, GetUserPostsRequest, GetUserPostsResponse } from '../interface/CommunityInterface'
 
 export const useCommunityController = () => {
     const posts = ref<Post[]>([]) 
@@ -41,12 +41,12 @@ export const useCommunityController = () => {
 //   ]
 
     // 加载社区启动数据：发送空搜索分别拉取帖子和作者列表
-    const loadCommunityData = async () => {
+    const loadCommunityData = async (queryStr: string, typeStr: string) => {
         loading.value = true
         error.value = null
         try {
             //空搜索拉取帖子
-            const postReq: SearchRequest = { query: '', type: 'posts' }
+            const postReq: SearchRequest = { query: queryStr, type: typeStr as 'posts' | 'authors' }
             const postRes: SearchResult = await CommunitySearchAPI(postReq)
             posts.value = postRes.posts ?? []
             normalizePosts(posts.value)
@@ -174,6 +174,25 @@ const addPost = async (crrpost: AddPostRequest): Promise<AddPostResponse | null>
     }
 }
 
+const addPostWithImages = async (title: string, content: string, files: File[]): Promise<AddPostWithImagesResponse> => {
+  loading.value = true
+  error.value = null
+  try {
+    const fd = new FormData()
+    fd.append('title', title)
+    fd.append('content', content)
+    files.slice(0, 9).forEach(f => fd.append('images', f))
+    const res = await CommunityAddPostWithImagesAPI(fd)
+    if (res.post) normalizePosts([res.post])
+    return res
+  } catch (e) {
+    console.error('带图发帖失败', e)
+    return { success: false, message: '发布失败', post: null, imageUrls: [] }
+  } finally {
+    loading.value = false
+  }
+}
+
     // 获取帖子回复
     const getReplies = async (postId: string): Promise<GetRepliesResponse> => {
         try {
@@ -183,6 +202,26 @@ const addPost = async (crrpost: AddPostRequest): Promise<AddPostResponse | null>
             return response
         } catch (e) {
             console.error('Controller: 获取回复失败:', e)
+            throw e
+        }
+    }
+
+    // 添加用户回复
+    const addReply = async (postId: string, content: string, authorId: string, authorName: string, authorAvatar: string): Promise<AddReplyResponse> => {
+        try {
+            console.log('Controller: 添加回复，postId:', postId, 'content:', content)
+            const request: AddReplyRequest = {
+                postId,
+                content,
+                authorId,
+                authorName,
+                authorAvatar
+            }
+            const response = await CommunityAddReplyAPI(postId, request)
+            console.log('Controller: 回复添加成功')
+            return response
+        } catch (e) {
+            console.error('Controller: 添加回复失败:', e)
             throw e
         }
     }
@@ -200,6 +239,44 @@ const addPost = async (crrpost: AddPostRequest): Promise<AddPostResponse | null>
         })
     }
 
+    // 获取用户自己的帖子
+    const getUserPosts = async (userId: string): Promise<GetUserPostsResponse> => {
+        loading.value = true
+        error.value = null
+        try {
+            console.log('Controller: 获取用户帖子，userId:', userId)
+            const request: GetUserPostsRequest = { userId }
+            const response = await CommunityGetUserPostsAPI(request)
+            console.log('Controller: 用户帖子获取成功，数量:', response.count)
+            normalizePosts(response.posts)
+            return response
+        } catch (e) {
+            console.error('Controller: 获取用户帖子失败:', e)
+            error.value = '获取用户帖子失败，请稍后重试'
+            throw e
+        } finally {
+            loading.value = false
+        }
+    }
+
+    // 删除帖子
+    const deletePost = async (postId: string): Promise<{success: boolean, message: string}> => {
+        loading.value = true
+        error.value = null
+        try {
+            console.log('Controller: 删除帖子，postId:', postId)
+            const response = await CommunityDeletePostAPI(postId)
+            console.log('Controller: 帖子删除成功')
+            return response
+        } catch (e) {
+            console.error('Controller: 删除帖子失败:', e)
+            error.value = '删除帖子失败，请稍后重试'
+            throw e
+        } finally {
+            loading.value = false
+        }
+    }
+
     return {
         posts,
         loading,
@@ -209,7 +286,11 @@ const addPost = async (crrpost: AddPostRequest): Promise<AddPostResponse | null>
         searchAuthors,
         likePost,
         addPost,
+        addPostWithImages, // 新增导出
         checkAuthor,
         getReplies,
+        addReply, // 新增：导出用户回复功能
+        getUserPosts, // 新增：导出获取用户帖子功能
+        deletePost, // 新增：导出删除帖子功能
     }
 }

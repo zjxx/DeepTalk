@@ -10,6 +10,7 @@ export interface Post {
   authorId?: string;
   authorName?: string;
   authorAvatar?: string;
+  imageUrls?: string[]; // 新增: 图片URL数组
 }
 //作者
 export interface Author {
@@ -82,4 +83,53 @@ export interface GetRepliesResponse {
   message?: string;
   count: number;
   replies: Reply[];
+}
+
+//添加回复请求
+export interface AddReplyRequest {
+  postId: string;
+  content: string;
+  authorId: string;
+  authorName: string;
+  authorAvatar: string;
+}
+
+//添加回复响应
+export interface AddReplyResponse {
+  success: boolean;
+  message: string;
+  reply: Reply | null;
+}
+
+export interface AddPostWithImagesResponse {
+  success: boolean;
+  message: string;
+  post: Post | null;
+  imageUrls: string[];
+}
+
+// 获取用户帖子请求
+export interface GetUserPostsRequest {
+  userId: string;
+}
+
+// 获取用户帖子响应
+export interface GetUserPostsResponse {
+  success: boolean;
+  message?: string;
+  posts: Post[];
+  count: number;
+}
+
+// 获取用户收藏列表请求
+export interface GetUserFavoritesRequest {
+  userId: string;
+}
+
+// 获取用户收藏列表响应
+export interface GetUserFavoritesResponse {
+  success: boolean;
+  message?: string;
+  posts: Post[];
+  count: number;
 }

@@ -27,8 +27,24 @@
           <v-card class="left-sidebar" elevation="1">
             <v-card-title class="text-h6 font-weight-bold">关注列表</v-card-title>
             <v-card-text class="following-list">
-              <!-- 这里后续添加关注列表组件 -->
-
+              <div v-if="!isLoggedIn" class="text-caption text-grey text-center pa-4">
+                请先登录查看关注列表
+              </div>
+              <div v-else-if="followingAuthors.length === 0" class="text-caption text-grey text-center pa-4">
+                暂无关注的作者
+              </div>
+              <div v-else class="author-list">
+                <div v-for="author in followingAuthors" :key="author.id" class="author-item">
+                  <v-avatar size="36"><v-img :src="author.avatar || '/default-avatar.png'" /></v-avatar>
+                  <div class="author-meta">
+                    <div class="name">{{ author.username }}</div>
+                    <div class="stats">{{ author.authorPosts }} 帖 · {{ author.followerCount }} 粉</div>
+                  </div>
+                  <v-btn size="x-small" color="primary" variant="outlined" @click="toggleFollowFromList(author)">
+                    已关注
+                  </v-btn>
+                </div>
+              </div>
             </v-card-text>
           </v-card>
 
@@ -50,7 +66,7 @@
                       <v-icon start size="16">{{ followedAuthors.has(post.author.id) ? 'mdi-account-check' : 'mdi-account-plus' }}</v-icon>
                       {{ followedAuthors.has(post.author.id) ? '已关注' : '关注' }}
                     </v-btn>
-                    <v-btn size="small" variant="text" :color="favorites.has(post.id) ? 'orange' : 'grey'" @click.stop="toggleFavorite(post.id)">
+                    <v-btn size="small" variant="text" :color="favorites.has(post.id) ? 'orange' : 'grey'" @click.stop="toggleFavoriteAction(post.id)">
                       <v-icon size="16">{{ favorites.has(post.id) ? 'mdi-star' : 'mdi-star-outline' }}</v-icon>
                     </v-btn>
                     <v-menu transition="scale-transition" location="bottom">
@@ -113,6 +129,18 @@
                     <v-icon size="24">mdi-pencil</v-icon>
                   </v-btn>
                   <p class="btn-label mt-2">发布新帖</p>
+                  
+                  <v-btn icon size="large" color="secondary" variant="elevated" class="my-posts-btn mt-4"
+                    @click="goToMyPosts" title="我的帖子">
+                    <v-icon size="24">mdi-post</v-icon>
+                  </v-btn>
+                  <p class="btn-label mt-2">我的帖子</p>
+                  
+                  <v-btn icon size="large" color="orange" variant="elevated" class="my-favorites-btn mt-4"
+                    @click="goToMyFavorites" title="我的收藏">
+                    <v-icon size="24">mdi-star</v-icon>
+                  </v-btn>
+                  <p class="btn-label mt-2">我的收藏</p>
                 </div>
               </v-card-text>
             </v-card>
@@ -120,6 +148,7 @@
         </div>
       </v-sheet>
     </div>
+    <v-snackbar v-model="followErrorShown" color="error" timeout="2500">{{ followError }}</v-snackbar>
   </v-container>
 </template>
 
@@ -134,7 +163,7 @@ import type { ReactionRequest } from '../interface/SocialInterface'
 const router = useRouter()
 
 const { posts, loading, loadCommunityData } = useCommunityController()
-const { toggleFollow: apiToggleFollow, toggleFavorite: apiToggleFavorite, react, getReactionSummary, getFollowStatus, getRecommendedAuthors } = useSocialController()
+const { toggleFollow: apiToggleFollow, toggleFavorite, getFavoriteStatus, react, getReactionSummary, getFollowStatus, getRecommendedAuthors, getFollowingList } = useSocialController()
 
 // 搜索相关状态
 const searchQuery = ref('')
@@ -143,6 +172,12 @@ const searchType = ref('posts')
 // 跳转到发帖页面
 const goToCreatePost = () => { router.push('/post/create') }
 
+// 跳转到我的帖子页面
+const goToMyPosts = () => { router.push('/my-posts') }
+
+// 跳转到我的收藏页面
+const goToMyFavorites = () => { router.push('/my-favorites') }
+
 // 搜索选项
 const searchOptions = [
   { text: '按内容搜索', value: 'posts' },
@@ -150,7 +185,7 @@ const searchOptions = [
 ]
 
 // 处理搜索（简化为重新加载）
-const handleSearch = async () => { await loadCommunityData() }
+const handleSearch = async () => { await loadCommunityData(searchQuery.value, searchType.value) }
 
 // 查看帖子详情
 const viewPost = (postId: string) => { router.push(`/post/${postId}`) }
@@ -171,6 +206,10 @@ const favorites = ref<Set<string>>(new Set())
 const reactionSummary = ref<Record<string, { counters: Record<string, number>; myReaction?: string | null }>>({})
 const reactionTypes: ReactionRequest['type'][] = ['like','love','laugh','sad','angry']
 const reactionEmoji: Record<string,string> = { like:'👍', love:'❤️', laugh:'😂', sad:'😢', angry:'😡' }
+
+const followError = ref<string>('')
+const followErrorShown = ref(false)
+const showFollowError = (msg: string) => { followError.value = msg; followErrorShown.value = true }
 
 const ensureReactionSummary = async (postId: string) => {
   if (!isLoggedIn.value || reactionSummary.value[postId]) return
@@ -195,21 +234,74 @@ const handleReaction = async (postId: string, type: ReactionRequest['type']) => 
 }
 
 const toggleFollow = async (authorId: string) => {
-  if (!isLoggedIn.value) return
-  const follow = !followedAuthors.value.has(authorId)
+  if (!isLoggedIn.value) { showFollowError('请先登录'); return }
+  const wasFollowed = followedAuthors.value.has(authorId)
+  if (wasFollowed) {
+    const ok = window.confirm('确定要取消关注该作者吗？')
+    if (!ok) return
+  }
+  // 乐观更新
+  if (wasFollowed) followedAuthors.value.delete(authorId); else followedAuthors.value.add(authorId)
   try {
-    const resp = await apiToggleFollow(currentUserId, authorId, follow)
-    if (resp) {
-      if (resp.followed) { followedAuthors.value.add(authorId) } else { followedAuthors.value.delete(authorId) }
+    const resp = await apiToggleFollow(currentUserId, authorId, !wasFollowed)
+    if (!resp) { if (wasFollowed) followedAuthors.value.add(authorId); else followedAuthors.value.delete(authorId); showFollowError('关注操作失败'); return }
+    if (resp.followed) {
+      followedAuthors.value.add(authorId)
+      // 关注成功后，重新加载关注列表
+      await loadFollowingList()
+    } else {
+      followedAuthors.value.delete(authorId)
+      // 取消关注后，从列表中移除
+      followingAuthors.value = followingAuthors.value.filter(a => a.id !== authorId)
     }
-  } catch (e) { console.error('follow失败', e) }
+  } catch (e) {
+    console.error('follow失败', e)
+    if (wasFollowed) followedAuthors.value.add(authorId); else followedAuthors.value.delete(authorId)
+    showFollowError('网络错误，稍后重试')
+  }
 }
 
-const toggleFavorite = async (postId: string) => {
+const toggleFollowSidebar = async (a: { id: string; followed: boolean }) => {
+  if (!isLoggedIn.value) { showFollowError('请先登录'); return }
+  const wasFollowed = a.followed
+  if (wasFollowed) { const ok = window.confirm('确定要取消关注该作者吗？'); if (!ok) return }
+  a.followed = !wasFollowed
+  try {
+    const resp = await apiToggleFollow(currentUserId, a.id, !wasFollowed)
+    if (!resp) { a.followed = wasFollowed; showFollowError('关注操作失败'); return }
+    a.followed = resp.followed
+    
+    // 同步更新关注状态和列表
+    if (resp.followed) {
+      followedAuthors.value.add(a.id)
+      await loadFollowingList()
+    } else {
+      followedAuthors.value.delete(a.id)
+      followingAuthors.value = followingAuthors.value.filter(author => author.id !== a.id)
+    }
+  } catch (e) { console.error('侧边栏关注失败', e); a.followed = wasFollowed; showFollowError('网络错误，稍后重试') }
+}
+
+const toggleFollowFromList = async (author: { id: string; followed: boolean }) => {
+  if (!isLoggedIn.value) { showFollowError('请先登录'); return }
+  const ok = window.confirm('确定要取消关注该作者吗？')
+  if (!ok) return
+  
+  try {
+    const resp = await apiToggleFollow(currentUserId, author.id, false)
+    if (!resp) { showFollowError('取消关注失败'); return }
+    // 从列表中移除
+    followingAuthors.value = followingAuthors.value.filter(a => a.id !== author.id)
+    // 更新关注状态集合
+    followedAuthors.value.delete(author.id)
+  } catch (e) { console.error('取消关注失败', e); showFollowError('网络错误，稍后重试') }
+}
+
+const toggleFavoriteAction = async (postId: string) => {
   if (!isLoggedIn.value) return
   const fav = !favorites.value.has(postId)
   try {
-    const resp = await apiToggleFavorite(postId, currentUserId, fav)
+    const resp = await toggleFavorite(postId, currentUserId, fav)
     if (resp) {
       if (resp.favorited) { favorites.value.add(postId) } else { favorites.value.delete(postId) }
     }
@@ -217,6 +309,7 @@ const toggleFavorite = async (postId: string) => {
 }
 
 const recommendedAuthors = ref<Array<{ id: string; username: string; avatar: string; authorPosts: number; followerCount: number; followed: boolean }>>([])
+const followingAuthors = ref<Array<{ id: string; username: string; avatar: string; authorPosts: number; followerCount: number; followed: boolean }>>([])
 
 const loadRecommendedAuthors = async () => {
   try {
@@ -225,23 +318,31 @@ const loadRecommendedAuthors = async () => {
   } catch (e) { console.error('推荐作者获取失败', e) }
 }
 
-const toggleFollowSidebar = async (a: { id: string; followed: boolean }) => {
+const loadFollowingList = async () => {
   if (!isLoggedIn.value) return
   try {
-    const resp = await apiToggleFollow(currentUserId, a.id, !a.followed)
-    if (resp) a.followed = resp.followed
-  } catch (e) { console.error('侧边栏关注失败', e) }
+    const res = await getFollowingList(currentUserId)
+    if (res?.authors) followingAuthors.value = res.authors
+  } catch (e) { console.error('获取关注列表失败', e) }
 }
 
 onMounted(async () => {
-  await loadCommunityData()
+  await loadCommunityData('', 'posts')
   // 仅登录时加载社交状态
   if (isLoggedIn.value) {
+    // 加载收藏状态
+    for (const p of posts.value) {
+      getFavoriteStatus(p.id, currentUserId)
+        .then(r => { if (r?.favorited) favorites.value.add(p.id) })
+        .catch(() => {})
+    }
+    // 加载表情反应
     for (const p of posts.value) {
       getReactionSummary(p.id, currentUserId)
         .then(r => { if (r) reactionSummary.value[p.id] = { counters: r.counters, myReaction: r.myReaction } })
         .catch(() => {})
     }
+    // 加载关注状态
     const seen = new Set<string>()
     for (const p of posts.value) {
       const aid = p.author?.id
@@ -252,6 +353,7 @@ onMounted(async () => {
         .catch(() => {})
     }
     await loadRecommendedAuthors()
+    await loadFollowingList()
   }
 })
 </script>
@@ -265,7 +367,8 @@ onMounted(async () => {
   padding: 16px 0;
 }
 
-.create-post-btn {
+.create-post-btn,
+.my-posts-btn {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
@@ -384,7 +487,18 @@ onMounted(async () => {
 } */
 
 .post-wrapper { position: relative; }
-.social-actions { position: absolute; top: 4px; right: 8px; display: flex; gap: 4px; z-index: 5; }
+.social-actions { 
+  position: absolute; 
+  top: 8px; 
+  right: 8px; 
+  display: flex; 
+  gap: 4px; 
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 4px 6px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
 .reaction-row { display: flex; flex-wrap: wrap; gap: 4px; }
 .author-list { display: flex; flex-direction: column; gap: 10px; }
 .author-item { display: flex; align-items: center; gap: 10px; justify-content: space-between; }

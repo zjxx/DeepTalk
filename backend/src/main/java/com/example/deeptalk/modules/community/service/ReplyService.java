@@ -2,6 +2,7 @@ package com.example.deeptalk.modules.community.service;
 
 import com.example.deeptalk.modules.community.entity.Reply;
 import com.example.deeptalk.modules.community.repository.ReplyRepository;
+import com.example.deeptalk.modules.community.util.AvatarUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
@@ -48,14 +49,13 @@ public class ReplyService {
         
         // 调用AI服务生成回复内容
         String aiReplyContent = aiReplyService.generateReply(postTitle, postContent);
-        
-        // 创建AI回复对象
+          // 创建AI回复对象
         Reply aiReply = new Reply();
         aiReply.setPostId(postId);
         aiReply.setContent(aiReplyContent);
         aiReply.setAuthorId("ai-assistant");
         aiReply.setAuthorName("AI助手");
-        aiReply.setAuthorAvatar("https://ui-avatars.com/api/?name=AI&background=4A90E2&color=fff");
+        aiReply.setAuthorAvatar(AvatarUtil.getAIAvatar());
         aiReply.setIsAiGenerated(true);
         aiReply.setCreatedAt(LocalDateTime.now());
           // 保存到数据库

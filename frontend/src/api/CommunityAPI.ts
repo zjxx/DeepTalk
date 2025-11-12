@@ -1,5 +1,5 @@
 //import axios from 'axios'
-import type { Post, CheckAuthorRequest, CheckAuthorResponse, SearchRequest, SearchResult, LikeRequest, LikeResponse, AddPostRequest, GetRepliesResponse } from '../interface/CommunityInterface'
+import type { Post, CheckAuthorRequest, CheckAuthorResponse, SearchRequest, SearchResult, LikeRequest, LikeResponse, AddPostRequest, GetRepliesResponse, AddPostWithImagesResponse, AddReplyRequest, AddReplyResponse, GetUserPostsRequest, GetUserPostsResponse } from '../interface/CommunityInterface'
 import { API_ENDPOINTS } from '../config/api'
 import { http } from '../utils/http'
 import type { FollowActionRequest, FollowStatusResponse, FavoriteRequest, FavoriteStatusResponse, ReactionRequest, ReactionSummaryResponse, AuthorListResponse } from '../interface/SocialInterface.ts'
@@ -34,10 +34,22 @@ export function CommunityAddPostAPI(request: AddPostRequest): Promise<Post> {
     return http.post<Post, AddPostRequest>(API_ENDPOINTS.COMMUNITY.POSTS.ADD, request)
 }
 
+//发帖带图片
+export function CommunityAddPostWithImagesAPI(formData: FormData): Promise<AddPostWithImagesResponse> {
+  // 让浏览器自动设置 multipart/form-data 边界
+  return http.post<AddPostWithImagesResponse, FormData>(API_ENDPOINTS.COMMUNITY.POSTS.ADD_WITH_IMAGES, formData)
+}
+
 //获取帖子回复
 export function CommunityGetRepliesAPI(postId: string): Promise<GetRepliesResponse> {
     console.log('获取回复，帖子ID:', postId)
     return http.get<GetRepliesResponse>(`${API_ENDPOINTS.COMMUNITY.POSTS.REPLIES}/${postId}/replies`) as Promise<GetRepliesResponse>
+}
+
+//添加用户回复
+export function CommunityAddReplyAPI(postId: string, request: AddReplyRequest): Promise<AddReplyResponse> {
+    console.log('发送回复请求，帖子ID:', postId, '内容:', request.content)
+    return http.post<AddReplyResponse, AddReplyRequest>(`${API_ENDPOINTS.COMMUNITY.POSTS.REPLIES}/${postId}/replies`, request)
 }
 
 // 关注/取关
@@ -71,4 +83,31 @@ export function SocialReactionSummaryAPI(postId: string, userId: string): Promis
 export function SocialRecommendAuthorsAPI(currentUserId?: string, limit = 10): Promise<AuthorListResponse> {
   const url = `${API_ENDPOINTS.SOCIAL.AUTHORS.RECOMMEND}?limit=${limit}${currentUserId ? `&currentUserId=${encodeURIComponent(currentUserId)}` : ''}`
   return http.get<AuthorListResponse>(url)
+}
+
+// 获取用户关注的作者列表
+export function SocialGetFollowingListAPI(userId?: string): Promise<AuthorListResponse> {
+  const url = userId 
+    ? `${API_ENDPOINTS.SOCIAL.FOLLOW.LIST}?userId=${encodeURIComponent(userId)}`
+    : API_ENDPOINTS.SOCIAL.FOLLOW.LIST
+  return http.get<AuthorListResponse>(url)
+}
+
+// 获取用户帖子
+export function CommunityGetUserPostsAPI(request: GetUserPostsRequest): Promise<GetUserPostsResponse> {
+    console.log('获取用户帖子请求:', JSON.stringify(request))
+    return http.post<GetUserPostsResponse, GetUserPostsRequest>(API_ENDPOINTS.COMMUNITY.POSTS.USER_POSTS, request)
+}
+
+// 获取用户收藏的帖子
+export function SocialGetUserFavoritesAPI(userId: string): Promise<Post[]> {
+    console.log('获取用户收藏帖子，用户ID:', userId)
+    const url = `${API_ENDPOINTS.SOCIAL.FAVORITE.USER_POSTS}?userId=${encodeURIComponent(userId)}`
+    return http.get<Post[]>(url)
+}
+
+// 删除帖子
+export function CommunityDeletePostAPI(postId: string): Promise<{success: boolean, message: string}> {
+    console.log('删除帖子请求，帖子ID:', postId)
+    return http.delete<{success: boolean, message: string}>(`${API_ENDPOINTS.COMMUNITY.POSTS.DELETE}/${postId}`)
 }

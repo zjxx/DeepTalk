@@ -39,6 +39,14 @@
           <!-- 正文内容 -->
           <v-card-text class="post-body-section">
             <div class="post-body">{{ currentPost.content }}</div>
+
+            <div v-if="currentPost.imageUrls && currentPost.imageUrls.length" class="image-gallery">
+              <v-row dense>
+                <v-col v-for="(img, i) in currentPost.imageUrls" :key="i" cols="12" sm="6" md="4">
+                  <v-img :src="img" class="gallery-item" cover @click.stop="openPreview(i)"/>
+                </v-col>
+              </v-row>
+            </div>
           </v-card-text>
 
           <v-divider class="my-4"></v-divider>
@@ -100,7 +108,61 @@
             <div v-else class="empty-replies text-center pa-4">
               <v-icon size="48" color="grey-lighten-2">mdi-comment-off-outline</v-icon>
               <p class="mt-2 text-grey">暂无回复</p>
-              <p class="text-caption text-grey-lighten-1">发布新帖子时，AI会自动生成第一条回复</p>
+              <p class="text-caption text-grey-lighten-1">成为第一个回复的人吧！</p>
+            </div>
+
+            <v-divider class="my-4"></v-divider>
+
+            <!-- 用户回复输入区 -->
+            <div class="reply-input-section">
+              <h4 class="reply-input-title">
+                <v-icon size="18" class="mr-1">mdi-comment-edit-outline</v-icon>
+                发表回复
+              </h4>
+              
+              <div v-if="!isLoggedIn" class="login-prompt text-center pa-4">
+                <p class="text-grey">请先登录后再发表回复</p>
+              </div>
+              
+              <div v-else class="reply-input-box">
+                <v-textarea
+                  v-model="replyContent"
+                  placeholder="分享你的想法..."
+                  variant="outlined"
+                  :rows="4"
+                  auto-grow
+                  :counter="500"
+                  :rules="replyRules"
+                  hide-details="auto"
+                  class="mb-3"
+                />
+                
+                <div class="reply-actions">
+                  <span class="reply-hint text-caption text-grey">
+                    还可输入 {{ 500 - replyContent.length }} 字
+                  </span>
+                  <div class="reply-buttons">
+                    <v-btn
+                      variant="outlined"
+                      size="small"
+                      @click="clearReplyInput"
+                      :disabled="isSubmittingReply || !replyContent.trim()"
+                    >
+                      清空
+                    </v-btn>
+                    <v-btn
+                      color="primary"
+                      size="small"
+                      :loading="isSubmittingReply"
+                      :disabled="!canSubmitReply"
+                      @click="submitReply"
+                      prepend-icon="mdi-send"
+                    >
+                      发送回复
+                    </v-btn>
+                  </div>
+                </div>
+              </div>
             </div>
           </v-card-text>
         </v-card>
@@ -138,9 +200,68 @@
               </div>
             </div>
 
-            <!-- 预留扩展空间 -->
-            <div class="extension-area">
-              <!-- 这里预留给未来功能扩展 -->
+            <!-- 社交互动功能区 -->
+            <div class="social-interaction-area">
+              <h4 class="interaction-title">
+                <v-icon size="18" class="mr-1">mdi-thumb-up-outline</v-icon>
+                互动
+              </h4>
+              
+              <div v-if="!isLoggedIn" class="login-prompt-interaction text-center pa-4">
+                <p class="text-grey">请先登录后使用互动功能</p>
+              </div>
+              
+              <div v-else class="interaction-buttons">
+                <!-- 收藏按钮 -->
+                <v-btn 
+                  variant="outlined" 
+                  :color="isFavorited ? 'orange' : 'grey'" 
+                  prepend-icon="mdi-star"
+                  @click="toggleFavoriteAction"
+                  :loading="isProcessingFavorite"
+                  :disabled="isProcessingFavorite"
+                  class="interaction-btn"
+                >
+                  {{ isFavorited ? '已收藏' : '收藏' }}
+                </v-btn>
+                
+                <!-- 表情反应按钮 -->
+                <v-menu transition="scale-transition" location="bottom">
+                  <template #activator="{ props }">
+                    <v-btn 
+                      v-bind="props" 
+                      variant="outlined" 
+                      :color="myReaction ? 'primary' : 'grey'"
+                      prepend-icon="mdi-emoticon-happy-outline"
+                      class="interaction-btn"
+                    >
+                      {{ myReaction ? reactionEmoji[myReaction] : '表情' }}
+                    </v-btn>
+                  </template>
+                  <v-card class="pa-3" min-width="250">
+                    <div class="reaction-selector">
+                      <v-btn 
+                        v-for="r in reactionTypes" 
+                        :key="r" 
+                        variant="text" 
+                        size="large"
+                        :color="myReaction === r ? 'primary' : 'grey'" 
+                        @click="handleReaction(r)"
+                        class="reaction-emoji-btn"
+                      >
+                        {{ reactionEmoji[r] }}
+                      </v-btn>
+                    </div>
+                    <v-divider class="my-2"></v-divider>
+                    <div class="reaction-counts text-caption">
+                      <div v-for="r in reactionTypes" :key="r" class="reaction-count-item">
+                        <span class="emoji">{{ reactionEmoji[r] }}</span>
+                        <span class="count">{{ getReactionCount(r) }}</span>
+                      </div>
+                    </div>
+                  </v-card>
+                </v-menu>
+              </div>
             </div>
           </v-card-text>
         </v-card>
@@ -153,6 +274,27 @@
         <v-btn color="primary" @click="goBack" class="mt-4">返回社区</v-btn>
       </div>
     </div>
+    <v-snackbar v-model="followErrorShown" color="error" timeout="2500">{{ followError }}</v-snackbar>
+    
+    <!-- 回复成功提示 -->
+    <v-snackbar v-model="replySuccessShown" color="success" timeout="2500">
+      {{ replySuccessMessage }}
+    </v-snackbar>
+    
+    <!-- 回复失败提示 -->
+    <v-snackbar v-model="replyErrorShown" color="error" timeout="2500">
+      {{ replyErrorMessage }}
+    </v-snackbar>
+
+    <v-dialog v-model="previewOpen" max-width="900">
+      <v-card>
+        <v-carousel v-model="previewIndex" hide-delimiter-background>
+          <v-carousel-item v-for="(img, i) in (currentPost?.imageUrls || [])" :key="i">
+            <v-img :src="img" class="preview-img" contain />
+          </v-carousel-item>
+        </v-carousel>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -172,10 +314,11 @@ const {
   loading,
   loadCommunityData,
   likePost,
-  getReplies
+  getReplies,
+  addReply
 } = useCommunityController()
 
-const { toggleFollow: apiToggleFollow, getFollowStatus } = useSocialController()
+const { toggleFollow: apiToggleFollow, getFollowStatus, toggleFavorite, getFavoriteStatus, react, getReactionSummary } = useSocialController()
 
 const currentPost = ref<Post | null>(null)
 const isLiked = ref(false)
@@ -183,6 +326,34 @@ const isProcessingLike = ref(false)
 const replies = ref<Reply[]>([])
 const loadingReplies = ref(false)
 const followed = ref(false)
+
+// 收藏和表情反应相关状态
+const isFavorited = ref(false)
+const isProcessingFavorite = ref(false)
+const reactionCounters = ref<Record<string, number>>({})
+const myReaction = ref<string | null>(null)
+
+// 表情类型和表情符号映射
+const reactionTypes: Array<'like' | 'love' | 'laugh' | 'sad' | 'angry'> = ['like', 'love', 'laugh', 'sad', 'angry']
+const reactionEmoji: Record<string, string> = { 
+  like: '👍', 
+  love: '❤️', 
+  laugh: '😂', 
+  sad: '😢', 
+  angry: '😡' 
+}
+
+// 回复相关状态
+const replyContent = ref('')
+const isSubmittingReply = ref(false)
+const replySuccessShown = ref(false)
+const replySuccessMessage = ref('')
+const replyErrorShown = ref(false)
+const replyErrorMessage = ref('')
+
+const followError = ref('')
+const followErrorShown = ref(false)
+const showFollowError = (msg: string) => { followError.value = msg; followErrorShown.value = true }
 
 // 获取当前登录用户
 const getCurrentUser = () => {
@@ -236,7 +407,7 @@ const loadPostDetail = async () => {
 
   if (posts.value.length === 0) {
     console.log('posts为空，开始加载社区数据...')
-    await loadCommunityData()
+    await loadCommunityData('', 'posts')
     console.log('加载完成，posts数组长度:', posts.value.length)
     console.log('加载完成，posts数组内容:', posts.value)
   }
@@ -254,6 +425,12 @@ const loadPostDetail = async () => {
     
     // 加载帖子的回复
     await loadReplies()
+    
+    // 加载收藏和表情反应状态
+    if (isLoggedIn.value) {
+      await loadFavoriteStatus()
+      await loadReactionStatus()
+    }
   } else {
     console.log('未找到对应帖子!')
     console.log('所有可用的帖子ID:', posts.value.map(p => p.id))
@@ -277,6 +454,68 @@ const loadReplies = async () => {
     replies.value = []
   } finally {
     loadingReplies.value = false
+  }
+}
+
+// 回复验证规则
+const replyRules = [
+  (v: string) => !!v || '回复内容不能为空',
+  (v: string) => v.length <= 500 || '回复内容不能超过500个字符',
+  (v: string) => v.length >= 2 || '回复内容至少需要2个字符'
+]
+
+// 计算属性：是否可以提交回复
+const canSubmitReply = computed(() => {
+  return replyContent.value.trim().length >= 2 && 
+         replyContent.value.trim().length <= 500 &&
+         !isSubmittingReply.value
+})
+
+// 清空回复输入
+const clearReplyInput = () => {
+  replyContent.value = ''
+}
+
+// 提交回复
+const submitReply = async () => {
+  if (!canSubmitReply.value || !currentPost.value) return
+  
+  if (!currentUser || !currentUser.userId || !currentUser.username) {
+    replyErrorMessage.value = '请先登录后再发表回复'
+    replyErrorShown.value = true
+    return
+  }
+  
+  isSubmittingReply.value = true
+  
+  try {
+    const response = await addReply(
+      currentPost.value.id,
+      replyContent.value.trim(),
+      currentUser.userId,
+      currentUser.username,
+      currentUser.avatar || ''
+    )
+    
+    if (response.success && response.reply) {
+      replySuccessMessage.value = '回复成功！'
+      replySuccessShown.value = true
+      
+      // 清空输入框
+      replyContent.value = ''
+      
+      // 重新加载回复列表
+      await loadReplies()
+    } else {
+      replyErrorMessage.value = response.message || '回复失败，请稍后重试'
+      replyErrorShown.value = true
+    }
+  } catch (error) {
+    console.error('提交回复失败:', error)
+    replyErrorMessage.value = '网络错误，回复失败，请稍后重试'
+    replyErrorShown.value = true
+  } finally {
+    isSubmittingReply.value = false
   }
 }
 
@@ -321,17 +560,109 @@ const loadFollowStatus = async () => {
 
 // 切换关注状态
 const toggleFollowAuthor = async () => {
-  if (!isLoggedIn.value || !currentPost.value?.author?.id) return
+  if (!isLoggedIn.value) { showFollowError('请先登录'); return }
+  if (!currentPost.value?.author?.id) return
+  const targetId = currentPost.value.author.id
+  const wasFollowed = followed.value
+  if (wasFollowed) {
+    const ok = window.confirm('确定要取消关注该作者吗？')
+    if (!ok) return
+  }
+  followed.value = !wasFollowed
   try {
-    const res = await apiToggleFollow(currentUserId, currentPost.value.author.id, !followed.value)
-    if (res) followed.value = res.followed
-  } catch (e) { console.error('关注操作失败', e) }
+    const res = await apiToggleFollow(currentUserId, targetId, !wasFollowed)
+    if (res) {
+      followed.value = res.followed
+    } else {
+      followed.value = wasFollowed
+      showFollowError('关注操作失败')
+    }
+  } catch (e) {
+    console.error('关注操作失败', e)
+    followed.value = wasFollowed
+    showFollowError('网络错误，稍后重试')
+  }
+}
+
+// 切换收藏状态
+const toggleFavoriteAction = async () => {
+  if (!currentPost.value || !isLoggedIn.value) return
+  if (isProcessingFavorite.value) return
+  
+  isProcessingFavorite.value = true
+  const postId = currentPost.value.id
+  const newFavState = !isFavorited.value
+  
+  try {
+    const resp = await toggleFavorite(postId, currentUserId, newFavState)
+    if (resp) {
+      isFavorited.value = resp.favorited
+    }
+  } catch (e) {
+    console.error('收藏操作失败', e)
+  } finally {
+    isProcessingFavorite.value = false
+  }
+}
+
+// 处理表情反应
+const handleReaction = async (type: 'like' | 'love' | 'laugh' | 'sad' | 'angry') => {
+  if (!currentPost.value || !isLoggedIn.value) return
+  
+  const postId = currentPost.value.id
+  const add = myReaction.value !== type
+  
+  try {
+    const resp = await react(postId, currentUserId, type, add)
+    if (resp) {
+      reactionCounters.value = resp.counters
+      myReaction.value = resp.myReaction || null
+    }
+  } catch (e) {
+    console.error('表情反应失败', e)
+  }
+}
+
+// 获取某个表情的计数
+const getReactionCount = (type: string): number => {
+  return reactionCounters.value[type] || 0
+}
+
+// 加载收藏状态
+const loadFavoriteStatus = async () => {
+  if (!isLoggedIn.value || !currentPost.value) return
+  try {
+    const resp = await getFavoriteStatus(currentPost.value.id, currentUserId)
+    if (resp) {
+      isFavorited.value = resp.favorited
+    }
+  } catch (e) {
+    console.warn('获取收藏状态失败', e)
+  }
+}
+
+// 加载表情反应状态
+const loadReactionStatus = async () => {
+  if (!isLoggedIn.value || !currentPost.value) return
+  try {
+    const resp = await getReactionSummary(currentPost.value.id, currentUserId)
+    if (resp) {
+      reactionCounters.value = resp.counters
+      myReaction.value = resp.myReaction || null
+    }
+  } catch (e) {
+    console.warn('获取表情反应状态失败', e)
+  }
 }
 
 // 返回社区
 const goBack = () => {
   router.push('/community')
 }
+
+const previewOpen = ref(false)
+const previewIndex = ref(0)
+const openPreview = (i: number) => { previewIndex.value = i; previewOpen.value = true }
 
 onMounted(() => {
   loadPostDetail()
@@ -423,6 +754,20 @@ onMounted(() => {
   white-space: pre-wrap;
 }
 
+.image-gallery { 
+  margin-top: 12px; 
+}
+
+.gallery-item { 
+  height: 200px; 
+  border-radius: 8px; 
+  cursor: pointer; 
+}
+
+.preview-img { 
+  height: 600px; 
+}
+
 /* 右侧作者信息卡片 */
 .author-info-card {
   height: fit-content;
@@ -473,20 +818,77 @@ onMounted(() => {
   color: #666;
 }
 
-/* 预留扩展空间 */
-.extension-area {
-  min-height: 100px;
-  border: 2px dashed #e0e0e0;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #999;
-  font-size: 14px;
+/* 社交互动功能区 */
+.social-interaction-area {
+  margin-top: 24px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border: 1px solid #e0e0e0;
 }
 
-.extension-area::before {
-  content: "预留扩展区域";
+.interaction-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+}
+
+.login-prompt-interaction {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.interaction-buttons {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.interaction-btn {
+  flex: 1;
+  min-width: 120px;
+}
+
+.reaction-selector {
+  display: flex;
+  justify-content: space-around;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.reaction-emoji-btn {
+  font-size: 24px;
+  min-width: 48px;
+  height: 48px;
+}
+
+.reaction-counts {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #666;
+}
+
+.reaction-count-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: #f5f5f5;
+}
+
+.reaction-count-item .emoji {
+  font-size: 16px;
+}
+
+.reaction-count-item .count {
+  font-weight: 600;
+  color: #1976d2;
 }
 
 /* 回复区域 */
@@ -601,6 +1003,48 @@ onMounted(() => {
   color: #666;
 }
 
+/* 回复输入区 */
+.reply-input-section {
+  margin-top: 16px;
+}
+
+.reply-input-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+}
+
+.login-prompt {
+  background: #f5f5f5;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.reply-input-box {
+  background: #f8f9fa;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid #e0e0e0;
+}
+
+.reply-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.reply-hint {
+  color: #999;
+}
+
+.reply-buttons {
+  display: flex;
+  gap: 8px;
+}
+
 /* 响应式设计 */
 @media (max-width: 960px) {
   .page-container {
@@ -624,6 +1068,17 @@ onMounted(() => {
   .post-title {
     margin-right: 0;
     margin-bottom: 16px;
+  }
+
+  .reply-actions {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .reply-buttons {
+    width: 100%;
+    justify-content: flex-end;
   }
 }
 </style>
