@@ -18,7 +18,7 @@ httpClient.interceptors.request.use(
       if (!headers['Content-Type']) headers['Content-Type'] = 'application/json'
     }
 
-    // 不需要token的接口白名单
+    // 不需要token的接口白名单（只读操作）
     const noToken = (
       config.url?.includes('/api/auth/login') ||
       config.url?.includes('/api/auth/register') ||
@@ -27,7 +27,8 @@ httpClient.interceptors.request.use(
       config.url?.includes('/api/shop/search') ||
       config.url?.includes('/api/shop/check-stock') ||
       config.url?.includes('/api/community/search') ||
-      config.url?.includes('/posts/add-with-images')
+      config.url?.includes('/api/community/posts/latest') ||
+      (config.url?.includes('/api/community/posts/') && config.url?.includes('/replies') && config.method?.toUpperCase() === 'GET')
     )
     if (!noToken) {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token')

@@ -1,6 +1,6 @@
 import { ref } from 'vue'
-import { CommunitySearchAPI, CommunityLikeAPI, CommunityCheckAuthorAPI, CommunityAddPostAPI, CommunityGetRepliesAPI, CommunityAddPostWithImagesAPI } from '../api/CommunityAPI'
-import type { Post, SearchRequest, SearchResult, LikeRequest, LikeResponse, CheckAuthorRequest, CheckAuthorResponse, AddPostRequest, AddPostResponse, GetRepliesResponse, AddPostWithImagesResponse } from '../interface/CommunityInterface'
+import { CommunitySearchAPI, CommunityLikeAPI, CommunityCheckAuthorAPI, CommunityAddPostAPI, CommunityGetRepliesAPI, CommunityAddPostWithImagesAPI, CommunityAddReplyAPI } from '../api/CommunityAPI'
+import type { Post, SearchRequest, SearchResult, LikeRequest, LikeResponse, CheckAuthorRequest, CheckAuthorResponse, AddPostRequest, AddPostResponse, GetRepliesResponse, AddPostWithImagesResponse, AddReplyRequest, AddReplyResponse } from '../interface/CommunityInterface'
 
 export const useCommunityController = () => {
     const posts = ref<Post[]>([]) 
@@ -206,6 +206,26 @@ const addPostWithImages = async (title: string, content: string, files: File[]):
         }
     }
 
+    // 添加用户回复
+    const addReply = async (postId: string, content: string, authorId: string, authorName: string, authorAvatar: string): Promise<AddReplyResponse> => {
+        try {
+            console.log('Controller: 添加回复，postId:', postId, 'content:', content)
+            const request: AddReplyRequest = {
+                postId,
+                content,
+                authorId,
+                authorName,
+                authorAvatar
+            }
+            const response = await CommunityAddReplyAPI(postId, request)
+            console.log('Controller: 回复添加成功')
+            return response
+        } catch (e) {
+            console.error('Controller: 添加回复失败:', e)
+            throw e
+        }
+    }
+
     const normalizePosts = (arr: Post[]) => {
         arr.forEach(p => {
             if (!p.author) {
@@ -231,5 +251,6 @@ const addPostWithImages = async (title: string, content: string, files: File[]):
         addPostWithImages, // 新增导出
         checkAuthor,
         getReplies,
+        addReply, // 新增：导出用户回复功能
     }
 }

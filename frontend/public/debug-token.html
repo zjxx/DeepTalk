@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Token调试工具</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        .result { margin: 10px 0; padding: 10px; background: #f0f0f0; border-radius: 4px; }
+        .error { background: #ffe6e6; }
+        .success { background: #e6ffe6; }
+    </style>
+</head>
+<body>
+    <h1>Token调试工具</h1>
+    
+    <div id="results"></div>
+    
+    <script>
+        const results = document.getElementById('results');
+        
+        function addResult(title, content, isError = false) {
+            const div = document.createElement('div');
+            div.className = `result ${isError ? 'error' : 'success'}`;
+            div.innerHTML = `<strong>${title}:</strong><br>${content}`;
+            results.appendChild(div);
+        }
+        
+        // 检查localStorage中的token
+        const localToken = localStorage.getItem('token');
+        const sessionToken = sessionStorage.getItem('token');
+        
+        addResult('localStorage token', localToken || '(不存在)', !localToken);
+        addResult('sessionStorage token', sessionToken || '(不存在)', !sessionToken);
+        
+        // 检查userInfo
+        const userInfo = localStorage.getItem('userInfo') || sessionStorage.getItem('userInfo');
+        addResult('userInfo', userInfo || '(不存在)', !userInfo);
+        
+        if (userInfo) {
+            try {
+                const parsed = JSON.parse(userInfo);
+                addResult('解析后的userInfo', JSON.stringify(parsed, null, 2));
+            } catch (e) {
+                addResult('userInfo解析失败', e.message, true);
+            }
+        }
+        
+        // 测试发送请求
+        const token = localToken || sessionToken;
+        if (token) {
+            addResult('准备测试请求', '发送到 /api/community/posts/add');
+            
+            fetch('http://localhost:8080/api/community/posts/add', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    authorId: '1',
+                    post: {
+                        title: '测试标题',
+                        content: '这是一个测试帖子，用来调试Token问题',
+                        author: {
+                            id: '1',
+                            username: '测试用户',
+                            avatar: 'https://ui-avatars.com/api/?name=Test',
+                            authorLikes: 0,
+                            authorPosts: 0
+                        },
+                        likesCount: 0,
+                        createdAt: new Date().toISOString()
+                    }
+                })
+            })
+            .then(response => {
+                addResult('响应状态', `${response.status} ${response.statusText}`, response.status !== 200);
+                return response.text();
+            })
+            .then(data => {
+                addResult('响应内容', data);
+            })
+            .catch(error => {
+                addResult('请求失败', error.message, true);
+            });
+        } else {
+            addResult('无法测试请求', '没有找到token', true);
+        }
+    </script>
+</body>
+</html>

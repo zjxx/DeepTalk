@@ -96,13 +96,17 @@ export async function autoLogin(): Promise<boolean> {
 
 export const login = async (request: LoginRequest, rememberMe: boolean): Promise<boolean> => {
   try {
+    console.log('=== 开始登录流程 ===')
     console.log('登录请求数据:', request)
+    console.log('记住我:', rememberMe)
+    
     const loginRequest: LoginRequest = {
       ...request,
       rememberMe
     }
     const res: LoginResponse = await loginApi(loginRequest)
     console.log('登录响应数据:', res)
+    console.log('响应中的Token:', res.token)
     
     userModel.username = res.username
     userModel.email = res.email
@@ -111,8 +115,11 @@ export const login = async (request: LoginRequest, rememberMe: boolean): Promise
     userModel.isLoggedIn = true
     userModel.userId = res.userId
     
+    console.log('准备保存Token，记住我:', rememberMe)
+    
     if (rememberMe) {
       // 记住我时，保存所有信息
+      console.log('保存到localStorage')
       localStorage.setItem('token', res.token)
       localStorage.setItem('savedEmail', request.email)
       localStorage.setItem('savedPassword', request.password)
@@ -123,8 +130,10 @@ export const login = async (request: LoginRequest, rememberMe: boolean): Promise
         email: res.email,
         avatar: userAvatar.value
       }))
+      console.log('✅ Token已保存到localStorage:', localStorage.getItem('token'))
     } else {
       // 不记住我时，只保存当前会话的 token
+      console.log('保存到sessionStorage')
       sessionStorage.setItem('token', res.token)
       sessionStorage.setItem('expiration', res.expiration)
       sessionStorage.setItem('userInfo', JSON.stringify({
@@ -133,6 +142,8 @@ export const login = async (request: LoginRequest, rememberMe: boolean): Promise
         email: res.email,
         avatar: userAvatar.value
       }))
+      console.log('✅ Token已保存到sessionStorage:', sessionStorage.getItem('token'))
+      
       // 清除所有本地存储的登录信息
       localStorage.removeItem('token')
       localStorage.removeItem('savedEmail')
@@ -141,6 +152,7 @@ export const login = async (request: LoginRequest, rememberMe: boolean): Promise
       localStorage.removeItem('userInfo')
     }
     
+    console.log('=== 登录流程完成 ===')
     return true
   } catch (e) {
     alert('登录失败，请检查邮箱和密码')

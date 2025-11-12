@@ -85,6 +85,22 @@ export interface GetRepliesResponse {
   replies: Reply[];
 }
 
+//添加回复请求
+export interface AddReplyRequest {
+  postId: string;
+  content: string;
+  authorId: string;
+  authorName: string;
+  authorAvatar: string;
+}
+
+//添加回复响应
+export interface AddReplyResponse {
+  success: boolean;
+  message: string;
+  reply: Reply | null;
+}
+
 export interface AddPostWithImagesResponse {
   success: boolean;
   message: string;

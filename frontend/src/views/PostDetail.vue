@@ -108,7 +108,61 @@
             <div v-else class="empty-replies text-center pa-4">
               <v-icon size="48" color="grey-lighten-2">mdi-comment-off-outline</v-icon>
               <p class="mt-2 text-grey">暂无回复</p>
-              <p class="text-caption text-grey-lighten-1">发布新帖子时，AI会自动生成第一条回复</p>
+              <p class="text-caption text-grey-lighten-1">成为第一个回复的人吧！</p>
+            </div>
+
+            <v-divider class="my-4"></v-divider>
+
+            <!-- 用户回复输入区 -->
+            <div class="reply-input-section">
+              <h4 class="reply-input-title">
+                <v-icon size="18" class="mr-1">mdi-comment-edit-outline</v-icon>
+                发表回复
+              </h4>
+              
+              <div v-if="!isLoggedIn" class="login-prompt text-center pa-4">
+                <p class="text-grey">请先登录后再发表回复</p>
+              </div>
+              
+              <div v-else class="reply-input-box">
+                <v-textarea
+                  v-model="replyContent"
+                  placeholder="分享你的想法..."
+                  variant="outlined"
+                  :rows="4"
+                  auto-grow
+                  :counter="500"
+                  :rules="replyRules"
+                  hide-details="auto"
+                  class="mb-3"
+                />
+                
+                <div class="reply-actions">
+                  <span class="reply-hint text-caption text-grey">
+                    还可输入 {{ 500 - replyContent.length }} 字
+                  </span>
+                  <div class="reply-buttons">
+                    <v-btn
+                      variant="outlined"
+                      size="small"
+                      @click="clearReplyInput"
+                      :disabled="isSubmittingReply || !replyContent.trim()"
+                    >
+                      清空
+                    </v-btn>
+                    <v-btn
+                      color="primary"
+                      size="small"
+                      :loading="isSubmittingReply"
+                      :disabled="!canSubmitReply"
+                      @click="submitReply"
+                      prepend-icon="mdi-send"
+                    >
+                      发送回复
+                    </v-btn>
+                  </div>
+                </div>
+              </div>
             </div>
           </v-card-text>
         </v-card>
@@ -162,6 +216,16 @@
       </div>
     </div>
     <v-snackbar v-model="followErrorShown" color="error" timeout="2500">{{ followError }}</v-snackbar>
+    
+    <!-- 回复成功提示 -->
+    <v-snackbar v-model="replySuccessShown" color="success" timeout="2500">
+      {{ replySuccessMessage }}
+    </v-snackbar>
+    
+    <!-- 回复失败提示 -->
+    <v-snackbar v-model="replyErrorShown" color="error" timeout="2500">
+      {{ replyErrorMessage }}
+    </v-snackbar>
 
     <v-dialog v-model="previewOpen" max-width="900">
       <v-card>
@@ -191,7 +255,8 @@ const {
   loading,
   loadCommunityData,
   likePost,
-  getReplies
+  getReplies,
+  addReply
 } = useCommunityController()
 
 const { toggleFollow: apiToggleFollow, getFollowStatus } = useSocialController()
@@ -202,6 +267,14 @@ const isProcessingLike = ref(false)
 const replies = ref<Reply[]>([])
 const loadingReplies = ref(false)
 const followed = ref(false)
+
+// 回复相关状态
+const replyContent = ref('')
+const isSubmittingReply = ref(false)
+const replySuccessShown = ref(false)
+const replySuccessMessage = ref('')
+const replyErrorShown = ref(false)
+const replyErrorMessage = ref('')
 
 const followError = ref('')
 const followErrorShown = ref(false)
@@ -259,7 +332,7 @@ const loadPostDetail = async () => {
 
   if (posts.value.length === 0) {
     console.log('posts为空，开始加载社区数据...')
-    await loadCommunityData()
+    await loadCommunityData('', 'posts')
     console.log('加载完成，posts数组长度:', posts.value.length)
     console.log('加载完成，posts数组内容:', posts.value)
   }
@@ -300,6 +373,68 @@ const loadReplies = async () => {
     replies.value = []
   } finally {
     loadingReplies.value = false
+  }
+}
+
+// 回复验证规则
+const replyRules = [
+  (v: string) => !!v || '回复内容不能为空',
+  (v: string) => v.length <= 500 || '回复内容不能超过500个字符',
+  (v: string) => v.length >= 2 || '回复内容至少需要2个字符'
+]
+
+// 计算属性：是否可以提交回复
+const canSubmitReply = computed(() => {
+  return replyContent.value.trim().length >= 2 && 
+         replyContent.value.trim().length <= 500 &&
+         !isSubmittingReply.value
+})
+
+// 清空回复输入
+const clearReplyInput = () => {
+  replyContent.value = ''
+}
+
+// 提交回复
+const submitReply = async () => {
+  if (!canSubmitReply.value || !currentPost.value) return
+  
+  if (!currentUser || !currentUser.userId || !currentUser.username) {
+    replyErrorMessage.value = '请先登录后再发表回复'
+    replyErrorShown.value = true
+    return
+  }
+  
+  isSubmittingReply.value = true
+  
+  try {
+    const response = await addReply(
+      currentPost.value.id,
+      replyContent.value.trim(),
+      currentUser.userId,
+      currentUser.username,
+      currentUser.avatar || ''
+    )
+    
+    if (response.success && response.reply) {
+      replySuccessMessage.value = '回复成功！'
+      replySuccessShown.value = true
+      
+      // 清空输入框
+      replyContent.value = ''
+      
+      // 重新加载回复列表
+      await loadReplies()
+    } else {
+      replyErrorMessage.value = response.message || '回复失败，请稍后重试'
+      replyErrorShown.value = true
+    }
+  } catch (error) {
+    console.error('提交回复失败:', error)
+    replyErrorMessage.value = '网络错误，回复失败，请稍后重试'
+    replyErrorShown.value = true
+  } finally {
+    isSubmittingReply.value = false
   }
 }
 
@@ -659,6 +794,48 @@ onMounted(() => {
   color: #666;
 }
 
+/* 回复输入区 */
+.reply-input-section {
+  margin-top: 16px;
+}
+
+.reply-input-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+}
+
+.login-prompt {
+  background: #f5f5f5;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.reply-input-box {
+  background: #f8f9fa;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid #e0e0e0;
+}
+
+.reply-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.reply-hint {
+  color: #999;
+}
+
+.reply-buttons {
+  display: flex;
+  gap: 8px;
+}
+
 /* 响应式设计 */
 @media (max-width: 960px) {
   .page-container {
@@ -682,6 +859,17 @@ onMounted(() => {
   .post-title {
     margin-right: 0;
     margin-bottom: 16px;
+  }
+
+  .reply-actions {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .reply-buttons {
+    width: 100%;
+    justify-content: flex-end;
   }
 }
 </style>

@@ -27,16 +27,24 @@ public class JwtAuthenticationInterceptor implements HandlerInterceptor {
         // 放行OPTIONS请求
         if (request.getMethod().equals("OPTIONS")) {
             return true;
-        }
-
-        String uri = request.getRequestURI();
+        }        String uri = request.getRequestURI();
         String method = request.getMethod();
         String authHeader = request.getHeader("Authorization");
         boolean hasAuth = authHeader != null && authHeader.startsWith("Bearer ");
         log.debug("[JWT] preHandle uri={}, method={}, hasAuth={}", uri, method, hasAuth);
 
         if (!hasAuth) {
-            // 无token则不做鉴权，直接放行
+            // 无token时，对于某些需要认证的接口返回未授权
+            // 但对于查询类接口（GET）可以放行
+            if ("POST".equals(method) || "PUT".equals(method) || "DELETE".equals(method)) {
+                // 写操作需要登录
+                log.warn("[JWT] 需要登录才能执行此操作, uri={}, method={}", uri, method);
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType("application/json;charset=UTF-8");
+                response.getWriter().write("{\"error\":\"需要登录\",\"code\":\"UNAUTHORIZED\"}");
+                return false;
+            }
+            // GET请求放行
             return true;
         }
 
@@ -48,9 +56,7 @@ public class JwtAuthenticationInterceptor implements HandlerInterceptor {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.getWriter().write("Token已被注销");
             return false;
-        }
-
-        try {
+        }        try {
             // 验证token
             Claims claims = Jwts.parser()
                     .setSigningKey(jwtSecretKey)
@@ -58,11 +64,15 @@ public class JwtAuthenticationInterceptor implements HandlerInterceptor {
                     .getBody();
 
             // 将用户信息添加到请求属性中
-            request.setAttribute("userId", claims.get("userId"));
+            // 统一转换为String类型，避免类型转换错误
+            Object userIdObj = claims.get("userId");
+            String userId = userIdObj != null ? String.valueOf(userIdObj) : null;
+            
+            request.setAttribute("userId", userId);
             request.setAttribute("username", claims.get("username"));
             request.setAttribute("email", claims.getSubject());
 
-            log.debug("[JWT] valid token for userId={}, uri={}", claims.get("userId"), uri);
+            log.debug("[JWT] valid token for userId={}, uri={}", userId, uri);
             return true;
         } catch (Exception e) {
             log.warn("[JWT] invalid token, uri={}, reason={}", uri, e.getMessage());

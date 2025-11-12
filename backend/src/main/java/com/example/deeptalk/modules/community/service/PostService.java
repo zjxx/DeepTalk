@@ -47,8 +47,7 @@ public class PostService {
     public Post addPost(Post post) {
         // 使用缓存服务保存（会自动清除缓存）
         Post savedPost = postCacheService.savePost(post);
-        
-        // 保存图片
+          // 保存图片
         if (post.getImageUrls() != null) {
             int order = 0;
             for (String url : post.getImageUrls()) {
@@ -61,7 +60,12 @@ public class PostService {
         }
         
         // 异步生成AI回复（通过独立的Service确保异步生效）
-        asyncReplyService.generateAIReplyAsync(savedPost);
+        try {
+            asyncReplyService.generateAIReplyAsync(savedPost);
+        } catch (Exception e) {
+            // AI回复生成失败不应该影响发帖
+            System.err.println("AI回复生成失败，但不影响发帖: " + e.getMessage());
+        }
         
         return savedPost;
     }

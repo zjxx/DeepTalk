@@ -26,24 +26,26 @@ public class SocialController {
     private final FollowService followService;
     private final FavoriteService favoriteService;
     private final ReactionService reactionService;
-    private final AuthorService authorService;
-
-    @PostMapping(value = "/follow", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
+    private final AuthorService authorService;    @PostMapping(value = "/follow", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
     public ResponseEntity<FollowStatusResponse> follow(@RequestBody FollowActionRequest request, HttpServletRequest httpRequest) {
-        String tokenUserId = (String) httpRequest.getAttribute("userId");
+        // 安全地获取Token中的用户信息
+        Object userIdObj = httpRequest.getAttribute("userId");
+        String tokenUserId = userIdObj != null ? String.valueOf(userIdObj) : null;
+        
         if (tokenUserId != null && !tokenUserId.isEmpty()) {
             request.setUserId(tokenUserId); // 以服务端认证为准
         }
         System.out.println("[Social] FOLLOW action user=" + request.getUserId() + ", target=" + request.getTargetAuthorId() + ", follow=" + request.isFollow());
         return ResponseEntity.ok(followService.toggleFollow(request));
-    }
-
-    @GetMapping(value = "/follow/status", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
+    }    @GetMapping(value = "/follow/status", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
     public ResponseEntity<FollowStatusResponse> status(@RequestParam(required = false) String currentUserId,
                                                        @RequestParam String targetAuthorId,
                                                        HttpServletRequest httpRequest) {
         if (currentUserId == null || currentUserId.isEmpty()) {
-            String tokenUserId = (String) httpRequest.getAttribute("userId");
+            // 安全地获取Token中的用户信息
+            Object userIdObj = httpRequest.getAttribute("userId");
+            String tokenUserId = userIdObj != null ? String.valueOf(userIdObj) : null;
+            
             if (tokenUserId != null && !tokenUserId.isEmpty()) currentUserId = tokenUserId;
         }
         System.out.println("[Social] FOLLOW status user=" + currentUserId + ", target=" + targetAuthorId);

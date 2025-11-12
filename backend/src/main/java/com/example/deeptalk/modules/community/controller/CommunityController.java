@@ -57,15 +57,16 @@ public class CommunityController {
     public ResponseEntity<LikeResponse> likePost(@RequestBody LikeRequest request) {
         LikeResponse response = postService.likePost(request);
         return ResponseEntity.ok(response);
-    }
-
-    @PostMapping(value = "/posts/add", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
+    }    @PostMapping(value = "/posts/add", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
     public ResponseEntity<AddPostResponse> addPost(@RequestBody AddPostRequest request, HttpServletRequest httpRequest) {
         try {
             Post post = request.getPost();
-            // 从认证拦截器注入的请求属性中获取用户
-            String tokenUserId = (String) httpRequest.getAttribute("userId");
-            String tokenUsername = (String) httpRequest.getAttribute("username");
+            // 从认证拦截器注入的请求属性中获取用户信息
+            // 安全地进行类型转换
+            Object userIdObj = httpRequest.getAttribute("userId");
+            Object usernameObj = httpRequest.getAttribute("username");
+            String tokenUserId = userIdObj != null ? String.valueOf(userIdObj) : null;
+            String tokenUsername = usernameObj != null ? String.valueOf(usernameObj) : null;
 
             // 服务器端作为真实来源：优先使用token中的信息
             String effectiveAuthorId = tokenUserId != null ? tokenUserId : request.getAuthorId();
@@ -105,17 +106,20 @@ public class CommunityController {
             response.setPost(null);
             return ResponseEntity.internalServerError().body(response);
         }
-    }
-
-    @PostMapping(value = "/posts/add-with-images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
+    }    @PostMapping(value = "/posts/add-with-images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
     public ResponseEntity<AddPostWithImagesResponse> addPostWithImages(
             @RequestPart("title") String title,
             @RequestPart("content") String content,
             @RequestPart(value = "images", required = false) List<MultipartFile> images,
             HttpServletRequest httpRequest) {
         long start = System.currentTimeMillis();
-        String tokenUserId = (String) httpRequest.getAttribute("userId");
-        String tokenUsername = (String) httpRequest.getAttribute("username");
+        
+        // 安全地获取Token中的用户信息
+        Object userIdObj = httpRequest.getAttribute("userId");
+        Object usernameObj = httpRequest.getAttribute("username");
+        String tokenUserId = userIdObj != null ? String.valueOf(userIdObj) : null;
+        String tokenUsername = usernameObj != null ? String.valueOf(usernameObj) : null;
+        
         String rawContentType = httpRequest.getContentType();
         log.info("[AddPostWithImages] raw Content-Type='{}'", rawContentType);
         log.debug("[AddPostWithImages] headers UA='{}'", httpRequest.getHeader("User-Agent"));
@@ -209,6 +213,67 @@ public class CommunityController {
             response.setMessage("获取回复失败: " + e.getMessage());
             response.setReplies(List.of());
             response.setCount(0);
+            
+            return ResponseEntity.internalServerError().body(response);
+        }
+    }
+
+    /**
+     * 添加用户回复
+     */
+    @PostMapping(value = "/posts/{postId}/replies", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8")
+    public ResponseEntity<AddReplyResponse> addReply(
+            @PathVariable String postId, 
+            @RequestBody AddReplyRequest request,
+            HttpServletRequest httpRequest) {        try {
+            log.info("📥 用户添加回复，postId: {}, content: {}", postId, request.getContent());
+            
+            // 从认证拦截器注入的请求属性中获取用户信息
+            // JWT拦截器已经将userId转换为String
+            Object userIdObj = httpRequest.getAttribute("userId");
+            Object usernameObj = httpRequest.getAttribute("username");
+            
+            String tokenUserId = userIdObj != null ? String.valueOf(userIdObj) : null;
+            String tokenUsername = usernameObj != null ? String.valueOf(usernameObj) : null;
+            
+            log.debug("🔑 Token信息 - userId: {}, username: {}", tokenUserId, tokenUsername);
+            
+            // 服务器端作为真实来源：优先使用token中的信息
+            String effectiveAuthorId = tokenUserId != null ? tokenUserId : request.getAuthorId();
+            String effectiveAuthorName = tokenUsername != null ? tokenUsername : request.getAuthorName();
+            String defaultAvatar = "https://sns-avatar-qc.xhscdn.com/avatar/1040g2jo31b593h86ng005p4rmeo7531ts9tr1og?imageView2/2/w/540/format/webp|imageMogr2/strip2";
+            String effectiveAvatar = request.getAuthorAvatar() != null && !request.getAuthorAvatar().isEmpty() 
+                    ? request.getAuthorAvatar() 
+                    : defaultAvatar;
+            
+            // 创建回复对象
+            Reply reply = new Reply();
+            reply.setPostId(postId);
+            reply.setContent(request.getContent());
+            reply.setAuthorId(effectiveAuthorId != null ? effectiveAuthorId : "anonymous");
+            reply.setAuthorName(effectiveAuthorName != null ? effectiveAuthorName : "匿名用户");
+            reply.setAuthorAvatar(effectiveAvatar);
+            reply.setIsAiGenerated(false);
+            reply.setCreatedAt(LocalDateTime.now());
+            
+            // 保存回复
+            Reply savedReply = replyService.addReply(reply);
+            
+            AddReplyResponse response = new AddReplyResponse();
+            response.setSuccess(true);
+            response.setMessage("回复成功");
+            response.setReply(savedReply);
+            
+            log.info("✅ 回复添加成功，replyId: {}", savedReply.getId());
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            log.error("❌ 添加回复失败: {}", e.getMessage(), e);
+            
+            AddReplyResponse response = new AddReplyResponse();
+            response.setSuccess(false);
+            response.setMessage("回复失败: " + e.getMessage());
+            response.setReply(null);
             
             return ResponseEntity.internalServerError().body(response);
         }

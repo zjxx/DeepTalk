@@ -1,5 +1,5 @@
 //import axios from 'axios'
-import type { Post, CheckAuthorRequest, CheckAuthorResponse, SearchRequest, SearchResult, LikeRequest, LikeResponse, AddPostRequest, GetRepliesResponse, AddPostWithImagesResponse } from '../interface/CommunityInterface'
+import type { Post, CheckAuthorRequest, CheckAuthorResponse, SearchRequest, SearchResult, LikeRequest, LikeResponse, AddPostRequest, GetRepliesResponse, AddPostWithImagesResponse, AddReplyRequest, AddReplyResponse } from '../interface/CommunityInterface'
 import { API_ENDPOINTS } from '../config/api'
 import { http } from '../utils/http'
 import type { FollowActionRequest, FollowStatusResponse, FavoriteRequest, FavoriteStatusResponse, ReactionRequest, ReactionSummaryResponse, AuthorListResponse } from '../interface/SocialInterface.ts'
@@ -44,6 +44,12 @@ export function CommunityAddPostWithImagesAPI(formData: FormData): Promise<AddPo
 export function CommunityGetRepliesAPI(postId: string): Promise<GetRepliesResponse> {
     console.log('获取回复，帖子ID:', postId)
     return http.get<GetRepliesResponse>(`${API_ENDPOINTS.COMMUNITY.POSTS.REPLIES}/${postId}/replies`) as Promise<GetRepliesResponse>
+}
+
+//添加用户回复
+export function CommunityAddReplyAPI(postId: string, request: AddReplyRequest): Promise<AddReplyResponse> {
+    console.log('发送回复请求，帖子ID:', postId, '内容:', request.content)
+    return http.post<AddReplyResponse, AddReplyRequest>(`${API_ENDPOINTS.COMMUNITY.POSTS.REPLIES}/${postId}/replies`, request)
 }
 
 // 关注/取关
