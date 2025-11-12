@@ -63,7 +63,7 @@ export class VersusModel {
       canvasHeight: 0,
       matchStarted: true, // 现在进入房间就自动开始对战
       remainingTime: 300,
-      matchType: '真人对战',
+      matchType: 'AI辅助',
       difficultyLevel: '中级',
       userMuted: false,
       isUserSpeaking: false,

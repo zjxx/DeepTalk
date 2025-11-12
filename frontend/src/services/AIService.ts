@@ -99,31 +99,176 @@ export class AIService {
       
       console.log(`Generating AI response using ${this.currentProvider}:`, userSpeechText)
       
-      // 调用当前AI服务生成回复
-      const aiResponse = await this.getCurrentService().generateResponse(userSpeechText)
+      // 持续重试直到获得正常回复
+      let aiResponse: string | null = null
+      let retryCount = 0
+      const maxRetries = 20 // 增加最大重试次数
+      let consecutiveFallbacks = 0 // 连续获得备用回复的次数
       
-      console.log('AI response generated:', aiResponse)
+      while (!aiResponse && retryCount < maxRetries) {
+        try {
+          console.log(`🔄 尝试获取AI回复 (第${retryCount + 1}次/共${maxRetries}次)...`)
+          const rawResponse = await this.getCurrentService().generateResponse(userSpeechText)
+          
+          // 验证回复是否为正常回复（不是备用回复）
+          if (this.isValidNormalResponse(rawResponse)) {
+            console.log('✅ 获得有效的AI正常回复:', rawResponse)
+            aiResponse = rawResponse
+            break
+          } else {
+            console.log('⚠️ 检测到备用回复，继续等待正常回复...')
+            consecutiveFallbacks++
+            
+            // 如果连续多次获得备用回复，增加等待时间
+            let waitTime = 3000 // 基础等待时间3秒
+            if (consecutiveFallbacks >= 3) {
+              waitTime = 5000 // 5秒
+            } else if (consecutiveFallbacks >= 6) {
+              waitTime = 8000 // 8秒
+            }
+            
+            console.log(`⏱️ 等待${waitTime/1000}秒后重试... (连续备用回复: ${consecutiveFallbacks}次)`)
+            await new Promise(resolve => setTimeout(resolve, waitTime))
+            
+            retryCount++
+          }
+        } catch (error) {
+          console.warn(`❌ 第${retryCount + 1}次尝试失败:`, error)
+          retryCount++
+          
+          if (retryCount < maxRetries) {
+            const waitTime = Math.min(3000 + retryCount * 1000, 10000) // 递增等待时间，最多10秒
+            console.log(`⏱️ 等待${waitTime/1000}秒后重试...`)
+            await new Promise(resolve => setTimeout(resolve, waitTime))
+          }
+        }
+      }
       
-      // 通知停止思考
-      this.onThinkingStateChange?.(false)
-      
-      // 立即显示AI回复文本（在TTS之前）
-      this.onResponseGenerated?.(aiResponse)
-      
-      // 注意：不在这里管理speaking状态
-      // speaking状态由TTS服务的回调自动管理
+      if (aiResponse) {
+        console.log('🎉 AI response successfully generated:', aiResponse)
+        
+        // 通知停止思考
+        this.onThinkingStateChange?.(false)
+        
+        // 立即显示AI回复文本（在TTS之前）
+        this.onResponseGenerated?.(aiResponse)
+        
+        // 注意：不在这里管理speaking状态
+        // speaking状态由TTS服务的回调自动管理
+      } else {
+        console.error(`💔 达到最大重试次数(${maxRetries}次)，仍未获得有效的AI回复`)
+        console.error(`📊 统计信息: 连续备用回复 ${consecutiveFallbacks} 次`)
+        this.onThinkingStateChange?.(false)
+        
+        // 提供更详细的错误信息
+        if (consecutiveFallbacks >= 5) {
+          this.onErrorOccurred?.('AI服务正在维护中，请稍后再试。我们正在努力为您提供更好的服务。')
+        } else {
+          this.onErrorOccurred?.('AI服务正在处理大量请求，请稍等片刻后再试。')
+        }
+      }
 
     } catch (error) {
       console.error('Error generating AI response:', error)
       this.onThinkingStateChange?.(false)
-      this.onSpeakingStateChange?.(false)
       this.onErrorOccurred?.('AI回复生成失败，请稍后重试')
-      
-      // 使用备用回复
-      this.generateFallbackResponse()
     } finally {
       this.isProcessing = false
     }
+  }
+
+  /**
+   * 验证是否为正常回复（而非备用回复）
+   */
+  private isValidNormalResponse(response: string): boolean {
+    if (!response || typeof response !== 'string') {
+      return false
+    }
+    
+    // 检查是否包含后端AIReplyService的备用回复模式
+    const backendFallbackPatterns = [
+      '感谢分享！这个话题很有意思，期待看到更多讨论。',
+      '很有见地的观点！你提到的内容让我有了新的思考。',
+      '这是一个很棒的帖子！希望能看到更多这样的内容。',
+      '非常有价值的分享，感谢你的贡献！',
+      '很高兴看到这样的讨论，继续加油！'
+    ]
+    
+    // 检查是否完全匹配后端备用回复
+    for (const pattern of backendFallbackPatterns) {
+      if (response.trim() === pattern) {
+        console.log(`检测到后端备用回复: ${pattern}`)
+        return false
+      }
+    }
+    
+    // 检查其他可能的备用回复模式
+    const generalFallbackPatterns = [
+      'I apologize, but I\'m having trouble',
+      'Sorry, I\'m experiencing some technical',
+      'I\'m having connection issues',
+      'Pardon me, but I need a moment',
+      'I apologize for the interruption',
+      'That\'s an interesting point about',
+      'I appreciate your thoughts on',
+      'Thank you for sharing. Could you explain',
+      'That\'s a good perspective',
+      'I understand. What made you interested',
+      '关于.*，这是一个有趣的观点',
+      '感谢你分享关于.*的想法',
+      '谢谢分享。能用另一种方式解释',
+      '这是一个很好的角度',
+      '我理解了。是什么让你对.*感兴趣',
+      'Sorry, I cannot generate a response',
+      'AI service is temporarily unavailable',
+      'The system is busy',
+      'Sorry, I need some time to think',
+      '感谢.*分享',
+      '很有.*观点',
+      '这是一个.*帖子',
+      '非常.*分享',
+      '很高兴.*讨论'
+    ]
+    
+    // 如果回复匹配任何备用回复模式，则认为不是正常回复
+    for (const pattern of generalFallbackPatterns) {
+      if (new RegExp(pattern, 'i').test(response)) {
+        console.log(`检测到备用回复模式: ${pattern}`)
+        return false
+      }
+    }
+    
+    // 如果回复太短（少于15个字符），可能也是备用回复
+    if (response.trim().length < 15) {
+      console.log('回复过短，可能是备用回复')
+      return false
+    }
+    
+    // 检查是否包含具体的对话内容（而不是泛泛而谈的礼貌用语）
+    const conversationIndicators = [
+      'what', 'how', 'why', 'when', 'where', 'which', 'who',
+      'tell me', 'explain', 'describe', 'think', 'believe', 'opinion',
+      'experience', 'example', 'interesting', 'different', 'similar',
+      '什么', '怎么', '为什么', '哪里', '如何', '告诉我', '解释', '描述', 
+      '我认为', '我觉得', '经验', '例子', '有趣', '不同', '类似',
+      'could you', 'would you', 'have you', 'do you', 'are you',
+      '你能', '你会', '你有', '你是否', '你觉得'
+    ]
+    
+    let hasConversationContent = false
+    for (const indicator of conversationIndicators) {
+      if (response.toLowerCase().includes(indicator.toLowerCase())) {
+        hasConversationContent = true
+        break
+      }
+    }
+    
+    if (!hasConversationContent) {
+      console.log('回复缺乏具体对话内容，可能是备用回复')
+      return false
+    }
+    
+    return true
   }
 
   /**
@@ -148,30 +293,14 @@ export class AIService {
   }
 
   /**
-   * 旧的开始说话方法（保持兼容性）
+   * 旧的开始说话方法（已废弃 - 不再使用预设回复）
+   * @deprecated 此方法已被废弃，现在统一使用 generateResponseFromSpeech() 方法
+   * 保留此方法仅为了向后兼容，但已移除预设回复逻辑
    */
   startSpeaking(): void {
-    this.stopSpeaking()
-    
-    setTimeout(() => {
-      // 生成AI回复
-      const aiResponses = [
-        "That's a very interesting perspective. Could you tell me more about your experience with this?",
-        "I understand your point. Have you considered the alternative viewpoint?",
-        "That's a great example. How do you think this applies in different situations?",
-        "Very thoughtful response. What do you think are the main challenges in this area?",
-        "I see what you mean. How has this changed over the years in your opinion?"
-      ]
-      
-      const randomResponse = aiResponses[Math.floor(Math.random() * aiResponses.length)]
-      
-      // 立即显示回复文本
-      if (this.onResponseGenerated) {
-        this.onResponseGenerated(randomResponse)
-      }
-      
-      // TTS将由Controller的回调自动处理
-    }, 1000)
+    console.warn('⚠️ startSpeaking() 方法已废弃，请使用 generateResponseFromSpeech() 方法')
+    // 不再生成预设回复，避免干扰真正的AI回复
+    // 如果需要AI回复，应该调用 generateResponseFromSpeech() 方法
   }
 
   stopSpeaking(): void {
