@@ -402,7 +402,18 @@ onMounted(async () => {
 } */
 
 .post-wrapper { position: relative; }
-.social-actions { position: absolute; top: 4px; right: 8px; display: flex; gap: 4px; z-index: 5; }
+.social-actions { 
+  position: absolute; 
+  top: 8px; 
+  right: 8px; 
+  display: flex; 
+  gap: 4px; 
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 4px 6px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
 .reaction-row { display: flex; flex-wrap: wrap; gap: 4px; }
 .author-list { display: flex; flex-direction: column; gap: 10px; }
 .author-item { display: flex; align-items: center; gap: 10px; justify-content: space-between; }
