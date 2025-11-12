@@ -200,9 +200,68 @@
               </div>
             </div>
 
-            <!-- 预留扩展空间 -->
-            <div class="extension-area">
-              <!-- 这里预留给未来功能扩展 -->
+            <!-- 社交互动功能区 -->
+            <div class="social-interaction-area">
+              <h4 class="interaction-title">
+                <v-icon size="18" class="mr-1">mdi-thumb-up-outline</v-icon>
+                互动
+              </h4>
+              
+              <div v-if="!isLoggedIn" class="login-prompt-interaction text-center pa-4">
+                <p class="text-grey">请先登录后使用互动功能</p>
+              </div>
+              
+              <div v-else class="interaction-buttons">
+                <!-- 收藏按钮 -->
+                <v-btn 
+                  variant="outlined" 
+                  :color="isFavorited ? 'orange' : 'grey'" 
+                  prepend-icon="mdi-star"
+                  @click="toggleFavoriteAction"
+                  :loading="isProcessingFavorite"
+                  :disabled="isProcessingFavorite"
+                  class="interaction-btn"
+                >
+                  {{ isFavorited ? '已收藏' : '收藏' }}
+                </v-btn>
+                
+                <!-- 表情反应按钮 -->
+                <v-menu transition="scale-transition" location="bottom">
+                  <template #activator="{ props }">
+                    <v-btn 
+                      v-bind="props" 
+                      variant="outlined" 
+                      :color="myReaction ? 'primary' : 'grey'"
+                      prepend-icon="mdi-emoticon-happy-outline"
+                      class="interaction-btn"
+                    >
+                      {{ myReaction ? reactionEmoji[myReaction] : '表情' }}
+                    </v-btn>
+                  </template>
+                  <v-card class="pa-3" min-width="250">
+                    <div class="reaction-selector">
+                      <v-btn 
+                        v-for="r in reactionTypes" 
+                        :key="r" 
+                        variant="text" 
+                        size="large"
+                        :color="myReaction === r ? 'primary' : 'grey'" 
+                        @click="handleReaction(r)"
+                        class="reaction-emoji-btn"
+                      >
+                        {{ reactionEmoji[r] }}
+                      </v-btn>
+                    </div>
+                    <v-divider class="my-2"></v-divider>
+                    <div class="reaction-counts text-caption">
+                      <div v-for="r in reactionTypes" :key="r" class="reaction-count-item">
+                        <span class="emoji">{{ reactionEmoji[r] }}</span>
+                        <span class="count">{{ getReactionCount(r) }}</span>
+                      </div>
+                    </div>
+                  </v-card>
+                </v-menu>
+              </div>
             </div>
           </v-card-text>
         </v-card>
@@ -259,7 +318,7 @@ const {
   addReply
 } = useCommunityController()
 
-const { toggleFollow: apiToggleFollow, getFollowStatus } = useSocialController()
+const { toggleFollow: apiToggleFollow, getFollowStatus, toggleFavorite, getFavoriteStatus, react, getReactionSummary } = useSocialController()
 
 const currentPost = ref<Post | null>(null)
 const isLiked = ref(false)
@@ -267,6 +326,22 @@ const isProcessingLike = ref(false)
 const replies = ref<Reply[]>([])
 const loadingReplies = ref(false)
 const followed = ref(false)
+
+// 收藏和表情反应相关状态
+const isFavorited = ref(false)
+const isProcessingFavorite = ref(false)
+const reactionCounters = ref<Record<string, number>>({})
+const myReaction = ref<string | null>(null)
+
+// 表情类型和表情符号映射
+const reactionTypes: Array<'like' | 'love' | 'laugh' | 'sad' | 'angry'> = ['like', 'love', 'laugh', 'sad', 'angry']
+const reactionEmoji: Record<string, string> = { 
+  like: '👍', 
+  love: '❤️', 
+  laugh: '😂', 
+  sad: '😢', 
+  angry: '😡' 
+}
 
 // 回复相关状态
 const replyContent = ref('')
@@ -350,6 +425,12 @@ const loadPostDetail = async () => {
     
     // 加载帖子的回复
     await loadReplies()
+    
+    // 加载收藏和表情反应状态
+    if (isLoggedIn.value) {
+      await loadFavoriteStatus()
+      await loadReactionStatus()
+    }
   } else {
     console.log('未找到对应帖子!')
     console.log('所有可用的帖子ID:', posts.value.map(p => p.id))
@@ -500,6 +581,77 @@ const toggleFollowAuthor = async () => {
     console.error('关注操作失败', e)
     followed.value = wasFollowed
     showFollowError('网络错误，稍后重试')
+  }
+}
+
+// 切换收藏状态
+const toggleFavoriteAction = async () => {
+  if (!currentPost.value || !isLoggedIn.value) return
+  if (isProcessingFavorite.value) return
+  
+  isProcessingFavorite.value = true
+  const postId = currentPost.value.id
+  const newFavState = !isFavorited.value
+  
+  try {
+    const resp = await toggleFavorite(postId, currentUserId, newFavState)
+    if (resp) {
+      isFavorited.value = resp.favorited
+    }
+  } catch (e) {
+    console.error('收藏操作失败', e)
+  } finally {
+    isProcessingFavorite.value = false
+  }
+}
+
+// 处理表情反应
+const handleReaction = async (type: 'like' | 'love' | 'laugh' | 'sad' | 'angry') => {
+  if (!currentPost.value || !isLoggedIn.value) return
+  
+  const postId = currentPost.value.id
+  const add = myReaction.value !== type
+  
+  try {
+    const resp = await react(postId, currentUserId, type, add)
+    if (resp) {
+      reactionCounters.value = resp.counters
+      myReaction.value = resp.myReaction || null
+    }
+  } catch (e) {
+    console.error('表情反应失败', e)
+  }
+}
+
+// 获取某个表情的计数
+const getReactionCount = (type: string): number => {
+  return reactionCounters.value[type] || 0
+}
+
+// 加载收藏状态
+const loadFavoriteStatus = async () => {
+  if (!isLoggedIn.value || !currentPost.value) return
+  try {
+    const resp = await getFavoriteStatus(currentPost.value.id, currentUserId)
+    if (resp) {
+      isFavorited.value = resp.favorited
+    }
+  } catch (e) {
+    console.warn('获取收藏状态失败', e)
+  }
+}
+
+// 加载表情反应状态
+const loadReactionStatus = async () => {
+  if (!isLoggedIn.value || !currentPost.value) return
+  try {
+    const resp = await getReactionSummary(currentPost.value.id, currentUserId)
+    if (resp) {
+      reactionCounters.value = resp.counters
+      myReaction.value = resp.myReaction || null
+    }
+  } catch (e) {
+    console.warn('获取表情反应状态失败', e)
   }
 }
 
@@ -666,20 +818,77 @@ onMounted(() => {
   color: #666;
 }
 
-/* 预留扩展空间 */
-.extension-area {
-  min-height: 100px;
-  border: 2px dashed #e0e0e0;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #999;
-  font-size: 14px;
+/* 社交互动功能区 */
+.social-interaction-area {
+  margin-top: 24px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border: 1px solid #e0e0e0;
 }
 
-.extension-area::before {
-  content: "预留扩展区域";
+.interaction-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+}
+
+.login-prompt-interaction {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.interaction-buttons {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.interaction-btn {
+  flex: 1;
+  min-width: 120px;
+}
+
+.reaction-selector {
+  display: flex;
+  justify-content: space-around;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.reaction-emoji-btn {
+  font-size: 24px;
+  min-width: 48px;
+  height: 48px;
+}
+
+.reaction-counts {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #666;
+}
+
+.reaction-count-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: #f5f5f5;
+}
+
+.reaction-count-item .emoji {
+  font-size: 16px;
+}
+
+.reaction-count-item .count {
+  font-weight: 600;
+  color: #1976d2;
 }
 
 /* 回复区域 */
