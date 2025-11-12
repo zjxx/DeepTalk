@@ -66,16 +66,21 @@ export class VersusController {
       
       // 根据对战模式加载不同的题目
       const currentMatchType = this.model.getState().matchType
+      console.log('VersusController: 当前对战模式:', currentMatchType)
+      
       if (currentMatchType === 'AI辅助') {
         // AI模式：使用固定的英语对话主题
+        console.log('初始化AI模式主题...')
         this.setAIModeTopic()
       } else {
         // 真人对战模式：使用固定主题
+        console.log('初始化真人对战模式主题...')
         this.setHumanBattleTopic()
       }
       
       this.notifyStateChange()
       console.log('VersusController: 自动对战初始化完成，matchStarted =', this.model.getState().matchStarted)
+      console.log('当前对战模式:', currentMatchType)
       console.log('自动加载题目:', this.currentTopic)
       console.log('当前使用的是服务器主题:', this.questionManager.isUsingServerTopic())
       console.log('题目管理器当前主题:', this.questionManager.getCurrentTopic())
@@ -232,11 +237,14 @@ export class VersusController {
     // 优先使用题库中的题目
     const questionTopic = this.questionManager.getCurrentTopic()
     if (questionTopic) {
+      console.log('VersusController: 使用QuestionManager主题:', questionTopic)
       return questionTopic
     }
     
     // 备用：使用VersusModel中的原有主题
-    return this.model.currentTopic
+    const modelTopic = this.model.currentTopic
+    console.log('VersusController: 使用VersusModel主题:', modelTopic)
+    return modelTopic
   }
 
   get currentPrompt(): string {
@@ -441,16 +449,23 @@ export class VersusController {
       isUserSpeaking: false
     })
     
-    // 根据对战模式设置不同的主题
-    if (matchType === 'AI辅助') {
-      console.log('切换到AI模式，设置AI专用主题')
-      this.setAIModeTopic()
-    } else {
-      console.log('切换到真人对战模式，设置真人对战专用主题')
-      this.setHumanBattleTopic()
-    }
-    
-    this.notifyStateChange()
+  // 根据对战模式设置不同的主题
+  if (matchType === 'AI辅助') {
+    console.log('切换到AI模式，设置AI专用主题')
+    this.setAIModeTopic()
+    console.log('AI模式主题设置完成，当前主题:', this.currentTopic)
+  } else {
+    console.log('切换到真人对战模式，设置真人对战专用主题')  
+    this.setHumanBattleTopic()
+    console.log('真人对战模式主题设置完成，当前主题:', this.currentTopic)
+  }
+  
+  // 强制通知状态变化，确保前端界面更新
+  this.notifyStateChange()
+  
+  // 额外日志用于调试
+  console.log('主题切换后 - QuestionManager当前主题:', this.questionManager.getCurrentTopic())
+  console.log('主题切换后 - 使用服务器主题:', this.questionManager.isUsingServerTopic())
   }
 
   changeDifficultyLevel(difficultyLevel: '初级' | '中级' | '高级'): void {
@@ -699,7 +714,7 @@ export class VersusController {
 
   // 设置AI模式的专用主题
   private setAIModeTopic(): void {
-    const aiTopic = "You will talk with your partner about your favorite book. Your discussion may include:"
+    const aiTopic = "You will talk with your partner about your favorite book."
     const aiPrompts = [
       "What is the book?",
       "Who wrote the book?", 
@@ -711,6 +726,9 @@ export class VersusController {
     
     console.log('AI模式主题已设置:', aiTopic)
     console.log('AI模式提示已设置:', aiPrompts)
+    
+    // 强制通知状态变化以触发Vue响应式更新
+    this.notifyStateChange()
   }
 
   // 设置真人对战模式的专用主题
@@ -729,6 +747,9 @@ export class VersusController {
     
     console.log('真人对战模式主题已设置:', humanTopic)
     console.log('真人对战模式提示已设置:', humanPrompts)
+    
+    // 强制通知状态变化以触发Vue响应式更新
+    this.notifyStateChange()
   }
 
   // 设置语音识别功能
