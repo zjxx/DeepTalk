@@ -245,92 +245,7 @@
         </v-card>
       </v-col>
 
-      <!-- AI对话历史区域 -->
-      <v-col v-if="displayBattleType === 'AI辅助'" cols="12" class="py-1">
-        <v-card class="conversation-card">
-          <v-card-title class="d-flex justify-space-between align-center">
-            <div>
-              <v-icon start color="success" class="mr-2">mdi-chat</v-icon>
-              AI对话记录
-            </div>
-            <v-chip size="small" color="info">
-              {{ state.transcriptMessages?.length || 0 }} 条消息
-            </v-chip>
-          </v-card-title>
-          
-          <v-card-text ref="conversationContentRef" class="conversation-content" style="max-height: 400px; overflow-y: auto; padding: 16px;">
-            <!-- 空状态提示 -->
-            <div v-if="!state.transcriptMessages || state.transcriptMessages.length === 0" class="empty-state text-center py-8">
-              <v-icon size="64" color="grey-lighten-2">mdi-chat-outline</v-icon>
-              <div class="text-h6 text-grey mt-4">还没有对话记录</div>
-              <div class="text-body-2 text-grey-darken-1 mt-2">
-                点击"开始对话"按钮开始录音，AI将会回复您
-              </div>
-            </div>
-            
-            <!-- 对话消息列表 -->
-            <div v-else class="conversation-messages">
-              <div 
-                v-for="(message, index) in state.transcriptMessages" 
-                :key="index"
-                class="message-item"
-                :class="{ 'user-message': message.isUser, 'ai-message': !message.isUser }"
-              >
-                <div class="message-header">
-                  <v-avatar size="32" :color="message.isUser ? 'primary' : 'success'">
-                    <v-icon size="20" color="white">
-                      {{ message.isUser ? 'mdi-account' : 'mdi-robot' }}
-                    </v-icon>
-                  </v-avatar>
-                  <span class="message-sender">
-                    {{ message.isUser ? '您' : 'AI助手' }}
-                  </span>
-                  <span class="message-time">
-                    {{ formatMessageTime(message.timestamp) }}
-                  </span>
-                </div>
-                
-                <div class="message-content">
-                  <div class="message-bubble" :class="{ 'user-bubble': message.isUser, 'ai-bubble': !message.isUser }">
-                    {{ message.text }}
-                  </div>
-                </div>
-              </div>
-              
-              <!-- AI思考状态指示 -->
-              <div v-if="state.isPartnerThinking" class="message-item ai-message">
-                <div class="message-header">
-                  <v-avatar size="32" color="orange">
-                    <v-icon size="20" color="white" class="pulse-animation">mdi-brain</v-icon>
-                  </v-avatar>
-                  <span class="message-sender">AI助手</span>
-                  <span class="message-time">思考中...</span>
-                </div>
-                <div class="message-content">
-                  <div class="message-bubble ai-bubble thinking-bubble">
-                    <div class="thinking-dots">
-                      <span></span>
-                      <span></span>
-                      <span></span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </v-card-text>
-          
-          <v-card-actions class="justify-center">
-            <v-btn 
-              variant="outlined" 
-              size="small" 
-              prepend-icon="mdi-delete"
-              @click="clearConversationHistory"
-            >
-              清空对话记录
-            </v-btn>
-          </v-card-actions>
-        </v-card>
-      </v-col>
+
 
       <!-- 控制面板 -->
       <v-col cols="12" class="py-1">
@@ -506,7 +421,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, nextTick, reactive, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, reactive } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import Live2DModel from '../components/Live2DModel.vue'
 import * as PIXI from 'pixi.js'
@@ -555,8 +470,7 @@ const controller = new VersusController()
 const state = reactive(controller.getState())
 const isLoadingPlayback = ref(false)
 
-// 对话容器引用（用于自动滚动）
-const conversationContentRef = ref<HTMLElement | null>(null)
+
 
 // 匹配参数展示
 const displayBattleType = computed(() => route.query.battleType || state.matchType || 'AI辅助')
@@ -575,38 +489,7 @@ const stopSpeechRecognition = () => {
   controller.stopSpeechRecognition()
 }
 
-// AI对话相关方法
-const formatMessageTime = (timestamp?: number) => {
-  if (!timestamp) return ''
-  const date = new Date(timestamp)
-  return date.toLocaleTimeString('zh-CN', { 
-    hour: '2-digit', 
-    minute: '2-digit',
-    second: '2-digit'
-  })
-}
 
-const clearConversationHistory = () => {
-  // 清空对话历史
-  state.transcriptMessages = []
-  // 同时清空语音识别文本
-  controller.clearSpeechText()
-  console.log('对话历史已清空')
-}
-
-// 自动滚动到对话底部
-const scrollToBottom = () => {
-  nextTick(() => {
-    if (conversationContentRef.value) {
-      conversationContentRef.value.scrollTop = conversationContentRef.value.scrollHeight
-    }
-  })
-}
-
-// 监听消息变化，自动滚动到底部
-watch(() => state.transcriptMessages.length, () => {
-  scrollToBottom()
-})
 
 // 动态模型路径
 const userModelPath = computed(() => {
@@ -1889,150 +1772,7 @@ const handlePartnerLeftBattle = (data: { message?: string; [key: string]: unknow
   display: inline-block;
 }
 
-/* 对话历史区域样式 */
-.conversation-card {
-  max-height: 400px;
-  display: flex;
-  flex-direction: column;
-}
 
-.conversation-content {
-  flex: 1;
-  overflow: hidden;
-  padding: 8px !important;
-}
-
-.conversation-messages {
-  max-height: 300px;
-  overflow-y: auto;
-  padding-right: 8px;
-}
-
-.message-item {
-  margin-bottom: 16px;
-  padding: 8px;
-  border-radius: 8px;
-  transition: background-color 0.2s;
-}
-
-.message-item:hover {
-  background-color: rgba(0, 0, 0, 0.05);
-}
-
-.user-message {
-  background: linear-gradient(135deg, rgba(25, 118, 210, 0.1), rgba(25, 118, 210, 0.05));
-}
-
-.ai-message {
-  background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(76, 175, 80, 0.05));
-}
-
-.message-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 8px;
-  gap: 8px;
-}
-
-.message-sender {
-  font-weight: 600;
-  color: var(--v-theme-primary);
-}
-
-.message-time {
-  font-size: 0.75rem;
-  color: var(--v-theme-on-surface-variant);
-  margin-left: auto;
-}
-
-.message-content {
-  padding-left: 40px;
-}
-
-.message-bubble {
-  padding: 12px 16px;
-  border-radius: 18px;
-  position: relative;
-  word-wrap: break-word;
-  line-height: 1.4;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-
-.user-bubble {
-  background: linear-gradient(135deg, #1976d2, #1565c0);
-  color: white;
-  margin-left: auto;
-  margin-right: 0;
-  max-width: 80%;
-}
-
-.ai-bubble {
-  background: linear-gradient(135deg, #4caf50, #43a047);
-  color: white;
-  margin-left: 0;
-  margin-right: auto;
-  max-width: 80%;
-}
-
-.thinking-bubble {
-  background: linear-gradient(135deg, #ff9800, #f57c00);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 40px;
-}
-
-/* 思考动画 */
-.thinking-dots {
-  display: flex;
-  gap: 4px;
-}
-
-.thinking-dots span {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: white;
-  animation: thinking 1.4s infinite ease-in-out both;
-}
-
-.thinking-dots span:nth-child(1) {
-  animation-delay: -0.32s;
-}
-
-.thinking-dots span:nth-child(2) {
-  animation-delay: -0.16s;
-}
-
-@keyframes thinking {
-  0%, 80%, 100% {
-    transform: scale(0.8);
-    opacity: 0.5;
-  }
-  40% {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-/* 滚动条样式 */
-.conversation-messages::-webkit-scrollbar {
-  width: 6px;
-}
-
-.conversation-messages::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.1);
-  border-radius: 3px;
-}
-
-.conversation-messages::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 3px;
-}
-
-.conversation-messages::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.5);
-}
 
 /* 现有样式继续 */
 </style>
