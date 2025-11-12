@@ -31,12 +31,35 @@ export const getUserAvatar = () => {
       console.error('Failed to parse userInfo:', e)
     }
   }
+  
+  // 尝试从 sessionStorage 中获取头像（针对非记住我的情况）
+  const sessionUserInfo = sessionStorage.getItem('userInfo')
+  if (sessionUserInfo) {
+    try {
+      const parsed = JSON.parse(sessionUserInfo)
+      const { avatar, userId, username } = parsed
+      if (avatar) {
+        userAvatar.value = avatar
+        return avatar
+      }
+      // 如果没有保存头像，根据用户ID/用户名生成
+      if (userId || username) {
+        const generatedAvatar = getAvatar(userId, username)
+        userAvatar.value = generatedAvatar
+        return generatedAvatar
+      }
+    } catch (e) {
+      console.error('Failed to parse sessionUserInfo:', e)
+    }
+  }
+  
   return userAvatar.value || getAvatar()
 }
 
 export const setUserAvatar = (newAvatar: string) => {
   // 更新内存中的状态
   userAvatar.value = newAvatar
+  
   // 同时更新 localStorage 中的头像
   const userInfo = localStorage.getItem('userInfo')
   if (userInfo) {
@@ -44,6 +67,15 @@ export const setUserAvatar = (newAvatar: string) => {
     info.avatar = newAvatar
     localStorage.setItem('userInfo', JSON.stringify(info))
   }
+  
+  // 同时更新 sessionStorage 中的头像（针对非记住我的情况）
+  const sessionUserInfo = sessionStorage.getItem('userInfo')
+  if (sessionUserInfo) {
+    const info = JSON.parse(sessionUserInfo)
+    info.avatar = newAvatar
+    sessionStorage.setItem('userInfo', JSON.stringify(info))
+  }
+  
   // 触发自定义事件，通知其他组件头像已更新
   window.dispatchEvent(new CustomEvent('avatar-updated', { detail: { avatar: newAvatar } }))
 }
@@ -55,7 +87,6 @@ export async function autoLogin(): Promise<boolean> {
     const savedEmail = localStorage.getItem('savedEmail')
     const savedPassword = localStorage.getItem('savedPassword')
     const expiration = localStorage.getItem('expiration')
-    const savedUserInfo = localStorage.getItem('userInfo')
     
     // 只有在有保存的邮箱和密码时才进行自动登录
     if (token && savedEmail && savedPassword && expiration) {
@@ -79,12 +110,9 @@ export async function autoLogin(): Promise<boolean> {
       userModel.expiration = res.expiration
       userModel.isLoggedIn = true
       
-      // 如果有保存的用户信息，恢复头像
-      if (savedUserInfo) {
-        const userInfo = JSON.parse(savedUserInfo)
-        if (userInfo.avatar) {
-          setUserAvatar(userInfo.avatar)
-        }
+      // 从服务器返回的头像更新到内存和localStorage
+      if (res.avatar) {
+        setUserAvatar(res.avatar)
       }
       
       return true
@@ -119,6 +147,7 @@ export const login = async (request: LoginRequest, rememberMe: boolean): Promise
     const res: LoginResponse = await loginApi(loginRequest)
     console.log('登录响应数据:', res)
     console.log('响应中的Token:', res.token)
+    console.log('响应中的Avatar:', res.avatar)
     
     userModel.username = res.username
     userModel.email = res.email
@@ -126,6 +155,11 @@ export const login = async (request: LoginRequest, rememberMe: boolean): Promise
     userModel.expiration = res.expiration
     userModel.isLoggedIn = true
     userModel.userId = res.userId
+    
+    // 从服务器返回的头像更新到内存和localStorage
+    if (res.avatar) {
+      setUserAvatar(res.avatar)
+    }
     
     console.log('准备保存Token，记住我:', rememberMe)
     
@@ -140,7 +174,7 @@ export const login = async (request: LoginRequest, rememberMe: boolean): Promise
         userId: res.userId,
         username: res.username,
         email: res.email,
-        avatar: userAvatar.value
+        avatar: res.avatar || ''
       }))
       console.log('✅ Token已保存到localStorage:', localStorage.getItem('token'))
     } else {
@@ -152,7 +186,7 @@ export const login = async (request: LoginRequest, rememberMe: boolean): Promise
         userId: res.userId,
         username: res.username,
         email: res.email,
-        avatar: userAvatar.value
+        avatar: res.avatar || ''
       }))
       console.log('✅ Token已保存到sessionStorage:', sessionStorage.getItem('token'))
       

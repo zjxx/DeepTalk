@@ -102,9 +102,7 @@ public class AuthController {
 
         if (user == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             return ResponseEntity.badRequest().body("邮箱或密码错误");
-        }
-
-        // 生成JWT token
+        }        // 生成JWT token
         long expiration = request.isRememberMe() ? rememberMeExpiration : normalExpiration;
         String token = generateToken(user, expiration);
 
@@ -113,6 +111,7 @@ public class AuthController {
         response.put("username", user.getUsername());
         response.put("userId", user.getId());
         response.put("email", user.getEmail());
+        response.put("avatar", user.getAvatar() != null ? user.getAvatar() : "");
         response.put("expiration", new Date(System.currentTimeMillis() + expiration));
 
         return ResponseEntity.ok(response);
