@@ -54,13 +54,13 @@ public class UserCacheService {
         }
 
         User user = userOpt.get();
-        
-        // 3. 构建用户信息（不包含密码）
+          // 3. 构建用户信息（不包含密码）
         Map<String, Object> userInfo = new HashMap<>();
         userInfo.put("id", user.getId());
         userInfo.put("username", user.getUsername());
         userInfo.put("email", maskEmail(user.getEmail())); // 脱敏邮箱
         userInfo.put("role", user.getRole());
+        userInfo.put("avatar", user.getAvatar()); // 添加头像信息
 
         // 4. 存入缓存
         redisUtil.set(cacheKey, userInfo, USER_INFO_EXPIRE);
@@ -154,13 +154,13 @@ public class UserCacheService {
         
         for (int i = 0; i < count; i++) {
             User user = users.get(i);
-            
-            // 缓存用户信息
+              // 缓存用户信息
             Map<String, Object> userInfo = new HashMap<>();
             userInfo.put("id", user.getId());
             userInfo.put("username", user.getUsername());
             userInfo.put("email", maskEmail(user.getEmail()));
             userInfo.put("role", user.getRole());
+            userInfo.put("avatar", user.getAvatar()); // 添加头像信息
             
             String infoKey = USER_INFO_PREFIX + user.getId();
             redisUtil.set(infoKey, userInfo, USER_INFO_EXPIRE);
