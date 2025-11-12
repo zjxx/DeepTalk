@@ -27,9 +27,9 @@
 import { ref } from 'vue'
 
 const scores = ref([
-  { type: 'AI智能对战', difficulty: '初级', cetLevel: 'CET-4', score: 85, time: '2025-6-09 10:00' },
-  { type: '真人对战', difficulty: '中级', cetLevel: 'CET-6', score: 92, time: '2025-6-08 14:30' },
-  { type: 'AI智能对战', difficulty: '高级', cetLevel: 'CET-4', score: 78, time: '2025-6-08 09:15' },
+  { type: 'AI智能对战', difficulty: '初级', cetLevel: 'CET-4', score: 85, time: '2025-10-28 10:00' },
+  { type: '真人对战', difficulty: '中级', cetLevel: 'CET-6', score: 92, time: '2025-10-29 14:30' },
+  { type: 'AI智能对战', difficulty: '高级', cetLevel: 'CET-4', score: 78, time: '2025-10-31 09:15' },
 ])
 </script>
 
