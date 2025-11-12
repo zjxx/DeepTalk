@@ -120,3 +120,16 @@ export interface GetUserPostsResponse {
   posts: Post[];
   count: number;
 }
+
+// 获取用户收藏列表请求
+export interface GetUserFavoritesRequest {
+  userId: string;
+}
+
+// 获取用户收藏列表响应
+export interface GetUserFavoritesResponse {
+  success: boolean;
+  message?: string;
+  posts: Post[];
+  count: number;
+}

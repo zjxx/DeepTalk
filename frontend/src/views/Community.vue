@@ -119,6 +119,12 @@
                     <v-icon size="24">mdi-post</v-icon>
                   </v-btn>
                   <p class="btn-label mt-2">我的帖子</p>
+                  
+                  <v-btn icon size="large" color="orange" variant="elevated" class="my-favorites-btn mt-4"
+                    @click="goToMyFavorites" title="我的收藏">
+                    <v-icon size="24">mdi-star</v-icon>
+                  </v-btn>
+                  <p class="btn-label mt-2">我的收藏</p>
                 </div>
               </v-card-text>
             </v-card>
@@ -141,7 +147,7 @@ import type { ReactionRequest } from '../interface/SocialInterface'
 const router = useRouter()
 
 const { posts, loading, loadCommunityData } = useCommunityController()
-const { toggleFollow: apiToggleFollow, toggleFavorite: apiToggleFavorite, react, getReactionSummary, getFollowStatus, getRecommendedAuthors } = useSocialController()
+const { toggleFollow: apiToggleFollow, toggleFavorite: apiToggleFavorite, getFavoriteStatus, react, getReactionSummary, getFollowStatus, getRecommendedAuthors } = useSocialController()
 
 // 搜索相关状态
 const searchQuery = ref('')
@@ -152,6 +158,9 @@ const goToCreatePost = () => { router.push('/post/create') }
 
 // 跳转到我的帖子页面
 const goToMyPosts = () => { router.push('/my-posts') }
+
+// 跳转到我的收藏页面
+const goToMyFavorites = () => { router.push('/my-favorites') }
 
 // 搜索选项
 const searchOptions = [
@@ -264,11 +273,19 @@ onMounted(async () => {
   await loadCommunityData('', 'posts')
   // 仅登录时加载社交状态
   if (isLoggedIn.value) {
+    // 加载收藏状态
+    for (const p of posts.value) {
+      getFavoriteStatus(p.id, currentUserId)
+        .then(r => { if (r?.favorited) favorites.value.add(p.id) })
+        .catch(() => {})
+    }
+    // 加载表情反应
     for (const p of posts.value) {
       getReactionSummary(p.id, currentUserId)
         .then(r => { if (r) reactionSummary.value[p.id] = { counters: r.counters, myReaction: r.myReaction } })
         .catch(() => {})
     }
+    // 加载关注状态
     const seen = new Set<string>()
     for (const p of posts.value) {
       const aid = p.author?.id

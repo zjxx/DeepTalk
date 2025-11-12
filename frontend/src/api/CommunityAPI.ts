@@ -90,3 +90,10 @@ export function CommunityGetUserPostsAPI(request: GetUserPostsRequest): Promise<
     console.log('获取用户帖子请求:', JSON.stringify(request))
     return http.post<GetUserPostsResponse, GetUserPostsRequest>(API_ENDPOINTS.COMMUNITY.POSTS.USER_POSTS, request)
 }
+
+// 获取用户收藏的帖子
+export function SocialGetUserFavoritesAPI(userId: string): Promise<Post[]> {
+    console.log('获取用户收藏帖子，用户ID:', userId)
+    const url = `${API_ENDPOINTS.SOCIAL.FAVORITE.USER_POSTS}?userId=${encodeURIComponent(userId)}`
+    return http.get<Post[]>(url)
+}

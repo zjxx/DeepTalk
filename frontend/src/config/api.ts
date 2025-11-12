@@ -63,7 +63,8 @@ export const API_ENDPOINTS = {
     },
     FAVORITE: {
       ACTION: '/api/social/favorite',
-      STATUS: '/api/social/favorite/status'
+      STATUS: '/api/social/favorite/status',
+      USER_POSTS: '/api/social/favorite/posts'  // 新增: 获取用户收藏的帖子
     },
     REACTION: {
       ACTION: '/api/social/reaction',
